@@ -96,6 +96,8 @@ The minimal lifecycle is represented by `resolved`:
 
 Tools MAY implement richer states (open, in-progress, addressed, closed) but MUST map them to resolved for interoperability.
 
+Resolving a parent comment MUST NOT automatically resolve its replies; each comment's `resolved` field is independent. A reply MAY raise a distinct concern that outlives the parent thread.
+
 ## 10. Conformance and Error Handling
 - Files MUST include `mrsf_version`, `document`, and `comments` (array).
 - Parsers MUST treat unknown fields as ignorable extensions.
@@ -110,6 +112,7 @@ Tools MAY implement richer states (open, in-progress, addressed, closed) but MUS
 - When `reply_to` is present and targeting fields are omitted, consumers SHOULD inherit anchor context from the parent comment for display and navigation.
 - Emit warnings (not hard failures) for unresolved `reply_to`, orphaned anchors, or stale `selected_text`, and surface them to reviewers for decision.
 - Prefer YAML for human-facing workflows and JSON for APIs; avoid lossy transformations between them.
+- Tools MAY offer cascading resolution (resolving a parent resolves all its replies) as a user-facing convenience, but SHOULD allow individual replies to remain open when they represent independent concerns.
 
 ## 11. Examples
 Unless stated otherwise, examples use YAML. Section 11.3 shows the equivalent JSON serialization.
