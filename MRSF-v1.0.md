@@ -58,7 +58,7 @@ comments:
 - `commit`: Git commit hash associated with the comment; SHOULD be the full (long) SHA for durability; short SHAs are acceptable for human readability but MAY become ambiguous as repositories grow.
 - `type`: Comment category; RECOMMENDED values: suggestion, issue, question, accuracy, style, clarity.
 - `severity`: Importance level; values: low, medium, high.
-- `selected_text`: Exact text selected by the reviewer; SHOULD match the substring defined by line/column fields and is authoritative for re-anchoring; MUST NOT exceed 4096 characters to avoid oversized payloads.
+- `selected_text`: Exact text selected by the reviewer; SHOULD match the substring defined by line/column fields and is authoritative for re-anchoring; MUST NOT exceed 4096 characters to avoid oversized payloads. Reviewers SHOULD capture enough surrounding context to make the value reasonably unique within the document; very short or common fragments (e.g., a single word) are likely to match multiple locations and degrade re-anchoring reliability.
 - `reply_to`: ID of another comment in the same sidecar file to which this comment is a reply; SHOULD resolve to an existing `id` to preserve thread integrity; replies MAY omit targeting fields and inherit context from the parent so short acknowledgments or meta-discussion do not need duplicate anchors.
 
 ## 7. Targeting and Anchoring
@@ -73,9 +73,10 @@ comments:
 - `line` + `end_line` → multi-line comment.
 - `line` + `start_column` + `end_column` → inline span.
 - `selected_text` SHOULD be used as the primary anchor when it still matches; if it no longer matches due to edits, agents SHOULD fall back to line/column anchors and mark the comment as needing re-anchoring.
+- When `selected_text` matches multiple locations in the document, agents MUST use line/column fields to disambiguate; if no line/column fields are present, agents SHOULD flag the comment as ambiguous rather than guessing.
 
 ### 7.3 Re-anchoring Guidance
-- Agents SHOULD re-anchor using `selected_text` when text moves but remains identical.
+- Agents SHOULD re-anchor using `selected_text` when text moves but remains identical. When multiple identical matches exist, agents SHOULD prefer the match closest to the original line/column position.
 - If `selected_text` conflicts with line/column, `selected_text` SHOULD take precedence; agents SHOULD attempt reconciliation before failing.
 - If anchors cannot be reconciled, agents SHOULD mark the comment as needing attention rather than silently discarding it.
 - If `selected_text` no longer matches due to author edits, agents SHOULD attempt re-anchoring using surrounding context and line/column hints, then flag the comment for reviewer attention if still unresolved.
