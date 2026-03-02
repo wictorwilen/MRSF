@@ -1,0 +1,103 @@
+
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/wictorwilen/MRSF/raw/main/mrsf.schema.json",
+  "title": "Markdown Review Sidecar Format (MRSF) v1.0",
+  "description": "Schema for MRSF review sidecar files. See MRSF-v1.0.md for the full specification.",
+  "type": "object",
+  "required": ["mrsf_version", "document", "comments"],
+  "additionalProperties": true,
+  "properties": {
+    "mrsf_version": {
+      "type": "string",
+      "pattern": "^1\\.\\d+$",
+      "description": "MRSF format version. MUST be a supported major.minor version (e.g., 1.0)."
+    },
+    "document": {
+      "type": "string",
+      "description": "Relative path to the Markdown document being reviewed."
+    },
+    "comments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "author", "timestamp", "text", "resolved"],
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Globally unique, opaque, collision-resistant identifier for the comment."
+          },
+          "author": {
+            "type": "string",
+            "description": "Creator of the comment. SHOULD follow the convention 'Display Name (identifier)'."
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 / RFC 3339 timestamp of comment creation; SHOULD include timezone offset."
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 16384,
+            "description": "The content of the review comment. MUST be plain text."
+          },
+          "resolved": {
+            "type": "boolean",
+            "description": "Whether the comment has been resolved."
+          },
+          "commit": {
+            "type": "string",
+            "description": "Git commit hash associated with the comment. SHOULD be the full (long) SHA."
+          },
+          "type": {
+            "type": "string",
+            "description": "Categorization of the comment. Recommended values listed in examples.",
+            "examples": [
+              "suggestion",
+              "issue",
+              "question",
+              "accuracy",
+              "style",
+              "clarity"
+            ]
+          },
+          "severity": {
+            "type": "string",
+            "description": "Importance level of the comment.",
+            "enum": ["low", "medium", "high"]
+          },
+          "reply_to": {
+            "type": "string",
+            "description": "ID of another comment in the same file that this comment replies to."
+          },
+          "line": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Starting line number (1-based) in the target document."
+          },
+          "end_line": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Ending line number (inclusive, 1-based). MUST be >= line."
+          },
+          "start_column": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Starting column index (0-based) within the starting line."
+          },
+          "end_column": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Ending column index. MUST be >= start_column when on the same line."
+          },
+          "selected_text": {
+            "type": "string",
+            "maxLength": 4096,
+            "description": "Exact text selected by the reviewer. SHOULD NOT exceed 4096 characters."
+          }
+        }
+      }
+    }
+  }
+}

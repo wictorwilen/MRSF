@@ -1,0 +1,22 @@
+mrsf_version: "1.0"
+document: examples/architecture.md
+comments:
+  - id: 1d3c72b0
+    author: Wictor (wictorwilen)
+    timestamp: '2026-03-02T18:22:59.713284+00:00'
+    text: "This section needs clarification."
+    resolved: false
+    line: 3
+    commit: 02eb613a3f4b8c9d1e5a7b2c4d6f8e0a1b3c5d7e
+  - id: 3eeccbd3
+    author: Wictor (wictorwilen)
+    timestamp: '2026-03-02T18:24:51.742976+00:00'
+    text: "Is this phrasing correct?"
+    type: question
+    resolved: false
+    commit: 02eb613a3f4b8c9d1e5a7b2c4d6f8e0a1b3c5d7e
+    line: 6
+    end_line: 6
+    start_column: 2
+    end_column: 21
+    selected_text: "Worker processes jobs"
