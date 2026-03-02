@@ -58,7 +58,7 @@ comments:
 - `commit`: Git commit hash associated with the comment; SHOULD be the full (long) SHA for durability; short SHAs are acceptable for human readability but MAY become ambiguous as repositories grow.
 - `type`: Comment category; RECOMMENDED values: suggestion, issue, question, accuracy, style, clarity.
 - `severity`: Importance level; values: low, medium, high.
-- `selected_text`: Exact text selected by the reviewer; SHOULD match the substring defined by line/column fields and is authoritative for re-anchoring; MUST NOT exceed 4096 characters to avoid oversized payloads. Reviewers SHOULD capture enough surrounding context to make the value reasonably unique within the document; very short or common fragments (e.g., a single word) are likely to match multiple locations and degrade re-anchoring reliability.
+- `selected_text`: Exact text selected by the reviewer; SHOULD match the substring defined by line/column fields and is authoritative for re-anchoring; MUST NOT exceed 4096 characters to avoid oversized payloads. Reviewers SHOULD capture enough surrounding context to make the value reasonably unique within the document; very short or common fragments (e.g., a single word) are likely to match multiple locations and degrade re-anchoring reliability. For line-only comments, `selected_text` SHOULD contain the full content of the referenced line (excluding the trailing newline). For multi-line comments, it SHOULD contain the full text of the spanned lines. For column-span comments, it SHOULD contain the substring defined by the column range.
 - `reply_to`: ID of another comment in the same sidecar file to which this comment is a reply; SHOULD resolve to an existing `id` to preserve thread integrity; replies MAY omit targeting fields and inherit context from the parent so short acknowledgments or meta-discussion do not need duplicate anchors.
 
 ## 7. Targeting and Anchoring
@@ -67,6 +67,8 @@ comments:
 - `end_line`: Ending line number (inclusive); MUST be ≥ line.
 - `start_column`: Starting column index (0-based); MUST be ≥ 0.
 - `end_column`: Ending column index; MUST be ≥ `start_column` when `line` equals `end_line` (same-line span); when `end_line` > `line` (multi-line span), `end_column` is independent of `start_column`.
+
+Line and column values are positional: they reflect the document state at the time the comment was created. Any insertion or deletion above the anchored location will shift these values, making them unreliable on their own across revisions. For this reason, `selected_text` SHOULD always be provided alongside targeting fields; it is content-based and survives positional shifts. When `commit` is present, implementations can compare it against the current document revision to detect that line/column values may be stale before attempting resolution.
 
 ### 7.2 Targeting Rules
 - `line` alone → single-line comment.
@@ -81,6 +83,27 @@ comments:
 - If anchors cannot be reconciled, agents SHOULD mark the comment as needing attention rather than silently discarding it.
 - If `selected_text` no longer matches due to author edits, agents SHOULD attempt re-anchoring using surrounding context and line/column hints, then flag the comment for reviewer attention if still unresolved.
 - If the referenced text and lines have been removed and cannot be re-anchored, agents SHOULD retain the comment, mark it as orphaned, and surface it for reviewer action (e.g., resolve or retarget) rather than deleting it.
+
+### 7.4 Anchoring Resolution Procedure
+When resolving the anchor for a comment, implementations SHOULD follow these steps in order:
+
+1. **Exact text match** — If `selected_text` is present, search the document for an exact match.
+   - a. **Single match found** — Anchor to it. Resolution complete.
+   - b. **Multiple matches found** — If `line`/column fields are present, select the match closest to the original position. If no line/column fields are present, flag the comment as ambiguous and surface it to the reviewer. Do not guess.
+   - c. **No match found** — Proceed to step 2.
+
+2. **Line/column fallback** — If `line` (and optionally `end_line`, `start_column`, `end_column`) is present, check whether those lines still exist in the document. If `commit` is present and differs from the current document revision, implementations SHOULD treat line/column values as potentially stale and apply additional scrutiny (e.g., verifying that the content at the position is plausible).
+   - a. **Lines exist and content is plausible** — Anchor to the line/column position. Mark the comment as needing re-anchoring (stale `selected_text`).
+   - b. **Lines exist but content at the position is clearly unrelated** — Proceed to step 3.
+   - c. **Lines no longer exist** (document shrank or section removed) — Proceed to step 3.
+
+3. **Contextual re-anchoring** — Attempt to locate the original text using surrounding context, partial similarity, or proximity to the original line/column hints.
+   - a. **Plausible match found** — Anchor tentatively. Mark as needing re-anchoring. Flag for reviewer attention.
+   - b. **No plausible match** — Proceed to step 4.
+
+4. **Orphan** — Retain the comment. Mark it as orphaned and surface it for reviewer action (resolve, retarget, or delete). Implementations MUST NOT silently discard orphaned comments.
+
+If `selected_text` is absent, begin at step 2.
 
 ## 8. AI Agent Behavior
 AI agents interacting with MRSF SHOULD:
@@ -128,6 +151,7 @@ comments:
     text: "This section needs clarification."
     resolved: false
     line: 9
+    selected_text: "The gateway component routes all inbound traffic."
     commit: 02eb613
 ```
 ### 11.2 Advanced YAML Example (Precise Text Span)
