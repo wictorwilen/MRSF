@@ -16,7 +16,7 @@ MRSF specifies how to persist review comments for Markdown documents in a sideca
 ## 2. Conventions and Terminology
 The key words MUST, MUST NOT, REQUIRED, SHOULD, SHOULD NOT, MAY are to be interpreted as described in RFC 2119 and RFC 8174 when appearing in uppercase. YAML examples follow YAML 1.2; JSON examples follow RFC 8259. Lines are 1-based; columns are 0-based. `selected_text` refers to the exact substring captured by a reviewer. `mrsf_version` denotes the MRSF format version, distinct from the target document’s own revision.
 
-## 3. File Naming
+## 3. File Naming and Discovery
 Sidecar files MUST follow this naming pattern:
 
 ```
@@ -29,6 +29,34 @@ In this pattern, <document> is the full filename (and relative path, if applicab
 
 MRSF may also be serialized as JSON; when JSON is used, a `.review.json` suffix MAY be used. YAML is the RECOMMENDED canonical format for human editing; JSON is equivalent for tooling and interchange.
 
+### 3.1 Default Discovery (Co-location)
+By default, the sidecar file MUST be co-located with the Markdown file it annotates. Tools discover the sidecar by appending `.review.yaml` to the document path.
+
+### 3.2 Alternate Sidecar Location
+When co-location is not desirable (e.g., read-only source trees, monorepo policies, or clean-directory requirements), a repository MAY provide a `.mrsf.yaml` configuration file at the repository or workspace root to redirect sidecar discovery.
+
+The configuration file uses the following structure:
+
+```yaml
+sidecar_root: .reviews
+```
+
+When `sidecar_root` is present, tools MUST resolve sidecar files by joining `sidecar_root` with the document's relative path plus the `.review.yaml` suffix. For example, with `sidecar_root: .reviews`, the sidecar for `docs/architecture.md` is located at:
+
+```
+.reviews/docs/architecture.md.review.yaml
+```
+
+The `sidecar_root` path MUST be relative to the repository or workspace root. Absolute paths and paths containing `..` MUST be rejected.
+
+### 3.3 Discovery Order
+Tools MUST resolve sidecar locations using the following order:
+
+1. Check for a `.mrsf.yaml` file at the repository or workspace root. If present and `sidecar_root` is defined, derive the sidecar path from it.
+2. Otherwise, look for the sidecar co-located with the Markdown file (default).
+
+Tools MUST NOT search both locations and merge results; exactly one location is authoritative per repository.
+
 ## 4. Top-Level Structure
 A valid MRSF file MUST contain:
 
@@ -39,7 +67,7 @@ comments:
   - <comment-object>
 ```
 
-`mrsf_version` identifies the format version. `document` is the relative path from the repository or workspace root to the annotated Markdown file, including the full filename. Because the sidecar file MUST be co-located with the Markdown file (Section 3), the `document` value will match the sidecar's own path with the `.review.yaml` suffix removed. `comments` is an array of comment objects; an empty array is valid and represents a document with no review comments.
+`mrsf_version` identifies the format version. `document` is the relative path from the repository or workspace root to the annotated Markdown file, including the full filename. When co-located (Section 3.1), the `document` value will match the sidecar's own path with the `.review.yaml` suffix removed. When `sidecar_root` is configured (Section 3.2), the sidecar resides under the configured directory but `document` still reflects the path to the Markdown file from the repository root. `comments` is an array of comment objects; an empty array is valid and represents a document with no review comments.
 
 ## 5. Versioning
 - `mrsf_version` MUST be present and MUST be set to the supported major.minor format version ("1.0" for this specification).
@@ -55,11 +83,12 @@ comments:
 - `resolved`: Boolean indicating whether the comment has been addressed (`false` = open, `true` = resolved).
 
 ### 6.2 Optional Fields
-- `commit`: Git commit hash associated with the comment; SHOULD be the full (long) SHA for durability; short SHAs are acceptable for human readability but MAY become ambiguous as repositories grow.
+- `commit`: Git commit hash associated with the comment; SHOULD be the full (long) SHA for durability; short SHAs are acceptable for human readability but MAY become ambiguous as repositories grow. When `commit` is absent, implementations MUST treat all positional anchors (line/column) as best-effort and rely on `selected_text` for resolution. MRSF does not track file renames or moves; if the annotated file is renamed, the `document` field and sidecar filename MUST be updated to reflect the new path. Tools MAY automate this as part of VCS rename detection.
 - `type`: Comment category; RECOMMENDED values: suggestion, issue, question, accuracy, style, clarity.
 - `severity`: Importance level; values: low, medium, high.
 - `selected_text`: Exact text selected by the reviewer; SHOULD match the substring defined by line/column fields and is authoritative for re-anchoring; MUST NOT exceed 4096 characters to avoid oversized payloads. Reviewers SHOULD capture enough surrounding context to make the value reasonably unique within the document; very short or common fragments (e.g., a single word) are likely to match multiple locations and degrade re-anchoring reliability. For line-only comments, `selected_text` SHOULD contain the full content of the referenced line (excluding the trailing newline). For multi-line comments, it SHOULD contain the full text of the spanned lines. For column-span comments, it SHOULD contain the substring defined by the column range.
 - `reply_to`: ID of another comment in the same sidecar file to which this comment is a reply; SHOULD resolve to an existing `id` to preserve thread integrity; replies MAY omit targeting fields and inherit context from the parent so short acknowledgments or meta-discussion do not need duplicate anchors.
+- `selected_text_hash`: Hex-encoded SHA-256 hash of `selected_text`; allows implementations to detect text changes without comparing the full string. When present, it MUST be the lowercase hex digest of the UTF-8 encoded `selected_text` value. Implementations SHOULD verify consistency between `selected_text` and `selected_text_hash` and flag mismatches as potential data corruption.
 
 ## 7. Targeting and Anchoring
 ### 7.1 Targeting Fields
@@ -124,6 +153,7 @@ Resolving a parent comment MUST NOT automatically resolve its replies; each comm
 ## 10. Conformance and Error Handling
 - Files MUST include `mrsf_version`, `document`, and `comments` (array).
 - Parsers MUST treat unknown fields as ignorable extensions.
+- Fields with the prefix `x_` are reserved for non-standard, tool-specific extensions (e.g., `x_tool_metadata`, `x_ai_confidence`). Implementations MUST NOT assign semantic meaning to `x_`-prefixed fields defined by other tools. Future versions of MRSF will not introduce normative fields with the `x_` prefix.
 - Parsers SHOULD reject documents missing required fields or with invalid types.
 - Parsers SHOULD validate cross-field constraints (e.g., `end_line` ≥ `line`; `end_column` ≥ `start_column` when applicable).
 - Parsers SHOULD reject `selected_text` values longer than 4096 characters.
@@ -225,9 +255,11 @@ comments:
 
 ## 13. Security and Privacy Considerations
 - Comments may contain sensitive or proprietary information; tools MUST NOT expose comments publicly without explicit permission.
+- Review comments MAY inadvertently contain secrets (API keys, tokens, credentials). Implementations SHOULD integrate with secret-scanning mechanisms where available and SHOULD warn authors before committing comments that match known secret patterns.
+- In public repositories, sidecar files are visible to all readers. Authors SHOULD avoid including confidential content in `text` or `selected_text`. Implementations MAY provide a visibility or classification field in future versions; until then, repository access controls are the primary privacy mechanism.
 - Agents MUST preserve author attribution and SHOULD record provenance where available.
 - Implementations SHOULD avoid path traversal when resolving document paths and SHOULD apply size limits to guard against resource exhaustion.
-- Implementations SHOULD sanitize or escape `text` and `selected_text` before rendering in HTML or other markup contexts to prevent injection attacks (e.g., XSS).
+- Implementations SHOULD sanitize or escape `text`, `selected_text`, and any `x_`-prefixed extension values before rendering in HTML or other markup contexts to prevent injection attacks (e.g., XSS).
 - MRSF does not provide an authentication mechanism for authors; `author` values are self-asserted. Implementations MAY use `commit` hashes and version control history as a provenance signal but SHOULD NOT treat them as proof of identity.
 
 ## 14. IANA Considerations
@@ -240,7 +272,6 @@ Potential additions for future versions:
 - `target`: object replacing flat targeting fields for structured anchoring.
 - `proposed`: block for suggested replacement text or fixes.
 - `context_before` / `context_after`: surrounding text for diff-resilient anchoring.
-- `selected_text_hash`: integrity hash of the selected text for change detection.
 - Multi-agent provenance metadata for attribution across automated pipelines.
 
 ## 16. References

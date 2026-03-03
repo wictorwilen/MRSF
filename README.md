@@ -10,6 +10,14 @@ Sidecar files live next to the Markdown file they annotate and follow this namin
 
 Example: docs/architecture.md.review.yaml
 
+Alternatively, a `.mrsf.yaml` config at the repo root can redirect sidecars to a separate directory:
+
+```yaml
+sidecar_root: .reviews
+```
+
+With this config, `docs/architecture.md` → `.reviews/docs/architecture.md.review.yaml`. See the [specification](MRSF-v1.0.md) for full discovery rules.
+
 ## Minimal Example
 
 ``` yaml

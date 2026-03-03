@@ -95,6 +95,11 @@
             "type": "string",
             "maxLength": 4096,
             "description": "Exact text selected by the reviewer. SHOULD NOT exceed 4096 characters."
+          },
+          "selected_text_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "description": "Hex-encoded SHA-256 hash of selected_text for change detection."
           }
         }
       }
