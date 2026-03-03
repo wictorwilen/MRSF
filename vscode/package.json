@@ -2,7 +2,7 @@
   "name": "mrsf-vscode",
   "displayName": "Sidemark – MRSF Review Comments",
   "description": "Display, create, and manage Markdown Review Sidecar Format (MRSF) comments directly in VS Code",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "wictor",
   "license": "MIT",
   "author": "Wictor Wilén (https://github.com/wictorwilen)",
@@ -159,7 +159,7 @@
         },
         "sidemark.reanchorAutoAcceptScore": {
           "type": "number",
-          "default": 1.0,
+          "default": 1,
           "minimum": 0,
           "maximum": 1,
           "description": "Auto-accept reanchor results at or above this confidence score"
@@ -181,13 +181,13 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@mrsf/cli": "^0.2.1"
+    "@mrsf/cli": "^0.2.2"
   },
   "devDependencies": {
-    "@types/vscode": "^1.85.0",
     "@types/node": "^22.13.10",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.0.0",
     "esbuild": "^0.24.0",
-    "typescript": "^5.8.2",
-    "@vscode/vsce": "^3.0.0"
+    "typescript": "^5.8.2"
   }
 }

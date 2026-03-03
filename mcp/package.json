@@ -1,6 +1,6 @@
 {
   "name": "@mrsf/mcp",
-  "version": "0.2.1",
+  "version": "0.2.5",
   "description": "MCP server for the Markdown Review Sidecar Format (MRSF)",
   "type": "module",
   "main": "./dist/server.js",
@@ -18,7 +18,8 @@
     "node": ">=18"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "node esbuild.config.mjs",
+    "test": "vitest run",
     "dev": "tsc --watch",
     "lint": "tsc --noEmit",
     "prepublishOnly": "cp ../LICENSE . && npm run build",
@@ -51,13 +52,13 @@
     "README.md",
     "LICENSE"
   ],
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.1",
-    "@mrsf/cli": "^0.2.1",
-    "zod": "^3.25.67"
-  },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "@mrsf/cli": "file:../cli",
     "@types/node": "^22.13.10",
-    "typescript": "^5.8.2"
+    "esbuild": "^0.27.3",
+    "typescript": "^5.8.2",
+    "vitest": "^4.0.18",
+    "zod": "^3.25.67"
   }
 }

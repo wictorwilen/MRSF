@@ -98,4 +98,4 @@ export {
   getThreads,
   summarize,
 } from "./lib/comments.js";
-export type { CommentSummary } from "./lib/comments.js";
+export type { CommentSummary, RemoveCommentOptions } from "./lib/comments.js";

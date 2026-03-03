@@ -199,14 +199,41 @@ export function registerDeleteComment(
         commentIdArg ?? (await pickComment(store, "Select comment to delete"));
       if (!commentId) return;
 
+      // Check if there are direct replies → offer cascade vs promote
+      const threads = store.getCommentThreads(active.uri);
+      const thread = threads.get(commentId);
+      let cascade = false;
+
+      if (thread && thread.length > 1) {
+        const choice = await vscode.window.showQuickPick(
+          [
+            {
+              label: "Delete this comment only",
+              description: "Replies will be promoted and re-anchored",
+              cascade: false,
+            },
+            {
+              label: "Delete with all replies",
+              description: "Remove this comment and its direct replies",
+              cascade: true,
+            },
+          ],
+          { placeHolder: "This comment has replies — how should they be handled?" },
+        );
+        if (!choice) return;
+        cascade = choice.cascade;
+      }
+
       const confirmed = await vscode.window.showWarningMessage(
-        "Are you sure you want to delete this comment?",
+        cascade
+          ? "Delete this comment and its replies?"
+          : "Are you sure you want to delete this comment?",
         { modal: true },
         "Delete",
       );
       if (confirmed !== "Delete") return;
 
-      const result = await store.deleteComment(active.uri, commentId);
+      const result = await store.deleteComment(active.uri, commentId, cascade);
       if (result) {
         vscode.window.showInformationMessage("Comment deleted.");
       } else {

@@ -148,16 +148,73 @@ export function unresolveComment(
 // Remove
 // ---------------------------------------------------------------------------
 
+/** Anchor fields that a reply may inherit from its parent on deletion. */
+const ANCHOR_FIELDS = [
+  "line",
+  "end_line",
+  "start_column",
+  "end_column",
+  "selected_text",
+  "selected_text_hash",
+  "anchored_text",
+  "commit",
+] as const;
+
+export interface RemoveCommentOptions {
+  /**
+   * When true, also delete all direct replies instead of promoting them.
+   * Default: false (promote replies per §9.1).
+   */
+  cascade?: boolean;
+}
+
 /**
- * Remove a comment by id. Returns true if found and removed.
+ * Remove a comment by id. Per §9.1, direct replies are promoted:
+ * their anchor fields are inherited from the parent (when absent),
+ * and their `reply_to` is re-pointed to the parent's parent (or cleared).
+ *
+ * If `cascade` is true, direct replies are removed along with the parent.
+ *
+ * Returns true if the comment was found and removed.
  */
 export function removeComment(
   doc: MrsfDocument,
   commentId: string,
+  opts?: RemoveCommentOptions,
 ): boolean {
+  const comment = doc.comments.find((c) => c.id === commentId);
+  if (!comment) return false;
+
+  if (opts?.cascade) {
+    // Remove direct replies first
+    doc.comments = doc.comments.filter(
+      (c) => c.id === commentId || c.reply_to !== commentId,
+    );
+  } else {
+    // Promote direct replies (§9.1)
+    for (const c of doc.comments) {
+      if (c.reply_to !== commentId) continue;
+
+      // Copy missing anchor fields from the parent
+      for (const field of ANCHOR_FIELDS) {
+        if (c[field] == null && comment[field] != null) {
+          (c as Record<string, unknown>)[field] = comment[field];
+        }
+      }
+
+      // Re-point reply_to to grandparent (or clear if parent was root)
+      if (comment.reply_to) {
+        c.reply_to = comment.reply_to;
+      } else {
+        delete c.reply_to;
+      }
+    }
+  }
+
+  // Remove the parent comment itself
   const idx = doc.comments.findIndex((c) => c.id === commentId);
-  if (idx === -1) return false;
-  doc.comments.splice(idx, 1);
+  if (idx !== -1) doc.comments.splice(idx, 1);
+
   return true;
 }
 

@@ -146,6 +146,68 @@ describe("removeComment", () => {
     expect(doc.comments).toHaveLength(1);
     expect(doc.comments[0].id).toBe("c-2");
   });
+
+  it("promotes direct replies by inheriting parent anchor (§9.1)", () => {
+    const doc = makeDoc();
+    doc.comments.push(
+      { id: "p1", author: "A", timestamp: "", text: "parent", resolved: false, line: 10, end_line: 12, selected_text: "hello world" },
+      { id: "r1", author: "B", timestamp: "", text: "reply", resolved: false, reply_to: "p1" },
+    );
+    expect(removeComment(doc, "p1")).toBe(true);
+    expect(doc.comments).toHaveLength(1);
+    const reply = doc.comments[0];
+    expect(reply.id).toBe("r1");
+    // Reply inherits parent anchor fields
+    expect(reply.line).toBe(10);
+    expect(reply.end_line).toBe(12);
+    expect(reply.selected_text).toBe("hello world");
+    // reply_to cleared (parent was root)
+    expect(reply.reply_to).toBeUndefined();
+  });
+
+  it("preserves reply's own anchor fields when present", () => {
+    const doc = makeDoc();
+    doc.comments.push(
+      { id: "p1", author: "A", timestamp: "", text: "parent", resolved: false, line: 10, selected_text: "parent text" },
+      { id: "r1", author: "B", timestamp: "", text: "reply", resolved: false, reply_to: "p1", line: 20, selected_text: "reply text" },
+    );
+    removeComment(doc, "p1");
+    const reply = doc.comments[0];
+    expect(reply.line).toBe(20);
+    expect(reply.selected_text).toBe("reply text");
+  });
+
+  it("re-points reply_to to grandparent when parent is a reply itself", () => {
+    const doc = makeDoc();
+    doc.comments.push(
+      { id: "root", author: "A", timestamp: "", text: "root", resolved: false, line: 1 },
+      { id: "mid", author: "B", timestamp: "", text: "mid", resolved: false, reply_to: "root", line: 5 },
+      { id: "leaf", author: "C", timestamp: "", text: "leaf", resolved: false, reply_to: "mid" },
+    );
+    removeComment(doc, "mid");
+    expect(doc.comments).toHaveLength(2);
+    const leaf = doc.comments.find((c) => c.id === "leaf")!;
+    expect(leaf.reply_to).toBe("root");
+    expect(leaf.line).toBe(5); // inherited from mid
+  });
+
+  it("cascade removes direct replies along with parent", () => {
+    const doc = makeDoc();
+    doc.comments.push(
+      { id: "p1", author: "A", timestamp: "", text: "parent", resolved: false, line: 10 },
+      { id: "r1", author: "B", timestamp: "", text: "reply1", resolved: false, reply_to: "p1" },
+      { id: "r2", author: "C", timestamp: "", text: "reply2", resolved: false, reply_to: "p1" },
+      { id: "other", author: "D", timestamp: "", text: "other", resolved: false },
+    );
+    removeComment(doc, "p1", { cascade: true });
+    expect(doc.comments).toHaveLength(1);
+    expect(doc.comments[0].id).toBe("other");
+  });
+
+  it("returns false for non-existent comment", () => {
+    const doc = makeDoc();
+    expect(removeComment(doc, "nope")).toBe(false);
+  });
 });
 
 describe("filterComments", () => {

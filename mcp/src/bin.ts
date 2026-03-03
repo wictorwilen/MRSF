@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 /**
  * @mrsf/mcp — CLI entry-point.
  *

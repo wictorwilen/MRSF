@@ -155,6 +155,14 @@ Tools MAY implement richer states (open, in-progress, addressed, closed) but MUS
 
 Resolving a parent comment MUST NOT automatically resolve its replies; each comment's `resolved` field is independent. A reply MAY raise a distinct concern that outlives the parent thread.
 
+### 9.1 Deletion
+When a parent comment is removed, implementations MUST promote its direct replies so they remain anchored:
+1. For each direct reply (where `reply_to` equals the deleted comment's `id`), if the reply omits its own targeting fields (`line`, `end_line`, `start_column`, `end_column`, `selected_text`), copy those fields from the parent.
+2. Update each direct reply's `reply_to` to the parent's `reply_to` value (i.e., the grandparent), or remove the field entirely if the parent was a root comment. This preserves thread hierarchy without orphaning replies.
+3. Remove the parent comment from the `comments` array.
+
+Implementations MAY also offer a "delete with replies" convenience that removes both the parent and all of its direct replies in one operation.
+
 ## 10. Conformance and Error Handling
 - Files MUST include `mrsf_version`, `document`, and `comments` (array).
 - Parsers MUST treat unknown fields as ignorable extensions.

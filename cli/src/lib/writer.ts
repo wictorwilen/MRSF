@@ -469,6 +469,52 @@ export async function writeSidecar(
 
   seq.items = newSeqItems;
 
+  // ── Fix first-item indentation after reorder / removal ────────────
+  //
+  // In the YAML CST, the `comments:` map-entry's `sep` array often
+  // contains trailing whitespace (space tokens) that provide the indent
+  // *before* the first seq-item indicator (`-`).  Non-first seq items
+  // carry their own leading space tokens in `start`.
+  //
+  // When the original first item is removed and a formerly non-first
+  // item becomes the new first, those extra space tokens stack with
+  // the sep whitespace, doubling the indent.  We fix this by stripping
+  // any leading space tokens (before the `seq-item-ind`) from the new
+  // first item's start — the sep already provides that whitespace.
+  //
+  // We also ensure the previous item's value ends with a newline so
+  // subsequent items render on their own line.
+  // ──────────────────────────────────────────────────────────────────
+
+  if (newSeqItems.length > 0) {
+    const originalFirstIdx = seq.items === newSeqItems ? 0 : -1; // always true after assignment
+    const origFirstItem = existingById.size > 0
+      ? [...existingById.values()].find((e) => e.index === 0)
+      : undefined;
+
+    const newFirst = newSeqItems[0];
+
+    // Check if the new first item is NOT the original first item
+    const isOriginalFirst =
+      origFirstItem &&
+      seq.items[0]?.value === origFirstItem.map;
+
+    if (!isOriginalFirst && newFirst.start) {
+      // Strip leading space tokens before the seq-item-ind
+      const dashIdx = newFirst.start.findIndex(
+        (t: CstNode) => t.type === "seq-item-ind",
+      );
+      if (dashIdx > 0) {
+        // Remove all tokens before the dash that are space/newline
+        const toRemove = newFirst.start
+          .slice(0, dashIdx)
+          .every((t: CstNode) => t.type === "space" || t.type === "newline");
+        if (toRemove) {
+          newFirst.start.splice(0, dashIdx);
+        }
+      }
+    }
+  }
   // ── Stringify via CST (byte-identical for untouched content) ───────
 
   const result = tokens.map((t: CstNode) => CST.stringify(t)).join("");

@@ -276,10 +276,11 @@ export class SidecarStore implements vscode.Disposable {
   async deleteComment(
     documentUri: vscode.Uri,
     commentId: string,
+    cascade?: boolean,
   ): Promise<boolean> {
     const entry = this.cache.get(documentUri.fsPath);
     if (!entry) return false;
-    const result = removeComment(entry.doc, commentId);
+    const result = removeComment(entry.doc, commentId, cascade);
     if (result) {
       await this.save(documentUri);
       this._onDidDelete.fire(documentUri);
@@ -455,6 +456,6 @@ function unresolveComment(doc: MrsfDocument, id: string): boolean {
   return cliUnresolveComment(doc, id);
 }
 
-function removeComment(doc: MrsfDocument, id: string): boolean {
-  return cliRemoveComment(doc, id);
+function removeComment(doc: MrsfDocument, id: string, cascade?: boolean): boolean {
+  return cliRemoveComment(doc, id, cascade ? { cascade: true } : undefined);
 }

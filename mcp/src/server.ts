@@ -40,6 +40,7 @@ import {
   populateSelectedText,
   resolveComment,
   unresolveComment,
+  removeComment,
   filterComments,
   summarize,
 
@@ -61,6 +62,7 @@ import type {
   ValidationResult,
   ReanchorResult,
   AddCommentOptions,
+  RemoveCommentOptions,
 } from "@mrsf/cli";
 
 // ---------------------------------------------------------------------------
@@ -565,6 +567,62 @@ function registerTools(server: McpServer): void {
       } catch (err) {
         return {
           content: [{ type: "text", text: `Rename failed: ${errorMessage(err)}` }],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  // ── mrsf_delete ───────────────────────────────────────────────────
+  server.registerTool(
+    "mrsf_delete",
+    {
+      title: "Delete Comment",
+      description:
+        "Delete a comment by ID from an MRSF sidecar file. Per §9.1, direct " +
+        "replies are promoted: they inherit the parent's anchor and their " +
+        "reply_to is re-pointed to the grandparent. Use cascade to delete " +
+        "direct replies along with the parent instead.",
+      inputSchema: {
+        sidecar: z.string().describe("Path to the sidecar file or its Markdown document"),
+        id: z.string().describe("Comment ID to delete"),
+        cascade: z.boolean().optional().describe(
+          "When true, also remove direct replies instead of promoting them (default: false)",
+        ),
+        cwd: z.string().optional().describe("Working directory"),
+      },
+    },
+    async ({ sidecar, id, cascade, cwd }) => {
+      try {
+        const workDir = cwd ?? process.cwd();
+        const [sp] = await resolveSidecarPaths([sidecar], workDir);
+        const doc = await parseSidecar(sp);
+
+        const ok = removeComment(doc, id, cascade ? { cascade: true } : undefined);
+
+        if (!ok) {
+          return {
+            content: [{ type: "text", text: `Comment '${id}' not found.` }],
+            isError: true,
+          };
+        }
+
+        await writeSidecar(sp, doc);
+
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              id,
+              deleted: true,
+              cascade: cascade ?? false,
+              sidecarPath: sp,
+            }, null, 2),
+          }],
+        };
+      } catch (err) {
+        return {
+          content: [{ type: "text", text: `Delete failed: ${errorMessage(err)}` }],
           isError: true,
         };
       }
