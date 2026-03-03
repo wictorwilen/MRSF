@@ -83,6 +83,7 @@ export default withMermaid(defineConfig({
         activeMatch: "/specification",
       },
       { text: "CLI", link: "/cli/", activeMatch: "/cli/" },
+      { text: "VS Code", link: "/vscode/", activeMatch: "/vscode/" },
       { text: "MCP Server", link: "/mcp/", activeMatch: "/mcp/" },
       {
         text: "Schema",
@@ -112,6 +113,12 @@ export default withMermaid(defineConfig({
         {
           text: "MCP Server",
           items: [{ text: "Overview", link: "/mcp/" }],
+        },
+      ],
+      "/vscode/": [
+        {
+          text: "VS Code Extension",
+          items: [{ text: "Overview", link: "/vscode/" }],
         },
       ],
     },

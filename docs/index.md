@@ -38,4 +38,7 @@ features:
   - icon: 📦
     title: Simple Tooling
     details: "npm install -g @mrsf/cli — validate, add, resolve, reanchor, and more from the terminal."
+  - icon: 💻
+    title: VS Code Extension
+    details: "Sidemark for VS Code — gutter icons, inline previews, hover cards, sidebar panel, and automatic reanchoring built right into your editor."
 ---

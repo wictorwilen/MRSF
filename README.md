@@ -6,7 +6,7 @@
 
 **Markdown Review Sidecar Format (MRSF)**, also known as **Sidemark**, is a portable, version-controlled, and machine-actionable way to store review comments *outside* Markdown files.
 
-🌐 [sidemark.org](https://sidemark.org) 
+🌐 [sidemark.org](https://sidemark.org) · 💻 [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=wictor.mrsf-vscode)
 
 This makes:
 - Markdown docs clean and uncluttered
@@ -123,6 +123,12 @@ Servers expose resources like:
 - `mrsf://anchors/{path}`
 
 See the full MCP server documentation in [`mcp/README.md`](mcp/README.md).
+
+## 💻 VS Code Extension
+
+**[Sidemark for VS Code](https://marketplace.visualstudio.com/items?itemName=wictor.mrsf-vscode)** brings MRSF review comments directly into your editor — gutter icons, inline previews, hover cards, a sidebar panel, and automatic reanchoring on save.
+
+Install from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=wictor.mrsf-vscode) or search for **"Sidemark"** in the VS Code Extensions view.
 
 ## 🧪 Status
 
