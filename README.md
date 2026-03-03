@@ -1,6 +1,12 @@
+<p align="center">
+  <img src="media/mrsf-logo.png" alt="Sidemark / MRSF logo" width="200" />
+</p>
+
 # Markdown Review Sidecar Format (MRSF) — Draft
 
-**Markdown Review Sidecar Format (MRSF)** is a portable, version-controlled, and machine-actionable way to store review comments *outside* Markdown files. 
+**Markdown Review Sidecar Format (MRSF)**, also known as **Sidemark**, is a portable, version-controlled, and machine-actionable way to store review comments *outside* Markdown files.
+
+🌐 [sidemark.org](https://sidemark.org) 
 
 This makes:
 - Markdown docs clean and uncluttered

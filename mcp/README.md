@@ -185,6 +185,18 @@ The server also exposes MCP resources for direct data access:
 | `mrsf://comment/{path}/{id}` | A single review comment |
 | `mrsf://anchors/{path}` | Anchor health status for all comments |
 
+## Agent Skill Example
+
+The repository includes a ready-to-use [Agent Skill](https://agentskills.io/) that teaches AI agents to review Markdown documents using the MCP server. See the [skill on GitHub](https://github.com/wictorwilen/MRSF/blob/main/examples/mrsf-review/SKILL.md).
+
+Copy it into your project:
+
+```bash
+cp -r examples/mrsf-review .agent/skills/
+```
+
+The skill instructs the agent to discover sidecars, add anchored comments with type and severity, validate results, and summarize findings — all through the MCP tools above.
+
 ## Requirements
 
 - Node.js ≥ 18
