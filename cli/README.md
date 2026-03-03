@@ -15,10 +15,10 @@ Validate sidecars, add and resolve review comments, re-anchor comments after doc
 
 ```bash
 # Install globally
-npm install -g mrsf
+npm install -g @mrsf/cli
 
 # …or run without installing
-npx mrsf --help
+npx @mrsf/cli --help
 ```
 
 ### From source
@@ -270,8 +270,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npx mrsf validate --strict
-      - run: npx mrsf reanchor --staged --dry-run
+      - run: npx @mrsf/cli validate --strict
+      - run: npx @mrsf/cli reanchor --staged --dry-run
 ```
 
 ### Git Pre-commit Hook
@@ -279,8 +279,8 @@ jobs:
 ```bash
 #!/usr/bin/env bash
 # .git/hooks/pre-commit
-npx mrsf reanchor --staged
-npx mrsf validate --strict
+npx @mrsf/cli reanchor --staged
+npx @mrsf/cli validate --strict
 ```
 
 ### Git Post-merge Hook
@@ -288,7 +288,7 @@ npx mrsf validate --strict
 ```bash
 #!/usr/bin/env bash
 # .git/hooks/post-merge
-npx mrsf reanchor
+npx @mrsf/cli reanchor
 ```
 
 ## Library Usage

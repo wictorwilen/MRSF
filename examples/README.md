@@ -32,22 +32,22 @@ The table below maps each §7.4 step to the example that exercises it:
 
 ## Trying the Examples
 
-If you have the MRSF CLI installed (`npm install -g mrsf` or via `npx`), you
+If you have the MRSF CLI installed (`npm install -g @mrsf/cli` or via `npx`), you
 can validate and inspect these examples:
 
 ```bash
 # Validate all sidecars
-npx mrsf validate examples/*.review.yaml
+npx @mrsf/cli validate examples/*.review.yaml
 
 # List open comments
-npx mrsf list examples/data-model.md.review.yaml
+npx @mrsf/cli list examples/data-model.md.review.yaml
 
 # Show summary stats
-npx mrsf list --summary examples/security-policy.md.review.yaml
+npx @mrsf/cli list --summary examples/security-policy.md.review.yaml
 
 # Dry-run re-anchoring (no writes)
-npx mrsf reanchor --dry-run examples/api-reference.md.review.yaml
+npx @mrsf/cli reanchor --dry-run examples/api-reference.md.review.yaml
 
 # Check anchor health
-npx mrsf status examples/contributing.md.review.yaml
+npx @mrsf/cli status examples/contributing.md.review.yaml
 ```

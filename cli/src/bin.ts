@@ -3,7 +3,7 @@
 /**
  * MRSF CLI — entry point.
  *
- *   npx mrsf <command> [options]
+ *   npx @mrsf/cli <command> [options]
  */
 
 import { createRequire } from "node:module";

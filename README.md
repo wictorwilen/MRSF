@@ -74,7 +74,7 @@ A worked example (Markdown file + sidecar) is available in the [examples/](examp
 The **`mrsf`** command-line tool validates, re-anchors, and manages MRSF sidecar files. Install it from npm:
 
 ```bash
-npm install -g mrsf
+npm install -g @mrsf/cli
 ```
 
 Quick start:
