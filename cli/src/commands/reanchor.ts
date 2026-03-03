@@ -11,7 +11,7 @@ import { readDocumentLines } from "../lib/parser.js";
 import { sidecarToDocument } from "../lib/discovery.js";
 import { resolveSidecarPaths } from "../lib/resolve-files.js";
 import { writeSidecar } from "../lib/writer.js";
-import { findRepoRoot, getStagedFiles } from "../lib/git.js";
+import { findRepoRoot, getStagedFiles, getCurrentCommit } from "../lib/git.js";
 import {
   reanchorDocument,
   applyReanchorResults,
@@ -28,6 +28,7 @@ export function registerReanchor(program: Command): void {
     .option("--no-git", "Disable git integration")
     .option("--from <commit>", "Override from-commit for all comments")
     .option("--update-text", "Also update selected_text to match current document text")
+    .option("-f, --force", "Firmly anchor high-confidence results (update commit to HEAD, clear audit fields)")
     .action(
       async (
         files: string[],
@@ -38,11 +39,13 @@ export function registerReanchor(program: Command): void {
           git: boolean;
           from?: string;
           updateText?: boolean;
+          force?: boolean;
         },
       ) => {
         const parentOpts = program.opts();
         const cwd = parentOpts.cwd ?? process.cwd();
         const quiet = parentOpts.quiet ?? false;
+        const verbose = parentOpts.verbose ?? false;
         const threshold = parseFloat(opts.threshold);
         const noGit = !opts.git;
 
@@ -75,6 +78,12 @@ export function registerReanchor(program: Command): void {
           return;
         }
 
+        if (verbose) {
+          console.log(chalk.dim(`threshold: ${threshold}`));
+          console.log(chalk.dim(`sidecars: ${sidecarPaths.length}`));
+          if (opts.dryRun) console.log(chalk.dim("mode: dry-run"));
+        }
+
         let totalChanged = 0;
         let totalOrphaned = 0;
 
@@ -84,6 +93,7 @@ export function registerReanchor(program: Command): void {
             const docPath = sidecarToDocument(sp);
             const lines = await readDocumentLines(docPath);
             const repoRoot = !noGit ? await findRepoRoot(cwd) : null;
+            const headCommit = repoRoot ? await getCurrentCommit(repoRoot) : undefined;
 
             const results = await reanchorDocument(doc, lines, {
               threshold,
@@ -99,15 +109,25 @@ export function registerReanchor(program: Command): void {
             if (!opts.dryRun) {
               const changed = applyReanchorResults(doc, results, {
                 updateText: opts.updateText,
+                force: opts.force,
+                headCommit: headCommit ?? undefined,
               });
               totalChanged += changed;
               if (changed > 0) {
                 await writeSidecar(sp, doc);
               }
+            } else {
+              // Dry-run: compute change count on a clone so we don't mutate
+              const clone = structuredClone(doc);
+              totalChanged += applyReanchorResults(clone, results, {
+                updateText: opts.updateText,
+                force: opts.force,
+                headCommit: headCommit ?? undefined,
+              });
             }
 
             if (!quiet) {
-              printResults(sp, results, opts.dryRun);
+              printResults(sp, results, opts.dryRun, verbose);
             }
           } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
@@ -132,6 +152,7 @@ function printResults(
   sidecarPath: string,
   results: ReanchorResult[],
   dryRun?: boolean,
+  verbose?: boolean,
 ): void {
   const prefix = dryRun ? "[dry-run] " : "";
   console.log(`${prefix}${sidecarPath}:`);
@@ -140,6 +161,11 @@ function printResults(
     const icon = statusIcon(r.status);
     const line = r.newLine != null ? `:${r.newLine}` : "";
     console.log(`  ${icon} ${r.commentId}${line} — ${r.reason}`);
+    if (verbose) {
+      if (r.newLine != null) console.log(`      new line: ${r.newLine}`);
+      if (r.score != null) console.log(`      score: ${r.score.toFixed(3)}`);
+      if (r.status !== "anchored") console.log(`      status: ${r.status}`);
+    }
   }
 }
 

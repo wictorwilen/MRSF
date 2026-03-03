@@ -74,7 +74,8 @@ program
   .option("--cwd <dir>", "Working directory")
   .option("--config <path>", "Path to .mrsf.yaml")
   .option("--no-color", "Disable colour output")
-  .option("-q, --quiet", "Suppress non-essential output");
+  .option("-q, --quiet", "Suppress non-essential output")
+  .option("-v, --verbose", "Show detailed diagnostic output");
 
 registerValidate(program);
 registerReanchor(program);

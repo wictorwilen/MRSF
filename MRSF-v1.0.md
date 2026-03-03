@@ -167,6 +167,7 @@ Resolving a parent comment MUST NOT automatically resolve its replies; each comm
 
 ### 10.1 Implementation Guidance (Non-Normative)
 - Preserve input order of `comments` when emitting files to aid human review diffs; tools MAY sort for deterministic output but SHOULD not reorder within a single thread.
+- When writing YAML sidecar files, implementations SHOULD preserve the existing formatting of unchanged content — including YAML comments (`#`), scalar styles (block `|`/`>`, quoted, plain), key ordering, and whitespace. This minimizes version-control diff noise, avoids unnecessary merge conflicts, and ensures that human-authored annotations are not inadvertently rewritten. Implementations that cannot perform format-preserving writes SHOULD, at minimum, avoid altering scalar styles and MUST NOT strip YAML comments.
 - When `reply_to` is present and targeting fields are omitted, consumers SHOULD inherit anchor context from the parent comment for display and navigation.
 - Emit warnings (not hard failures) for unresolved `reply_to`, orphaned anchors, or stale `selected_text`, and surface them to reviewers for decision.
 - Prefer YAML for human-facing workflows and JSON for APIs; avoid lossy transformations between them.

@@ -190,10 +190,11 @@ function registerTools(server: McpServer): void {
         dryRun: z.boolean().optional().describe("Report without modifying files"),
         threshold: z.number().min(0).max(1).optional().describe("Fuzzy match threshold 0.0–1.0 (default 0.6)"),
         updateText: z.boolean().optional().describe("Also replace selected_text with current document text (opt-in per §6.2)"),
+        force: z.boolean().optional().describe("Firmly anchor high-confidence results: update commit to HEAD and clear audit fields"),
         cwd: z.string().optional().describe("Working directory"),
       },
     },
-    async ({ files, dryRun, threshold, updateText, cwd }) => {
+    async ({ files, dryRun, threshold, updateText, force, cwd }) => {
       try {
         const workDir = cwd ?? process.cwd();
         const sidecarPaths = await resolveSidecarPaths(files ?? [], workDir);
@@ -205,6 +206,7 @@ function registerTools(server: McpServer): void {
             dryRun,
             threshold,
             updateText,
+            force,
             cwd: workDir,
           });
           allResults.push({ file: sp, results, changed });

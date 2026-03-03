@@ -20,6 +20,7 @@ export function registerRename(program: Command): void {
       const parentOpts = program.opts();
       const cwd = parentOpts.cwd ?? process.cwd();
       const quiet = parentOpts.quiet ?? false;
+      const verbose = parentOpts.verbose ?? false;
 
       const oldDocPath = path.resolve(cwd, oldDoc);
       const newDocPath = path.resolve(cwd, newDoc);
@@ -62,6 +63,10 @@ export function registerRename(program: Command): void {
         console.log(
           chalk.green(`Renamed: ${oldSidecarPath} → ${newSidecarPath}`),
         );
+      }
+      if (verbose) {
+        console.log(chalk.dim(`  document: ${doc.document}`));
+        console.log(chalk.dim(`  comments: ${doc.comments.length}`));
       }
     });
 }

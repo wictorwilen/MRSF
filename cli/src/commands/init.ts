@@ -19,6 +19,7 @@ export function registerInit(program: Command): void {
       const parentOpts = program.opts();
       const cwd = parentOpts.cwd ?? process.cwd();
       const quiet = parentOpts.quiet ?? false;
+      const verbose = parentOpts.verbose ?? false;
 
       const docPath = path.resolve(cwd, document);
 
@@ -57,6 +58,10 @@ export function registerInit(program: Command): void {
 
       if (!quiet) {
         console.log(chalk.green(`Created ${sidecarPath}`));
+      }
+      if (verbose) {
+        console.log(chalk.dim(`  document: ${doc.document}`));
+        console.log(chalk.dim(`  sidecar: ${sidecarPath}`));
       }
     });
 }

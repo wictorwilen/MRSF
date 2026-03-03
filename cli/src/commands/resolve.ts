@@ -24,6 +24,7 @@ export function registerResolve(program: Command): void {
         const parentOpts = program.opts();
         const cwd = parentOpts.cwd ?? process.cwd();
         const quiet = parentOpts.quiet ?? false;
+        const verbose = parentOpts.verbose ?? false;
         const sp = path.resolve(cwd, sidecar);
 
         const doc = await parseSidecar(sp);
@@ -42,6 +43,9 @@ export function registerResolve(program: Command): void {
         if (!quiet) {
           const action = opts.undo ? "Unresolved" : "Resolved";
           console.log(chalk.green(`${action} ${id} in ${sidecar}.`));
+        }
+        if (verbose) {
+          console.log(chalk.dim(`  sidecar: ${sp}`));
         }
       },
     );

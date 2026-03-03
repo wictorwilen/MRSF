@@ -21,6 +21,7 @@ export function registerStatus(program: Command): void {
       const parentOpts = program.opts();
       const cwd = parentOpts.cwd ?? process.cwd();
       const quiet = parentOpts.quiet ?? false;
+      const verbose = parentOpts.verbose ?? false;
 
       const sidecarPaths = await resolveSidecarPaths(files, cwd);
 
@@ -64,6 +65,12 @@ export function registerStatus(program: Command): void {
       if (opts.json) {
         console.log(JSON.stringify(allResults, null, 2));
         return;
+      }
+
+      if (verbose) {
+        for (const sp of sidecarPaths) {
+          console.log(chalk.dim(`  sidecar: ${sp}`));
+        }
       }
 
       for (const r of allResults) {

@@ -336,6 +336,60 @@ With this config, the sidecar for `docs/architecture.md` is resolved as `.review
 
 See [§3.2 Alternate Sidecar Location](../MRSF-v1.0.md) in the spec for details.
 
+## Extension Fields (`x_*`)
+
+MRSF reserves the `x_` prefix for tool-specific, non-standard extension properties (see [§10 Extension Fields](../MRSF-v1.0.md)). These fields may appear on the top-level document object or on individual comments. The CLI preserves them during round-trip writes and exposes them through the catch-all index signature on both `MrsfDocument` and `Comment`.
+
+### Built-in `x_` fields
+
+The CLI and Sidemark VS Code extension use the following extension fields:
+
+| Field | Scope | Type | Set by | Description |
+|---|---|---|---|---|
+| `x_reanchor_status` | comment | `"anchored"` \| `"shifted"` \| `"fuzzy"` \| `"orphaned"` | `mrsf reanchor` | Result of the most recent reanchor pass. `orphaned` means the anchor text could not be found in the current document. |
+| `x_reanchor_score` | comment | `number` (0–1) | `mrsf reanchor` | Confidence score from the reanchor algorithm. `1.0` = exact match, lower values indicate fuzzy or shifted matches. |
+
+### Adding your own fields
+
+Any property whose key starts with `x_` is valid on both the document root and on each comment. The CLI and Sidemark will silently preserve these fields through all operations (validate, add, resolve, reanchor, etc.).
+
+```yaml
+comments:
+  - id: abc123
+    author: ci-bot
+    timestamp: "2025-01-15T10:00:00Z"
+    text: Possible security concern
+    resolved: false
+    line: 42
+    # Custom extension fields
+    x_ai_confidence: 0.92
+    x_tool_name: security-scanner
+    x_category: injection
+```
+
+**Rules** (from the spec):
+
+- Keys MUST start with `x_` (underscore, not hyphen).
+- Implementations MUST NOT assign semantic meaning to `x_` fields defined by other tools.
+- Future MRSF spec versions will never introduce normative fields with the `x_` prefix.
+- Unknown `x_` fields are preserved by the CLI's round-trip writer and never stripped or modified.
+
+### Programmatic access
+
+```typescript
+import { parseSidecar } from "@mrsf/cli";
+
+const doc = await parseSidecar("file.md.review.yaml");
+for (const comment of doc.comments) {
+  // Access built-in x_ fields
+  if (comment.x_reanchor_status === "orphaned") {
+    console.log(`Comment ${comment.id} is orphaned`);
+  }
+  // Access custom x_ fields
+  const confidence = comment.x_ai_confidence as number | undefined;
+}
+```
+
 ## Requirements
 
 - Node.js 18 or later

@@ -210,6 +210,8 @@ export interface ReanchorOptions extends BaseOptions {
   fromCommit?: string;
   /** Update selected_text to match anchored_text (opt-in per §6.2). */
   updateText?: boolean;
+  /** Force-anchor: update commit to HEAD and clear audit fields for high-confidence results. */
+  force?: boolean;
 }
 
 export interface ValidateOptions extends BaseOptions {

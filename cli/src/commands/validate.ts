@@ -17,6 +17,7 @@ export function registerValidate(program: Command): void {
       const parentOpts = program.opts();
       const cwd = parentOpts.cwd ?? process.cwd();
       const quiet = parentOpts.quiet ?? false;
+      const verbose = parentOpts.verbose ?? false;
 
       const sidecarPaths = await resolveSidecarPaths(files, cwd);
 
@@ -55,6 +56,9 @@ export function registerValidate(program: Command): void {
         for (const w of result.warnings) {
           const fn = opts.strict ? chalk.red : chalk.yellow;
           console.log(fn(`  ${opts.strict ? "error" : "warn"}: ${w.message}${w.path ? ` (${w.path})` : ""}`));
+        }
+        if (verbose) {
+          console.log(chalk.dim(`  ${result.errors.length} error(s), ${result.warnings.length} warning(s)`));
         }
       }
 

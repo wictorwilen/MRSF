@@ -81,8 +81,28 @@ export function reanchorComment(
   // -----------------------------------------------------------------------
   // Step 0: Diff-based shift
   // -----------------------------------------------------------------------
-  if (selectedText && comment.line != null && opts.diffHunks?.length) {
+  if (comment.line != null && opts.diffHunks?.length) {
     const { shift, modified } = getLineShift(opts.diffHunks, comment.line);
+
+    // For line-only comments (no selected_text), apply the diff shift directly
+    if (!selectedText) {
+      const shiftedLine = comment.line + shift;
+      const lineSpan =
+        comment.end_line != null ? comment.end_line - comment.line : 0;
+      const shiftedEndLine =
+        comment.end_line != null ? shiftedLine + lineSpan : undefined;
+      return {
+        commentId,
+        status: shift === 0 ? "anchored" : "shifted",
+        score: 1.0,
+        newLine: shiftedLine,
+        newEndLine: shiftedEndLine,
+        reason:
+          shift === 0
+            ? "Line-only comment unchanged (diff confirms position)."
+            : `Line-only comment shifted by ${shift > 0 ? "+" : ""}${shift} line(s) via diff.`,
+      };
+    }
 
     if (!modified) {
       const shiftedLine = comment.line + shift;
@@ -230,13 +250,18 @@ export function reanchorComment(
       }
 
       // Pure line fallback
+      // If there's no selected_text, the comment is purely line-anchored.
+      // A commit change alone doesn't make it ambiguous — we accept it as-is.
+      const isLineOnly = !selectedText;
       return {
         commentId,
-        status: opts.commitIsStale ? "ambiguous" : "anchored",
-        score: opts.commitIsStale ? 0.5 : 0.8,
+        status: isLineOnly ? "anchored" : (opts.commitIsStale ? "ambiguous" : "anchored"),
+        score: isLineOnly ? 1.0 : (opts.commitIsStale ? 0.5 : 0.8),
         newLine: comment.line,
         newEndLine: comment.end_line,
-        reason: `Line/column fallback${qualifier}.`,
+        reason: isLineOnly
+          ? "Line-only comment (no selected_text to verify)."
+          : `Line/column fallback${qualifier}.`,
       };
     }
   }
@@ -363,7 +388,7 @@ export async function reanchorDocument(
 export function applyReanchorResults(
   doc: MrsfDocument,
   results: ReanchorResult[],
-  opts: { updateText?: boolean } = {},
+  opts: { updateText?: boolean; force?: boolean; headCommit?: string } = {},
 ): number {
   let changed = 0;
   const resultMap = new Map(results.map((r) => [r.commentId, r]));
@@ -418,6 +443,25 @@ export function applyReanchorResults(
       comment.x_reanchor_score = result.score;
     }
 
+    // --force: firmly anchor high-confidence results
+    // Update commit to HEAD and clear audit fields so the comment
+    // won't be re-evaluated on the next reanchor run.
+    if (
+      opts.force &&
+      opts.headCommit &&
+      (result.status === "anchored" || result.status === "shifted") &&
+      result.score >= HIGH_THRESHOLD
+    ) {
+      comment.commit = opts.headCommit;
+      delete comment.x_reanchor_status;
+      delete comment.x_reanchor_score;
+      // Clear stale anchored_text since anchor is now confirmed
+      if (comment.anchored_text && comment.anchored_text === comment.selected_text) {
+        delete comment.anchored_text;
+      }
+      isChanged = true;
+    }
+
     if (isChanged) changed++;
   }
 
@@ -440,6 +484,7 @@ export async function reanchorFile(
   const documentLines = await readDocumentLines(docPath);
 
   const repoRoot = !opts.noGit ? await findRepoRoot(opts.cwd) : null;
+  const headCommit = repoRoot ? await getCurrentCommit(repoRoot) : undefined;
 
   const results = await reanchorDocument(doc, documentLines, {
     ...opts,
@@ -451,7 +496,11 @@ export async function reanchorFile(
   let written = false;
 
   if (!opts.dryRun) {
-    changed = applyReanchorResults(doc, results, { updateText: opts.updateText });
+    changed = applyReanchorResults(doc, results, {
+      updateText: opts.updateText,
+      force: opts.force,
+      headCommit: headCommit ?? undefined,
+    });
     if (changed > 0 || opts.autoUpdate) {
       await writeSidecar(sidecarPath, doc);
       written = true;

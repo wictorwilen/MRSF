@@ -1,0 +1,193 @@
+{
+  "name": "mrsf-vscode",
+  "displayName": "Sidemark – MRSF Review Comments",
+  "description": "Display, create, and manage Markdown Review Sidecar Format (MRSF) comments directly in VS Code",
+  "version": "0.1.0",
+  "publisher": "wictor",
+  "license": "MIT",
+  "author": "Wictor Wilén (https://github.com/wictorwilen)",
+  "homepage": "https://github.com/wictorwilen/MRSF/tree/main/vscode#readme",
+  "bugs": {
+    "url": "https://github.com/wictorwilen/MRSF/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wictorwilen/MRSF.git",
+    "directory": "vscode"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "mrsf",
+    "markdown",
+    "review",
+    "comments",
+    "sidemark",
+    "sidecar"
+  ],
+  "icon": "media/icons/sidemark-icon.png",
+  "galleryBanner": {
+    "color": "#1a73e8",
+    "theme": "dark"
+  },
+  "activationEvents": [
+    "onLanguage:markdown",
+    "workspaceContains:**/*.review.yaml",
+    "workspaceContains:**/*.review.json"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "mrsf.addLineComment",
+        "title": "Sidemark: Add Line Comment",
+        "icon": "$(comment)"
+      },
+      {
+        "command": "mrsf.addInlineComment",
+        "title": "Sidemark: Add Comment on Selection",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "mrsf.replyToComment",
+        "title": "Sidemark: Reply to Comment",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "mrsf.resolveComment",
+        "title": "Sidemark: Resolve Comment",
+        "icon": "$(check)"
+      },
+      {
+        "command": "mrsf.unresolveComment",
+        "title": "Sidemark: Unresolve Comment",
+        "icon": "$(circle-slash)"
+      },
+      {
+        "command": "mrsf.deleteComment",
+        "title": "Sidemark: Delete Comment",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "mrsf.reanchor",
+        "title": "Sidemark: Reanchor Comments",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "mrsf.navigateToComment",
+        "title": "Sidemark: Go to Comment",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "mrsf.refreshComments",
+        "title": "Sidemark: Refresh Comments",
+        "icon": "$(refresh)"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "mrsf.addInlineComment",
+          "when": "editorHasSelection && resourceLangId == markdown",
+          "group": "mrsf@1"
+        },
+        {
+          "command": "mrsf.addLineComment",
+          "when": "!editorHasSelection && resourceLangId == markdown",
+          "group": "mrsf@1"
+        }
+      ],
+      "editor/lineNumber/context": [
+        {
+          "command": "mrsf.addLineComment",
+          "when": "resourceLangId == markdown",
+          "group": "mrsf@1"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "mrsf-sidebar",
+          "title": "Sidemark",
+          "icon": "media/icons/sidebar-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "mrsf-sidebar": [
+        {
+          "type": "webview",
+          "id": "mrsf.commentsView",
+          "name": "Comments"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Sidemark",
+      "properties": {
+        "sidemark.author": {
+          "type": "string",
+          "default": "",
+          "description": "Default author name for new comments (e.g., 'Your Name (username)')"
+        },
+        "sidemark.showResolved": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show resolved comments in editor decorations and sidebar"
+        },
+        "sidemark.gutterIcons": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show gutter icons for commented lines"
+        },
+        "sidemark.inlineHighlights": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show inline background highlights for text-specific comments"
+        },
+        "sidemark.reanchorThreshold": {
+          "type": "number",
+          "default": 0.6,
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Fuzzy match threshold for reanchoring (0.0–1.0)"
+        },
+        "sidemark.reanchorAutoAcceptScore": {
+          "type": "number",
+          "default": 1.0,
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Auto-accept reanchor results at or above this confidence score"
+        },
+        "sidemark.reanchorOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically reanchor comments when a Markdown file is saved"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "watch": "node esbuild.config.mjs --watch",
+    "lint": "tsc --noEmit",
+    "package": "vsce package",
+    "publish": "vsce publish",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@mrsf/cli": "^0.2.1"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^22.13.10",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.8.2",
+    "@vscode/vsce": "^3.0.0"
+  }
+}

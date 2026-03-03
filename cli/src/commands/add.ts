@@ -45,6 +45,7 @@ export function registerAdd(program: Command): void {
         const parentOpts = program.opts();
         const cwd = parentOpts.cwd ?? process.cwd();
         const quiet = parentOpts.quiet ?? false;
+        const verbose = parentOpts.verbose ?? false;
 
         const docPath = path.resolve(cwd, document);
         const root = await findWorkspaceRoot(cwd);
@@ -98,6 +99,13 @@ export function registerAdd(program: Command): void {
         }
 
         await writeSidecar(sidecarPath, doc);
+
+        if (verbose) {
+          console.log(chalk.dim(`  sidecar: ${sidecarPath}`));
+          console.log(chalk.dim(`  id: ${comment.id}`));
+          if (comment.line) console.log(chalk.dim(`  line: ${comment.line}`));
+          if (comment.selected_text) console.log(chalk.dim(`  selected_text: ${comment.selected_text.slice(0, 80)}${comment.selected_text.length > 80 ? "…" : ""}`));
+        }
 
         if (!quiet) {
           console.log(
