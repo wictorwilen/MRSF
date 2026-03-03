@@ -1,0 +1,59 @@
+# Re-anchoring scenario: Shifted Text (Exact Match at New Position)
+#
+# These comments were written against an earlier revision of api-reference.md.
+# Since then, two new lines were inserted in the "Authentication" section,
+# pushing all subsequent content down by 2 lines. The line numbers in these
+# comments no longer match the current document, but the selected_text values
+# are still present verbatim. A re-anchoring tool should:
+#
+#   1. Fail to match at the original line (content changed).
+#   2. Search the full document for the exact selected_text.
+#   3. Find the text at its new position and update line numbers.
+#
+# This exercises §7.4 Step 1 (exact text match) of the spec.
+
+mrsf_version: "1.0"
+document: examples/api-reference.md
+comments:
+  # -- Comment A: selected_text is on line 21 now, but was on line 19 --
+  - id: a1b2c3d4-0001-4000-8000-000000000001
+    author: reviewer-alice
+    timestamp: "2026-02-20T10:00:00+00:00"
+    text: >
+      Should we mention the Retry-After header value format?
+      RFC 9110 §10.2.3 says it can be a date or delta-seconds.
+    type: suggestion
+    severity: medium
+    resolved: false
+    line: 19
+    selected_text: "When the limit is exceeded, the API returns HTTP 429 with a `Retry-After` header."
+    selected_text_hash: "d47c833f0d96d3cf48d998b8e6b6376d8ef0077157391e56815f6de29b35f283"
+    commit: "aabbccdd1122334455667788"
+
+  # -- Comment B: selected_text is on line 38 now, but was recorded at line 36 --
+  - id: a1b2c3d4-0002-4000-8000-000000000002
+    author: reviewer-alice
+    timestamp: "2026-02-20T10:05:00+00:00"
+    text: >
+      The word "Requires" is ambiguous — does the API reject the
+      request if these are missing, or just ignore extra fields?
+    type: question
+    resolved: false
+    line: 36
+    selected_text: "Creates a new user. Requires `name` and `email` fields."
+    commit: "aabbccdd1122334455667788"
+
+  # -- Comment C: multi-line span, both lines shifted --
+  - id: a1b2c3d4-0003-4000-8000-000000000003
+    author: reviewer-bob
+    timestamp: "2026-02-21T14:30:00+00:00"
+    text: >
+      90 days seems too long for GDPR compliance.
+      Can we make the retention period configurable?
+    type: issue
+    severity: high
+    resolved: false
+    line: 42
+    end_line: 43
+    selected_text: "Soft-deletes a user. The record is retained for 90 days before permanent removal.\nAdministrators can restore soft-deleted users via `POST /users/:id/restore`."
+    commit: "aabbccdd1122334455667788"

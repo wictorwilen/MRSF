@@ -1,0 +1,100 @@
+# Re-anchoring scenario: Disambiguation (§7.4 Step 1b)
+#
+# The document security-policy.md contains several phrases that appear
+# multiple times verbatim. For example:
+#
+#   "The principle of least privilege MUST be followed" — appears 3 times
+#   "MUST NOT be embedded in URLs or query parameters" — appears 2 times
+#   "Read-only access to all resources."              — appears in 2 roles
+#
+# When selected_text matches multiple locations, §7.4 Step 1b says:
+#   - If line/column fields are present → pick the closest match.
+#   - If no line/column fields → flag as ambiguous.
+#
+# This exercises disambiguation logic in the re-anchoring procedure.
+
+mrsf_version: "1.0"
+document: examples/security-policy.md
+comments:
+  # -- Comment A: Repeated phrase WITH line hint → should disambiguate --
+  # "The principle of least privilege MUST be followed" appears on lines:
+  #   50: "The principle of least privilege MUST be followed."
+  #   57: "The principle of least privilege MUST be followed when defining custom roles."
+  #   71: "The principle of least privilege MUST be followed for audit log access."
+  # Line hint 50 → should anchor to line 50 (Access Control section).
+  - id: d15a3b10-0001-4000-8000-aaaaaaaaaaaa
+    author: reviewer-eve
+    timestamp: "2026-02-22T08:00:00+00:00"
+    text: >
+      Can we link to an internal policy document that defines what
+      "least privilege" means in our context?
+    type: suggestion
+    severity: low
+    resolved: false
+    line: 50
+    selected_text: "The principle of least privilege MUST be followed."
+    commit: "2222222222222222"
+
+  # -- Comment B: Same phrase, different location, WITH line hint --
+  # Line hint 57 → should anchor to line 57 (Custom Roles section).
+  - id: d15a3b10-0002-4000-8000-aaaaaaaaaaaa
+    author: reviewer-eve
+    timestamp: "2026-02-22T08:10:00+00:00"
+    text: >
+      We need a concrete example of a custom role definition here.
+      The principle statement alone isn't actionable for developers.
+    type: issue
+    severity: medium
+    resolved: false
+    line: 57
+    selected_text: "The principle of least privilege MUST be followed when defining custom roles."
+    commit: "2222222222222222"
+
+  # -- Comment C: Repeated phrase WITHOUT line hint → MUST be flagged ambiguous --
+  # "MUST NOT be embedded in URLs or query parameters." appears on:
+  #   Line 31: in API Key section
+  #   Line 37: in OAuth section
+  # No line field provided → tool cannot disambiguate → flag as ambiguous.
+  - id: d15a3b10-0003-4000-8000-aaaaaaaaaaaa
+    author: reviewer-frank
+    timestamp: "2026-02-23T16:00:00+00:00"
+    text: >
+      Should we add a note about what happens if a key/token IS
+      accidentally included in a URL? (e.g., automatic rotation)
+    type: question
+    resolved: false
+    selected_text: "MUST NOT be embedded in URLs or query parameters."
+    commit: "2222222222222222"
+
+  # -- Comment D: Partial overlap with line hint → disambiguation succeeds --
+  # "Read-only access to all resources." appears in two bullet points:
+  #   Line 53: Viewer role
+  #   Line 54: Auditor role
+  # Line hint 54 + column span on "Auditor" → anchors to Auditor line.
+  - id: d15a3b10-0004-4000-8000-aaaaaaaaaaaa
+    author: reviewer-frank
+    timestamp: "2026-02-23T16:15:00+00:00"
+    text: >
+      Should Auditors also be able to view user activity dashboards,
+      or is that a separate permission?
+    type: question
+    resolved: false
+    line: 54
+    start_column: 4
+    end_column: 14
+    selected_text: "**Auditor**"
+    commit: "2222222222222222"
+
+  # -- Comment E: Unique text, no disambiguation needed (control case) --
+  - id: d15a3b10-0005-4000-8000-aaaaaaaaaaaa
+    author: reviewer-eve
+    timestamp: "2026-02-22T08:30:00+00:00"
+    text: >
+      365 days may not be sufficient for regulated industries.
+      SOX requires 7 years for financial records.
+    type: issue
+    severity: high
+    resolved: false
+    line: 67
+    selected_text: "Audit logs are retained for 365 days."
+    commit: "2222222222222222"

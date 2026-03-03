@@ -94,12 +94,17 @@
           "selected_text": {
             "type": "string",
             "maxLength": 4096,
-            "description": "Exact text selected by the reviewer. SHOULD NOT exceed 4096 characters."
+            "description": "Exact text selected by the reviewer. SHOULD NOT be modified by re-anchoring tools. SHOULD NOT exceed 4096 characters."
+          },
+          "anchored_text": {
+            "type": "string",
+            "maxLength": 4096,
+            "description": "Text currently found at the resolved anchor position. Populated by re-anchoring tools when the document text differs from selected_text. SHOULD be omitted when identical to selected_text."
           },
           "selected_text_hash": {
             "type": "string",
             "pattern": "^[a-f0-9]{64}$",
-            "description": "Hex-encoded SHA-256 hash of selected_text for change detection."
+            "description": "Hex-encoded SHA-256 hash of selected_text. Immutable after creation; used for fast exact-match detection during re-anchoring, integrity verification, and staleness checks. SHOULD NOT be modified by re-anchoring tools unless selected_text is also replaced (opt-in behaviour), in which case it MUST be recomputed."
           }
         }
       }

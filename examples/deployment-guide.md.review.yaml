@@ -1,0 +1,85 @@
+# Re-anchoring scenario: Fuzzy / Contextual Match (§7.4 Step 3)
+#
+# These comments were written against a previous revision of deployment-guide.md.
+# The document was subsequently edited — sentences were reworded, a typo was
+# fixed, and a line was split in two. The selected_text values NO LONGER match
+# the document exactly, but they are close enough for fuzzy re-anchoring.
+#
+# A re-anchoring tool should:
+#
+#   1. Fail exact match (text was edited).
+#   2. Check line/column fallback — content at original line is different.
+#   3. Fall through to contextual/fuzzy matching (Step 3).
+#   4. Find a high-similarity match and anchor tentatively.
+#   5. Mark the comment for reviewer attention.
+#
+# This exercises §7.4 Step 3 (contextual re-anchoring) of the spec.
+
+mrsf_version: "1.0"
+document: examples/deployment-guide.md
+comments:
+  # -- Comment A: Minor rewording --
+  # Original text: "Build the container image from the project Dockerfile:"
+  # Current text:  "Build the container image using the project Dockerfile:"
+  # The word "from" was changed to "using" — close enough for fuzzy match.
+  - id: f1e2d3c4-0001-4000-8000-ffffffffffff
+    author: reviewer-charlie
+    timestamp: "2026-02-18T09:00:00+00:00"
+    text: >
+      Should we mention multi-stage builds here?
+      It would reduce the final image size significantly.
+    type: suggestion
+    severity: low
+    resolved: false
+    line: 17
+    selected_text: "Build the container image from the project Dockerfile:"
+    commit: "1111111111111111"
+
+  # -- Comment B: Sentence was split into two --
+  # Original (single line): "The deployment uses a rolling update strategy with maxSurge: 1 and maxUnavailable: 0, ensuring zero downtime during updates."
+  # Current (multi-line):   Split across lines 37-39 with rewording.
+  # Token overlap is high but not identical — fuzzy match should succeed.
+  - id: f1e2d3c4-0002-4000-8000-ffffffffffff
+    author: reviewer-charlie
+    timestamp: "2026-02-18T09:15:00+00:00"
+    text: >
+      Consider adding maxUnavailable: 1 as an option for
+      non-critical environments to speed up deployments.
+    type: suggestion
+    severity: medium
+    resolved: false
+    line: 35
+    selected_text: "The deployment uses a rolling update strategy with maxSurge: 1 and maxUnavailable: 0, ensuring zero downtime during updates."
+    commit: "1111111111111111"
+
+  # -- Comment C: Typo was fixed --
+  # Original: "Verify database migrations are backwards-compatible."
+  # Current:  "Verify database migrations are backward-compatible."
+  # "backwards" → "backward" — tiny edit, should fuzzy-match easily.
+  - id: f1e2d3c4-0003-4000-8000-ffffffffffff
+    author: reviewer-diana
+    timestamp: "2026-02-19T11:00:00+00:00"
+    text: >
+      We should add a link to the migration compatibility guide here.
+    type: suggestion
+    severity: low
+    resolved: false
+    line: 48
+    selected_text: "Verify database migrations are backwards-compatible."
+    commit: "1111111111111111"
+
+  # -- Comment D: Threshold value changed --
+  # Original: "Request latency p99 < 250ms"
+  # Current:  "Request latency p99 < 200ms"
+  # The number changed — still a very close fuzzy match.
+  - id: f1e2d3c4-0004-4000-8000-ffffffffffff
+    author: reviewer-diana
+    timestamp: "2026-02-19T11:10:00+00:00"
+    text: >
+      200ms seems aggressive for p99.
+      Can we use 500ms for the initial rollout?
+    type: question
+    resolved: false
+    line: 57
+    selected_text: "Request latency p99 < 250ms"
+    commit: "1111111111111111"

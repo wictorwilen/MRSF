@@ -69,6 +69,26 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
 
 A worked example (Markdown file + sidecar) is available in the [examples/](examples/) folder.
 
+## CLI
+
+The **`mrsf`** command-line tool validates, re-anchors, and manages MRSF sidecar files. Install it from npm:
+
+```bash
+npm install -g mrsf
+```
+
+Quick start:
+
+```bash
+mrsf init docs/architecture.md          # create a sidecar
+mrsf add docs/architecture.md -l 12     # add a comment
+mrsf validate                           # validate all sidecars
+mrsf reanchor                           # re-anchor after edits
+mrsf status                             # check anchor health
+```
+
+See the full CLI documentation in [`cli/README.md`](cli/README.md), or run `mrsf --help`.
+
 ## Status
 
 Draft — this specification is open for feedback and may change. Please file issues or pull requests with suggestions.

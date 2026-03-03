@@ -1,0 +1,147 @@
+# Re-anchoring scenario: Threaded Replies, Mixed Anchor States, and Extensions
+#
+# This example demonstrates several MRSF features working together:
+#
+#   1. Threaded replies (reply_to) — replies inherit anchor context from parent.
+#   2. Resolved vs open comments in the same file.
+#   3. Extension fields (x_ prefix) for tool-specific metadata.
+#   4. A mix of anchoring states: some exact, some stale, one document-level.
+#   5. Multiple comment types and severities.
+#
+# This is a realistic "lived-in" review file that reflects ongoing collaboration.
+
+mrsf_version: "1.0"
+document: examples/data-model.md
+comments:
+  # ── Thread 1: Event sourcing discussion (3 comments) ──────────────
+
+  # Parent: exact match, resolved
+  - id: t1-parent-0001
+    author: reviewer-ivan
+    timestamp: "2026-02-10T14:00:00+00:00"
+    text: >
+      Event sourcing adds significant complexity. Have we evaluated
+      whether a simple CRUD model would be sufficient for v1?
+    type: question
+    severity: high
+    resolved: true
+    line: 5
+    end_line: 7
+    selected_text: "The system uses an event-sourced architecture where all state changes are\ncaptured as immutable events in an append-only log. Read models are projected\nfrom the event stream for query performance."
+    commit: "4444444444444444"
+
+  # Reply 1: inherits anchor from parent (no targeting fields)
+  - id: t1-reply-0002
+    author: reviewer-julia
+    timestamp: "2026-02-10T15:30:00+00:00"
+    text: >
+      We evaluated CRUD in the design phase. Event sourcing was chosen
+      because we need a full audit trail and the ability to replay
+      state for debugging. See ADR-007 for the decision record.
+    resolved: true
+    reply_to: t1-parent-0001
+
+  # Reply 2: follow-up from original reviewer, also resolved
+  - id: t1-reply-0003
+    author: reviewer-ivan
+    timestamp: "2026-02-10T16:00:00+00:00"
+    text: >
+      Fair enough. Let's revisit if read model projections become
+      a maintenance burden. Closing this thread.
+    resolved: true
+    reply_to: t1-parent-0001
+
+  # ── Thread 2: Email uniqueness (2 comments, open) ─────────────────
+
+  # Parent: exact match, open
+  - id: t2-parent-0004
+    author: reviewer-ivan
+    timestamp: "2026-02-11T09:00:00+00:00"
+    text: >
+      "case-insensitive" for email — are we normalizing to lowercase
+      on write, or using a case-insensitive collation in the DB?
+      This matters for the unique index.
+    type: question
+    severity: medium
+    resolved: false
+    line: 14
+    start_column: 24
+    end_column: 56
+    selected_text: "Unique, case-insensitive"
+    commit: "4444444444444444"
+
+  # Reply: open, adds independent concern (§9 — resolving parent ≠ resolving reply)
+  - id: t2-reply-0005
+    author: reviewer-julia
+    timestamp: "2026-02-11T10:00:00+00:00"
+    text: >
+      Also, we need to decide how to handle email changes. If a
+      user updates their email, do we keep the old one as an alias
+      for 30 days (for password reset links)?
+    type: issue
+    severity: medium
+    resolved: false
+    reply_to: t2-parent-0004
+
+  # ── Standalone comments (no thread) ───────────────────────────────
+
+  # Exact match, uses x_ extensions for AI agent metadata
+  - id: standalone-0006
+    author: ai-reviewer-bot
+    timestamp: "2026-02-12T00:00:00+00:00"
+    text: >
+      The `deletedAt` field allows null, but the table schema should
+      use a nullable column — not a sentinel value like epoch zero.
+    type: accuracy
+    severity: medium
+    resolved: false
+    line: 18
+    selected_text: "Null unless soft-deleted"
+    commit: "4444444444444444"
+    x_ai_model: "gpt-4o-2024-11-20"
+    x_ai_confidence: 0.92
+    x_tool_name: "mrsf-ai-reviewer"
+    x_tool_version: "0.3.1"
+
+  # Document-level comment (no targeting fields at all)
+  - id: standalone-0007
+    author: reviewer-ivan
+    timestamp: "2026-02-10T14:30:00+00:00"
+    text: >
+      Overall the data model looks solid. My main concern is around
+      the event schema — we should define a registry of event types
+      rather than using free-form strings.
+    type: suggestion
+    severity: low
+    resolved: false
+
+  # Line-only comment on the indexing section
+  - id: standalone-0008
+    author: reviewer-julia
+    timestamp: "2026-02-13T11:00:00+00:00"
+    text: >
+      We should benchmark the composite index on Event(type, timestamp).
+      For high-cardinality event types, a BRIN index might be more
+      space-efficient than a B-tree.
+    type: suggestion
+    severity: medium
+    resolved: false
+    line: 52
+    selected_text: "`events_type_ts_idx` on `Event(type, timestamp)` for time-range queries"
+    commit: "4444444444444444"
+
+  # Comment with selected_text_hash for integrity verification
+  - id: standalone-0009
+    author: reviewer-ivan
+    timestamp: "2026-02-14T08:00:00+00:00"
+    text: >
+      "Max 200 chars" for title — is this enforced at the API layer,
+      the database layer, or both? We need consistency.
+    type: question
+    resolved: false
+    line: 24
+    start_column: 18
+    end_column: 53
+    selected_text: "Max 200 chars, must be non-empty"
+    selected_text_hash: "b4d038adb4be7b1442475e23aeb07e840db7dd25752499901ea1d136a99c6ed0"
+    commit: "4444444444444444"

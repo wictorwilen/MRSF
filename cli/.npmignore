@@ -1,0 +1,13 @@
+# Source & config
+src/
+tsconfig.json
+vitest.config.ts
+
+# Tests & coverage
+coverage/
+__tests__/
+
+# Dev artifacts
+*.tgz
+.gitignore
+node_modules/

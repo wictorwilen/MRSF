@@ -1,0 +1,100 @@
+# Re-anchoring scenario: Orphaned Comments + Line-Only Fallback (§7.4 Steps 2 & 4)
+#
+# This sidecar was written against an earlier version of contributing.md that
+# had additional sections ("Release Process", "Deprecation Policy") which have
+# since been removed. Some comments reference text that no longer exists.
+#
+# Additionally, some comments have NO selected_text — they rely purely on
+# line numbers (§7.4 begins at Step 2 when selected_text is absent).
+#
+# A re-anchoring tool should:
+#
+#   - Comment A: Line-only fallback — no selected_text, line is still valid
+#     → Anchors at the line, but flags as best-effort (Step 2a).
+#   - Comment B: deleted text — selected_text gone, line references removed
+#     section → Orphaned (Step 4).
+#   - Comment C: deleted text — line is beyond document length
+#     → Orphaned (Step 4).
+#   - Comment D: Line-only fallback — line exists but content is unrelated
+#     (document shrank, different content now at that line)
+#     → Step 2b, falls through to Step 3/4.
+#   - Comment E: selected_text present but section was rewritten entirely
+#     → No exact match, no fuzzy match → Orphaned (Step 4).
+
+mrsf_version: "1.0"
+document: examples/contributing.md
+comments:
+  # -- Comment A: Line-only, no selected_text, line is still valid --
+  # Line 5 contains "This project follows the Contributor Covenant Code of Conduct."
+  # No selected_text → begin at Step 2. Line exists → Step 2a (anchor, best-effort).
+  - id: 00000000-0001-4000-8000-bbbbbbbbbbbb
+    author: reviewer-grace
+    timestamp: "2026-02-15T12:00:00+00:00"
+    text: "Add a link to the actual Code of Conduct document."
+    type: suggestion
+    severity: low
+    resolved: false
+    line: 5
+    commit: "3333333333333333"
+
+  # -- Comment B: Text was in a "Release Process" section that was deleted --
+  # Original text: "Tag the release with a semver-compliant version number."
+  # This section no longer exists anywhere in the document.
+  - id: 00000000-0002-4000-8000-bbbbbbbbbbbb
+    author: reviewer-grace
+    timestamp: "2026-02-15T12:10:00+00:00"
+    text: >
+      We should also push the tag to the upstream remote, not just
+      the fork. Otherwise CI won't trigger the release pipeline.
+    type: issue
+    severity: high
+    resolved: false
+    line: 45
+    selected_text: "Tag the release with a semver-compliant version number."
+    commit: "3333333333333333"
+
+  # -- Comment C: Line number is beyond document length --
+  # The old document had ~70 lines; the current one has ~40.
+  # Line 62 doesn't exist → orphaned.
+  - id: 00000000-0003-4000-8000-bbbbbbbbbbbb
+    author: reviewer-hank
+    timestamp: "2026-02-16T09:00:00+00:00"
+    text: >
+      The deprecation notice period should be at least 2 major versions,
+      not just one.
+    type: issue
+    severity: medium
+    resolved: false
+    line: 62
+    selected_text: "Deprecated features will be removed in the next major version."
+    commit: "3333333333333333"
+
+  # -- Comment D: Line-only, line exists but content is now unrelated --
+  # This comment was on line 38 which, in the old version, was in the
+  # "Release Process" section. In the current document, line 38 is in
+  # "License". No selected_text → Step 2, content mismatch → Step 2b.
+  - id: 00000000-0004-4000-8000-bbbbbbbbbbbb
+    author: reviewer-hank
+    timestamp: "2026-02-16T09:15:00+00:00"
+    text: "Automate this step with a GitHub Action."
+    type: suggestion
+    severity: low
+    resolved: false
+    line: 38
+    commit: "3333333333333333"
+
+  # -- Comment E: selected_text present, but entire section was rewritten --
+  # Original: "Run `make release VERSION=x.y.z` to build and publish artifacts."
+  # Nothing remotely similar exists in the current document.
+  - id: 00000000-0005-4000-8000-bbbbbbbbbbbb
+    author: reviewer-grace
+    timestamp: "2026-02-15T12:20:00+00:00"
+    text: >
+      The Makefile target doesn't exist yet. We need to create it
+      before documenting it.
+    type: issue
+    severity: high
+    resolved: false
+    line: 47
+    selected_text: "Run `make release VERSION=x.y.z` to build and publish artifacts."
+    commit: "3333333333333333"

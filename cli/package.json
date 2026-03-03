@@ -1,0 +1,70 @@
+{
+  "name": "mrsf",
+  "version": "0.1.0",
+  "description": "CLI and library for the Markdown Review Sidecar Format (MRSF)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "bin": {
+    "mrsf": "./dist/bin.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "cp ../LICENSE . && npm run build && npm test",
+    "postpublish": "rm -f LICENSE"
+  },
+  "keywords": [
+    "markdown",
+    "review",
+    "sidecar",
+    "mrsf",
+    "anchoring",
+    "comments"
+  ],
+  "license": "MIT",
+  "author": "Wictor Wilén (https://github.com/wictorwilen)",
+  "homepage": "https://github.com/wictorwilen/MRSF/tree/main/cli#readme",
+  "bugs": {
+    "url": "https://github.com/wictorwilen/MRSF/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wictorwilen/MRSF.git",
+    "directory": "cli"
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "chalk": "^5.4.1",
+    "commander": "^13.1.0",
+    "fastest-levenshtein": "^1.0.16",
+    "js-yaml": "^4.1.0",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.13.10",
+    "@types/uuid": "^10.0.0",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.9"
+  }
+}
