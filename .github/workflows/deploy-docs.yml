@@ -1,0 +1,37 @@
+name: Deploy Docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "MRSF-v1.0.md"
+      - "cli/README.md"
+      - "mcp/README.md"
+      - "examples/**"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build docs
+        run: |
+          cd docs
+          npm ci
+          npx vitepress build
+
+      - name: Deploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: upload
+          app_location: docs/.vitepress/dist
+          skip_app_build: true
+          skip_api_build: true

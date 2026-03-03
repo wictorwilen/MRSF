@@ -1,7 +1,9 @@
 # Markdown Review Sidecar Format (MRSF) v1.0 (Draft)
 
+Also known as **Sidemark** — [sidemark.org](https://sidemark.org)
+
 ## Abstract
-The Markdown Review Sidecar Format (MRSF) defines a structured, portable, and machine-actionable way to store review comments externally to Markdown documents. It keeps Markdown sources free of annotations while enabling durable review history, precise anchoring, and collaboration among humans, automated tooling, and AI agents.
+The Markdown Review Sidecar Format (MRSF), also known as Sidemark, defines a structured, portable, and machine-actionable way to store review comments externally to Markdown documents. It keeps Markdown sources free of annotations while enabling durable review history, precise anchoring, and collaboration among humans, automated tooling, and AI agents.
 
 ## Status of This Memo
 This document is a draft and work in progress. It is published for community review and comment. Feedback and proposed changes are welcome via issues and pull requests.
