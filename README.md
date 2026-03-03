@@ -89,6 +89,33 @@ mrsf status                             # check anchor health
 
 See the full CLI documentation in [`cli/README.md`](cli/README.md), or run `mrsf --help`.
 
+## MCP Server
+
+The **`@mrsf/mcp`** package exposes MRSF operations as an [MCP](https://modelcontextprotocol.io/) server, so AI assistants (Claude Desktop, Cursor, VS Code Copilot, etc.) can manage review sidecars natively.
+
+```bash
+npm install -g @mrsf/mcp
+```
+
+Add to Claude Desktop config:
+
+```json
+{
+  "mcpServers": {
+    "mrsf": {
+      "command": "npx",
+      "args": ["-y", "@mrsf/mcp"]
+    }
+  }
+}
+```
+
+**8 tools** — `mrsf_discover`, `mrsf_validate`, `mrsf_reanchor`, `mrsf_add`, `mrsf_resolve`, `mrsf_list`, `mrsf_status`, `mrsf_rename`
+
+**3 resources** — `mrsf://sidecar/{path}`, `mrsf://comment/{path}/{id}`, `mrsf://anchors/{path}`
+
+See the full MCP server documentation in [`mcp/README.md`](mcp/README.md).
+
 ## Status
 
 Draft — this specification is open for feedback and may change. Please file issues or pull requests with suggestions.

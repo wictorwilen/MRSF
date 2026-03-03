@@ -1,0 +1,63 @@
+{
+  "name": "@mrsf/mcp",
+  "version": "0.1.0",
+  "description": "MCP server for the Markdown Review Sidecar Format (MRSF)",
+  "type": "module",
+  "main": "./dist/server.js",
+  "types": "./dist/server.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/server.js",
+      "types": "./dist/server.d.ts"
+    }
+  },
+  "bin": {
+    "mrsf-mcp": "./dist/bin.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "cp ../LICENSE . && npm run build",
+    "postpublish": "rm -f LICENSE"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "markdown",
+    "review",
+    "sidecar",
+    "mrsf",
+    "ai",
+    "llm"
+  ],
+  "license": "MIT",
+  "author": "Wictor Wilén (https://github.com/wictorwilen)",
+  "homepage": "https://github.com/wictorwilen/MRSF/tree/main/mcp#readme",
+  "bugs": {
+    "url": "https://github.com/wictorwilen/MRSF/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wictorwilen/MRSF.git",
+    "directory": "mcp"
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "@mrsf/cli": "^0.1.0",
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "typescript": "^5.8.2"
+  }
+}

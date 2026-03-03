@@ -1,0 +1,8 @@
+# Source & config
+src/
+tsconfig.json
+
+# Dev artifacts
+*.tgz
+.gitignore
+node_modules/
