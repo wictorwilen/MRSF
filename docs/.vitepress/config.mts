@@ -49,6 +49,30 @@ export default withMermaid(defineConfig({
   description:
     "Sidemark — Markdown Review Sidecar Format. Portable, version-controlled review comments for Markdown.",
 
+  vite: {
+    // The markdown-it plugin imports @mrsf/cli which uses node:fs etc.
+    // SSR can handle Node modules natively; for the client bundle we
+    // need to tell Rollup to treat them as external (the demo component
+    // loads the plugin via dynamic import and only uses the inline-data
+    // code path so the Node APIs are never called at runtime).
+    ssr: {
+      noExternal: ["@mrsf/markdown-it-mrsf", "@mrsf/cli"],
+    },
+    build: {
+      rollupOptions: {
+        external: [
+          "node:fs",
+          "node:fs/promises",
+          "node:path",
+          "node:url",
+          "node:crypto",
+          "node:child_process",
+          "node:util",
+        ],
+      },
+    },
+  },
+
   ignoreDeadLinks: [
     // Links valid on GitHub but not in the docs site
     /MRSF-v1\.0/,
@@ -100,6 +124,7 @@ export default withMermaid(defineConfig({
             { text: "Quick Start", link: "/guide/quick-start" },
             { text: "Examples", link: "/guide/examples" },
             { text: "Agent Skill", link: "/guide/agent-skill" },
+            { text: "markdown-it Plugin", link: "/guide/markdown-it" },
           ],
         },
       ],
