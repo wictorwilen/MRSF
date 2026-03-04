@@ -1,0 +1,69 @@
+{
+  "name": "@mrsf/markdown-it-mrsf",
+  "version": "0.1.0",
+  "description": "markdown-it plugin for rendering MRSF (Markdown Review Sidecar Format) review comments",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./style.css": "./dist/style.css",
+    "./controller": {
+      "import": "./dist/controller.js",
+      "types": "./dist/controller.d.ts"
+    }
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc && cp src/style.css dist/style.css",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "cp ../LICENSE . && npm run build && npm test",
+    "postpublish": "rm -f LICENSE"
+  },
+  "keywords": [
+    "markdown-it",
+    "markdown-it-plugin",
+    "markdown",
+    "review",
+    "sidecar",
+    "mrsf",
+    "sidemark",
+    "comments"
+  ],
+  "license": "MIT",
+  "author": "Wictor Wilén (https://github.com/wictorwilen)",
+  "homepage": "https://github.com/wictorwilen/MRSF/tree/main/markdown-it#readme",
+  "bugs": {
+    "url": "https://github.com/wictorwilen/MRSF/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wictorwilen/MRSF.git",
+    "directory": "markdown-it"
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "dist/style.css",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "@mrsf/cli": "file:../cli"
+  },
+  "devDependencies": {
+    "@types/markdown-it": "^14.1.2",
+    "@types/node": "^22.13.10",
+    "markdown-it": "^14.1.0",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.9"
+  }
+}
