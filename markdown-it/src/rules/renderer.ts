@@ -183,4 +183,17 @@ export function installRendererRules(
 
     return html;
   };
+
+  // Gutter container wrapper (left gutter mode)
+  md.renderer.rules["mrsf_gutter_open"] = (
+    tokens: any[],
+    idx: number,
+  ): string => {
+    const cls = tokens[idx].attrGet("class") || "mrsf-gutter-container";
+    return `<div class="${escapeHtml(cls)}">`;
+  };
+
+  md.renderer.rules["mrsf_gutter_close"] = (): string => {
+    return `</div>`;
+  };
 }

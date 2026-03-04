@@ -179,5 +179,14 @@ export function installCoreRule(
         }
       }
     }
+
+    // Wrap the entire output in a gutter container when using left gutter
+    if (gutterPosition === "left" && processed.size > 0) {
+      const openToken = new TokenCtor("mrsf_gutter_open", "div", 1);
+      openToken.attrSet("class", "mrsf-gutter-container");
+      tokens.unshift(openToken);
+      const closeToken = new TokenCtor("mrsf_gutter_close", "div", -1 as Nesting);
+      tokens.push(closeToken);
+    }
   });
 }

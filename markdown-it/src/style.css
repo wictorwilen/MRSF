@@ -33,6 +33,14 @@
   }
 }
 
+/* ── Gutter container (left gutter mode) ────────────────── */
+
+.mrsf-gutter-container {
+  --mrsf-gutter-width: 44px;
+  position: relative;
+  padding-left: var(--mrsf-gutter-width);
+}
+
 /* ── Line highlight ─────────────────────────────────────── */
 
 .mrsf-line-highlight {
@@ -42,11 +50,6 @@
   border-radius: 2px;
   position: relative;
   transition: background 0.15s ease;
-}
-
-/* Extra left padding when using the left gutter to make room for the badge */
-.mrsf-line-highlight:has(> .mrsf-gutter-left) {
-  margin-left: 40px;
 }
 
 .mrsf-line-highlight:hover {
@@ -114,20 +117,19 @@
   margin-left: 0;
 }
 
-/* Gutter position: left — badge in the left margin outside content */
+/* Gutter position: left — badge in the left margin gutter */
 .mrsf-tooltip-anchor.mrsf-gutter-left {
   position: absolute;
-  left: 0;
+  right: calc(100% + 4px);
   top: 2px;
-  transform: translateX(calc(-100% - 8px));
 }
 
 .mrsf-tooltip-anchor.mrsf-gutter-left .mrsf-badge {
   margin-left: 0;
 }
 
-/* Tooltip anchored to left edge for left-gutter badges */
-.mrsf-tooltip-anchor.mrsf-gutter-left .mrsf-tooltip {
+/* Tooltip for left-gutter badges: anchor to the left edge */
+.mrsf-tooltip-anchor.mrsf-gutter-left > .mrsf-tooltip {
   left: 0;
   right: auto;
 }
