@@ -27,3 +27,91 @@ Pull-request review comments (GitHub, GitLab, Azure DevOps, etc.) are great for 
 | **Version control** | Stored in a platform database, not in Git history. You can't `git log` or `git blame` a PR comment. | Committed to the repo. Full Git history, blame, and diff support. |
 
 Sidecar files and PR comments are **complementary** — you can use both. But when you need review feedback that is **portable, durable, and machine-actionable**, sidecar files are the better home.
+
+## What happens when I edit the document — do comments break?
+
+No. MRSF is designed to survive document edits. Every comment can carry a `selected_text` field that captures the exact text the reviewer highlighted. When you edit the document, the CLI and MCP server can **re-anchor** comments automatically using a multi-step procedure:
+
+1. **Exact text match** — search the updated document for the original `selected_text`. If found, update line/column numbers.
+2. **Fuzzy match** — if the text was lightly edited, fuzzy matching finds the closest candidate and scores it by similarity.
+3. **Git diff analysis** — when a `commit` hash is present, the tool can use `git diff` to trace how lines moved and map old positions to new ones.
+4. **Orphan flagging** — if none of the above succeed, the comment is flagged as orphaned and surfaced for human attention rather than silently deleted.
+
+Run re-anchoring with the CLI:
+
+```bash
+mrsf reanchor docs/architecture.md
+```
+
+The VS Code extension and MCP server can also trigger re-anchoring automatically or on demand.
+
+## Can I use MRSF with non-Markdown files?
+
+The specification is written for Markdown documents, and all tooling (CLI, VS Code extension, MCP server) is built around Markdown workflows. However, the sidecar format itself — YAML with line/column anchors and `selected_text` — is generic enough to annotate any plain-text file.
+
+If you want to experiment with other file types you can create a `.review.yaml` sidecar manually, but be aware that rendering integrations (the markdown-it plugin, VS Code decorations) assume Markdown content. Future spec revisions may formalize support for additional file types.
+
+## Should I commit sidecar files to Git?
+
+**Yes — that's the whole point.** Committing `.review.yaml` files gives you:
+
+- Full version history of every review conversation (`git log`, `git blame`)
+- Portable reviews that travel with forks, mirrors, and platform migrations
+- Offline access — `git clone` and you have every comment locally
+- Clean diffs — review chatter is in separate files from content changes
+
+If your team wants **ephemeral** reviews that don't persist in the repo, you can add a pattern to `.gitignore`:
+
+```gitignore
+# Ignore all sidecar review files
+*.review.yaml
+```
+
+You can also use the `sidecar_root` option in `.mrsf.yaml` to keep sidecars in a dedicated directory, which makes it easy to include or exclude them as a group:
+
+```yaml
+# .mrsf.yaml
+sidecar_root: .reviews
+```
+
+This places all sidecars under `.reviews/` instead of next to the documents.
+
+## How do AI agents interact with MRSF?
+
+MRSF is designed from the ground up for human + AI collaboration. There are three integration points:
+
+1. **MCP Server** — The `@mrsf/mcp` package exposes every operation (discover, read, add comment, re-anchor, validate, resolve) as Model Context Protocol tools. Any MCP-compatible AI agent can use them directly:
+
+   ```json
+   {
+     "mcpServers": {
+       "mrsf": { "command": "npx", "args": ["-y", "@mrsf/mcp"] }
+     }
+   }
+   ```
+
+2. **Agent Skill** — The repo includes a ready-to-use [Agent Skill](https://agentskills.io/) (`examples/mrsf-review/SKILL.md`) that teaches any skills-compatible agent how to conduct a full document review using the MCP server.
+
+3. **Structured Schema** — Every comment field (`severity`, `category`, `labels`, `resolved`, `reply_to`) is typed and schema-validated. Agents don't need to parse free-form text — they read and write structured YAML.
+
+Because the sidecar file is the single source of truth, agents and humans collaborate through the same artifact with no platform lock-in.
+
+## Can multiple reviewers comment on the same document?
+
+Yes. Each comment has an `author` field (e.g., `Jane Doe (janedoe)`) so it's always clear who said what. Multiple reviewers — human or AI — simply add comments to the same sidecar file.
+
+**Threaded replies** are supported via the `reply_to` field, which references the `id` of a parent comment. This keeps conversations organized without duplicating anchor information.
+
+Merge conflicts in YAML sidecars are straightforward to resolve because each comment is an independent list item. In practice, two reviewers adding comments to different parts of a document will produce clean merges. When conflicts do occur, they're simple append-vs-append cases — far easier to resolve than conflicts in the document itself.
+
+## What's the difference between `.review.yaml` and `.review.json`?
+
+The MRSF specification supports both YAML and JSON serialization. They are semantically equivalent — the same fields, the same schema.
+
+| | `.review.yaml` | `.review.json` |
+|---|---|---|
+| **Human editing** | Easy — clean syntax, supports comments (`#`) | Verbose — quotes, braces, no comments |
+| **Tooling** | Recommended default for the CLI and VS Code extension | Works with any JSON tooling or API |
+| **Diff readability** | Compact, readable diffs | Noisier diffs due to structural punctuation |
+
+YAML is the **recommended** canonical format. Use JSON when you're integrating with systems that only speak JSON, or when you prefer strict machine-generated output. The CLI and MCP server can read both formats.
