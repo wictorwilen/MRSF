@@ -93,12 +93,12 @@ function printValidateResults(
 
   for (const e of result.errors) {
     console.log(
-      chalk.red(`    error: ${e.message}${e.path ? ` (${e.path})` : ""}`),
+      chalk.red(`    ERROR: ${e.message}${e.path ? ` (${e.path})` : ""}`),
     );
   }
   for (const w of result.warnings) {
     const fn = strict ? chalk.red : chalk.yellow;
-    const tag = strict ? "error" : "warn";
+    const tag = strict ? "ERROR" : "WARN";
     console.log(
       fn(`    ${tag}: ${w.message}${w.path ? ` (${w.path})` : ""}`),
     );

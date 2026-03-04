@@ -121,3 +121,4 @@ Each step is **machine-readable**. The agent never modifies the Markdown directl
 - [Quick Start](./quick-start) — install and try it in 2 minutes
 - [Specification](/specification) — the full MRSF v1.0 spec
 - [Examples](./examples) — worked examples for every re-anchoring strategy
+- [Python CLI & SDK](./python) — same CLI and library in Python

@@ -51,11 +51,11 @@ export function registerValidate(program: Command): void {
         }
 
         for (const e of result.errors) {
-          console.log(chalk.red(`  error: ${e.message}${e.path ? ` (${e.path})` : ""}`));
+          console.log(chalk.red(`  ERROR: ${e.message}${e.path ? ` (${e.path})` : ""}`));
         }
         for (const w of result.warnings) {
           const fn = opts.strict ? chalk.red : chalk.yellow;
-          console.log(fn(`  ${opts.strict ? "error" : "warn"}: ${w.message}${w.path ? ` (${w.path})` : ""}`));
+          console.log(fn(`  ${opts.strict ? "ERROR" : "WARN"}: ${w.message}${w.path ? ` (${w.path})` : ""}`));
         }
         if (verbose) {
           console.log(chalk.dim(`  ${result.errors.length} error(s), ${result.warnings.length} warning(s)`));

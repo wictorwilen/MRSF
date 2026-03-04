@@ -11,8 +11,11 @@
 [![npm downloads (cli)](https://img.shields.io/npm/dm/@mrsf/cli?label=cli%20downloads)](https://www.npmjs.com/package/@mrsf/cli)
 [![npm downloads (mcp)](https://img.shields.io/npm/dm/@mrsf/mcp?label=mcp%20downloads)](https://www.npmjs.com/package/@mrsf/mcp)
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/wictor.mrsf-vscode?label=VS%20Code)](https://marketplace.visualstudio.com/items?itemName=wictor.mrsf-vscode)
-[![VS Code Installs](https://img.shields.io/visual-studio-marketplace/i/wictor.mrsf-vscode?label=VS%20Code%20installs)](https://marketplace.visualstudio.com/items?itemName=wictor.mrsf-vscode)[![@mrsf/markdown-it-mrsf on npm](https://img.shields.io/npm/v/@mrsf/markdown-it-mrsf?label=%40mrsf%2Fmarkdown-it-mrsf)](https://www.npmjs.com/package/@mrsf/markdown-it-mrsf)
-[![@mrsf/rehype-mrsf on npm](https://img.shields.io/npm/v/@mrsf/rehype-mrsf?label=%40mrsf%2Frehype-mrsf)](https://www.npmjs.com/package/@mrsf/rehype-mrsf)[![MCP Compatible](https://img.shields.io/badge/MCP-compatible-blueviolet?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyem0wIDE4Yy00LjQyIDAtOC0zLjU4LTgtOHMzLjU4LTggOC04IDggMy41OCA4IDgtMy41OCA4LTggOHoiLz48L3N2Zz4=)](https://modelcontextprotocol.io)
+[![VS Code Installs](https://img.shields.io/visual-studio-marketplace/i/wictor.mrsf-vscode?label=VS%20Code%20installs)](https://marketplace.visualstudio.com/items?itemName=wictor.mrsf-vscode)
+[![mrsf on PyPI](https://img.shields.io/pypi/v/mrsf?label=mrsf%20on%20PyPI)](https://pypi.org/project/mrsf/)
+[![@mrsf/markdown-it-mrsf on npm](https://img.shields.io/npm/v/@mrsf/markdown-it-mrsf?label=%40mrsf%2Fmarkdown-it-mrsf)](https://www.npmjs.com/package/@mrsf/markdown-it-mrsf)
+[![@mrsf/rehype-mrsf on npm](https://img.shields.io/npm/v/@mrsf/rehype-mrsf?label=%40mrsf%2Frehype-mrsf)](https://www.npmjs.com/package/@mrsf/rehype-mrsf)
+[![MCP Compatible](https://img.shields.io/badge/MCP-compatible-blueviolet?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyem0wIDE4Yy00LjQyIDAtOC0zLjU4LTgtOHMzLjU4LTggOC04IDggMy41OCA4IDgtMy41OCA4LTggOHoiLz48L3N2Zz4=)](https://modelcontextprotocol.io)
 
 **Markdown Review Sidecar Format (MRSF)**, also known as **Sidemark**, is a portable, version-controlled, and machine-actionable way to store review comments *outside* Markdown files.
 
@@ -41,6 +44,8 @@ MRSF solves this with **sidecar files** that hold review metadata separate from 
 - JSON Schema for validation  
 - CLI tools for validation, re-anchoring, status checks  
 - MCP server for integrations with LLMs and assistant clients
+- Python CLI & SDK (`pip install mrsf`) — 1:1 port of the Node.js CLI
+- Rendering plugins for markdown-it and rehype/unified ecosystems
 
 ## 📄 Specification
 
@@ -50,7 +55,11 @@ The full specification is available in [MRSF-v1.0.md](MRSF-v1.0.md).
 
 ### Install
 ```bash
+# Node.js
 npm install -g @mrsf/cli
+
+# Python
+pip install mrsf
 ```
 
 ### Typical workflow
@@ -140,6 +149,75 @@ See the full MCP server documentation in [`mcp/README.md`](mcp/README.md).
 
 Install from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=wictor.mrsf-vscode) or search for **"Sidemark"** in the VS Code Extensions view.
 
+## 🐍 Python CLI & SDK
+
+A full Python port of the CLI and library, installable via pip:
+
+```bash
+pip install mrsf
+```
+
+Same 9 commands, same library API, same 134 tests:
+
+```python
+import mrsf
+
+doc = mrsf.parse_sidecar("README.md.review.yaml")
+for comment in doc.comments:
+    print(f"{comment.author}: {comment.text}")
+
+result = mrsf.validate(doc)
+```
+
+See [`python/README.md`](python/README.md) for the full SDK reference.
+
+## 🎨 Rendering Plugins
+
+Render MRSF review comments directly in Markdown output as badges, highlights, and tooltips.
+
+### markdown-it Plugin
+
+For VitePress, markdown-it, and any markdown-it-based renderer:
+
+```bash
+npm install @mrsf/markdown-it-mrsf
+```
+
+```js
+import MarkdownIt from "markdown-it";
+import { mrsfPlugin } from "@mrsf/markdown-it-mrsf";
+
+const md = new MarkdownIt();
+md.use(mrsfPlugin, { sidecarPath: "doc.md.review.yaml" });
+```
+
+See [`plugins/markdown-it/README.md`](plugins/markdown-it/README.md).
+
+### rehype Plugin
+
+For Astro, Next.js MDX, Docusaurus, and the unified ecosystem:
+
+```bash
+npm install @mrsf/rehype-mrsf
+```
+
+```js
+import { unified } from "unified";
+import remarkParse from "remark-parse";
+import remarkRehype from "remark-rehype";
+import { rehypeMrsf } from "@mrsf/rehype-mrsf";
+import rehypeStringify from "rehype-stringify";
+
+const file = await unified()
+  .use(remarkParse)
+  .use(remarkRehype)
+  .use(rehypeMrsf, { sidecarPath: "doc.md.review.yaml" })
+  .use(rehypeStringify)
+  .process(markdown);
+```
+
+See [`plugins/rehype/README.md`](plugins/rehype/README.md).
+
 ## 🧪 Status
 
 **Draft**: this specification and tooling are open for feedback and improvement.
@@ -150,8 +228,18 @@ File issues or pull requests with suggestions.
 
 We welcome:
 - review of the spec
-- implementation feedback on the CLI/MCP
-- integration examples with editors and bots
+- implementation feedback on the CLI/MCP/Python SDK
+- integration examples with editors, renderers, and bots
+
+| Package | Path | Install |
+|---------|------|---------|
+| CLI & library | [`cli/`](cli/) | `npm install @mrsf/cli` |
+| MCP server | [`mcp/`](mcp/) | `npm install @mrsf/mcp` |
+| VS Code extension | [`vscode/`](vscode/) | [Marketplace](https://marketplace.visualstudio.com/items?itemName=wictor.mrsf-vscode) |
+| Python CLI & SDK | [`python/`](python/) | `pip install mrsf` |
+| markdown-it plugin | [`plugins/markdown-it/`](plugins/markdown-it/) | `npm install @mrsf/markdown-it-mrsf` |
+| rehype plugin | [`plugins/rehype/`](plugins/rehype/) | `npm install @mrsf/rehype-mrsf` |
+| Documentation | [`docs/`](docs/) | [sidemark.org](https://sidemark.org) |
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md)
 

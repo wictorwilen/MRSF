@@ -8,5 +8,8 @@ This document outlines the architecture decisions for the system.
 - Worker processes jobs asynchronously.
 - Database stores transactional data.
 
+
+
+
 ## Notes
 Further details will be expanded in subsequent sections.

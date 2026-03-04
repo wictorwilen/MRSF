@@ -53,6 +53,7 @@
   "files": [
     "dist/**/*.js",
     "dist/**/*.d.ts",
+    "mrsf.schema.json",
     "README.md",
     "LICENSE"
   ],

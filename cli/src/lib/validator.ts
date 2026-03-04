@@ -27,8 +27,10 @@ async function loadSchema(): Promise<object> {
   if (_schemaCache) return _schemaCache;
 
   // The schema lives at the repo root, two levels up from dist/lib/
+  // When installed as a package, it's at the package root (cli/)
   const candidates = [
-    path.resolve(__dirname, "../../../mrsf.schema.json"),       // from dist/lib/
+    path.resolve(__dirname, "../../mrsf.schema.json"),          // from dist/lib/ → cli/ (installed package)
+    path.resolve(__dirname, "../../../mrsf.schema.json"),       // from dist/lib/ → repo root (dev)
     path.resolve(__dirname, "../../../../mrsf.schema.json"),    // fallback
     path.resolve(process.cwd(), "mrsf.schema.json"),           // cwd fallback
   ];

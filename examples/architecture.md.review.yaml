@@ -7,16 +7,18 @@ comments:
     text: "This section needs clarification."
     resolved: false
     line: 3
-    commit: 02eb613a3f4b8c9d1e5a7b2c4d6f8e0a1b3c5d7e
+    commit: "3b206c6c105b686b241cdecc4d7d1467fb035a64"
   - id: 3eeccbd3
     author: Wictor (wictorwilen)
     timestamp: '2026-03-02T18:24:51.742976+00:00'
     text: "Is this phrasing correct?"
     type: question
     resolved: false
-    commit: 02eb613a3f4b8c9d1e5a7b2c4d6f8e0a1b3c5d7e
-    line: 6
-    end_line: 6
+    commit: "3b206c6c105b686b241cdecc4d7d1467fb035a64"
+    line: 8
+    end_line: 8
     start_column: 2
-    end_column: 21
+    end_column: 23
     selected_text: "Worker processes jobs"
+    x_reanchor_status: anchored
+    x_reanchor_score: 1

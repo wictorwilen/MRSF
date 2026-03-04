@@ -8,9 +8,17 @@ Get up and running with MRSF in under 2 minutes.
 
 ## Install the CLI
 
-```bash
+::: code-group
+
+```bash [npm]
 npm install -g @mrsf/cli
 ```
+
+```bash [pip]
+pip install mrsf
+```
+
+:::
 
 Or use without installing:
 
@@ -83,5 +91,6 @@ mrsf list --author "Jane Doe"
 
 - [Examples](./examples) — worked examples for every re-anchoring strategy
 - [Full CLI Reference](/cli/) — all commands and options
+- [Python CLI & SDK](./python) — use MRSF from Python
 - [MCP Server](/mcp/) — expose MRSF to AI assistants
 - [Specification](/specification) — the complete MRSF v1.0 spec

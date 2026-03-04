@@ -105,6 +105,7 @@ export default withMermaid(defineConfig({
         activeMatch: "/specification",
       },
       { text: "CLI", link: "/cli/", activeMatch: "/cli/" },
+      { text: "Python SDK", link: "/guide/python", activeMatch: "/guide/python" },
       { text: "VS Code", link: "/vscode/", activeMatch: "/vscode/" },
       { text: "MCP Server", link: "/mcp/", activeMatch: "/mcp/" },
       {
@@ -122,6 +123,7 @@ export default withMermaid(defineConfig({
             { text: "Quick Start", link: "/guide/quick-start" },
             { text: "Examples", link: "/guide/examples" },
             { text: "Agent Skill", link: "/guide/agent-skill" },
+            { text: "Python CLI & SDK", link: "/guide/python" },
             { text: "markdown-it Plugin", link: "/guide/markdown-it" },
             { text: "rehype Plugin", link: "/guide/rehype" },
             { text: "CI/CD Integration", link: "/guide/ci-integration" },

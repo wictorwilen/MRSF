@@ -56,7 +56,7 @@ function showBanner(): void {
   ${chalk.cyan.bold("╔╦╗")}${chalk.blue.bold("╦═╗")}${chalk.magenta.bold("╔═╗")}${chalk.yellow.bold("╔═╗")}
   ${chalk.cyan.bold("║║║")}${chalk.blue.bold("╠╦╝")}${chalk.magenta.bold("╚═╗")}${chalk.yellow.bold("╠╣")}
   ${chalk.cyan.bold("╩ ╩")}${chalk.blue.bold("╩╚═")}${chalk.magenta.bold("╚═╝")}${chalk.yellow.bold("╚")}
-  ${chalk.dim("Markdown Review Sidecar Format")}  ${chalk.dim.italic(`v${version}`)}
+  ${chalk.dim("Markdown Review Sidecar Format")}  ${chalk.dim.italic(`v${version} (Node.js)`)}
   ${chalk.dim.underline(repo)}
 `;
   process.stderr.write(banner + "\n");
@@ -70,8 +70,8 @@ const program = new Command();
 
 program
   .name("mrsf")
-  .description("Markdown Review Sidecar Format — CLI & toolkit")
-  .version(version)
+  .description("Markdown Review Sidecar Format — CLI & toolkit (Node.js)")
+  .version(`${version} (Node.js)`)
   .option("--cwd <dir>", "Working directory")
   .option("--config <path>", "Path to .mrsf.yaml")
   .option("--no-color", "Disable colour output")
