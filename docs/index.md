@@ -21,6 +21,9 @@ hero:
       link: https://github.com/wictorwilen/MRSF
 
 features:
+  - icon: 💡
+    title: '"Pull Requests review changes. Sidemark reviews documents over time."'
+    details: "PR Reviews Aren’t Built for Living Documents"
   - icon: 📝
     title: Keeps Markdown Clean
     details: Review comments live in sidecar files, not inline annotations. Your documents stay readable and diff-friendly.
@@ -30,6 +33,8 @@ features:
   - icon: 🤖
     title: AI & Agent Ready
     details: Structured YAML format with MCP server support. AI assistants can read, create, and manage reviews through standard protocols.
+    link: https://www.npmjs.com/package/@mrsf/mcp
+    linkText: "@mrsf/mcp on npm"
   - icon: ✅
     title: Validation & Schema
     details: JSON Schema and CLI validation ensure sidecars are well-formed. Integrates into CI/CD pipelines.
@@ -39,7 +44,21 @@ features:
   - icon: 📦
     title: Simple Tooling
     details: "npm install -g @mrsf/cli — validate, add, resolve, reanchor, and more from the terminal."
+    link: https://www.npmjs.com/package/@mrsf/cli
+    linkText: "@mrsf/cli on npm"
   - icon: 💻
     title: VS Code Extension
     details: "Sidemark for VS Code — gutter icons, inline previews, hover cards, sidebar panel, and automatic reanchoring built right into your editor."
+    link: https://marketplace.visualstudio.com/items?itemName=wictor.mrsf-vscode
+    linkText: "VS Code Marketplace"
+  - icon: 🎨
+    title: markdown-it Plugin
+    details: "Render review comments as badges, line highlights, and tooltips with @mrsf/markdown-it-mrsf — works with VitePress and any markdown-it project."
+    link: https://www.npmjs.com/package/@mrsf/markdown-it-mrsf
+    linkText: "@mrsf/markdown-it-mrsf on npm"
+  - icon: 🔌
+    title: rehype Plugin
+    details: "Use @mrsf/rehype-mrsf to render comments in the unified ecosystem — Astro, Next.js MDX, Docusaurus, and more."
+    link: https://www.npmjs.com/package/@mrsf/rehype-mrsf
+    linkText: "@mrsf/rehype-mrsf on npm"
 ---
