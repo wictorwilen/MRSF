@@ -1,3 +1,7 @@
+---
+description: "Learn what Sidemark / MRSF is, the problems it solves, and how sidecar files enable durable, portable review comments for Markdown documents."
+---
+
 # What is Sidemark / MRSF?
 
 **Markdown Review Sidecar Format (MRSF)**, also known as **Sidemark**, is a portable, version-controlled, and machine-actionable way to store review comments *outside* Markdown files.

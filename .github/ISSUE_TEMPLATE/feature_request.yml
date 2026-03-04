@@ -1,0 +1,40 @@
+name: Feature Request
+description: Suggest a new feature or enhancement
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      description: Which package does this relate to?
+      options:
+        - "@mrsf/cli"
+        - "@mrsf/mcp"
+        - "mrsf-vscode (VS Code extension)"
+        - "@mrsf/markdown-it-mrsf"
+        - "@mrsf/rehype-mrsf"
+        - "Specification (MRSF-v1.0.md)"
+        - "Documentation site"
+        - "Other / Cross-cutting"
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or motivation
+      description: "What problem does this solve, or what workflow does it improve?"
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: "Describe the feature or change you'd like to see."
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: "Any alternative solutions or workarounds you've considered."

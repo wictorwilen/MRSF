@@ -1,3 +1,7 @@
+---
+description: "Install the Sidemark (MRSF) CLI and create your first sidecar review file in under 2 minutes."
+---
+
 # Quick Start
 
 Get up and running with MRSF in under 2 minutes.

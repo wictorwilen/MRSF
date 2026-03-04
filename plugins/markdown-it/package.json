@@ -44,7 +44,11 @@
     "sidecar",
     "mrsf",
     "sidemark",
-    "comments"
+    "comments",
+    "annotation",
+    "highlight",
+    "tooltip",
+    "rendering"
   ],
   "license": "MIT",
   "author": "Wictor Wilén (https://github.com/wictorwilen)",

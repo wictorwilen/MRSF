@@ -1,3 +1,7 @@
+---
+description: "Use the Sidemark (MRSF) agent skill to teach AI assistants (Claude, Copilot, Cursor) how to review Markdown documents via the MCP server."
+---
+
 # Agent Skill: Document Review
 
 MRSF includes a ready-to-use [Agent Skill](https://agentskills.io/) that teaches AI agents to review Markdown documents using the MCP server.

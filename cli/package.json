@@ -31,8 +31,13 @@
     "review",
     "sidecar",
     "mrsf",
+    "sidemark",
     "anchoring",
-    "comments"
+    "comments",
+    "cli",
+    "yaml",
+    "validation",
+    "reanchor"
   ],
   "license": "MIT",
   "author": "Wictor Wilén (https://github.com/wictorwilen)",

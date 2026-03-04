@@ -1,3 +1,7 @@
+---
+description: "Sidemark for VS Code — gutter icons, inline previews, hover cards, sidebar panel, and automatic re-anchoring for MRSF review comments."
+---
+
 # Sidemark for VS Code
 
 **Sidemark** brings MRSF review comments directly into Visual Studio Code — add, manage, navigate, and reanchor comments without ever leaving your editor or touching your Markdown source files.

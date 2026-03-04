@@ -52,6 +52,10 @@ export default withMermaid(defineConfig({
   description:
     "Sidemark — Markdown Review Sidecar Format. Portable, version-controlled review comments for Markdown.",
 
+  sitemap: {
+    hostname: "https://sidemark.org",
+  },
+
   vite: {
     ssr: {
       noExternal: ["@mrsf/markdown-it-mrsf"],
@@ -78,6 +82,15 @@ export default withMermaid(defineConfig({
     ["link", { rel: "icon", href: "/favicon.ico" }],
     ["link", { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" }],
     ["link", { rel: "manifest", href: "/site.webmanifest" }],
+    ["meta", { property: "og:title", content: "Sidemark — Markdown Review Sidecar Format" }],
+    ["meta", { property: "og:description", content: "Portable, version-controlled review comments for Markdown" }],
+    ["meta", { property: "og:image", content: "https://sidemark.org/og-image.png" }],
+    ["meta", { property: "og:url", content: "https://sidemark.org" }],
+    ["meta", { property: "og:type", content: "website" }],
+    ["meta", { name: "twitter:card", content: "summary_large_image" }],
+    ["meta", { name: "twitter:title", content: "Sidemark — MRSF" }],
+    ["meta", { name: "twitter:description", content: "Portable, version-controlled review comments for Markdown" }],
+    ["meta", { name: "twitter:image", content: "https://sidemark.org/og-image.png" }],
   ],
 
   themeConfig: {
@@ -111,6 +124,7 @@ export default withMermaid(defineConfig({
             { text: "Agent Skill", link: "/guide/agent-skill" },
             { text: "markdown-it Plugin", link: "/guide/markdown-it" },
             { text: "rehype Plugin", link: "/guide/rehype" },
+            { text: "CI/CD Integration", link: "/guide/ci-integration" },
             { text: "FAQ", link: "/guide/faq" },
           ],
         },
@@ -118,7 +132,10 @@ export default withMermaid(defineConfig({
       "/cli/": [
         {
           text: "CLI Reference",
-          items: [{ text: "Overview", link: "/cli/" }],
+          items: [
+            { text: "Overview", link: "/cli/" },
+            { text: "Library API", link: "/cli/api" },
+          ],
         },
       ],
       "/mcp/": [

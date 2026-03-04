@@ -1,3 +1,7 @@
+---
+description: "Render Sidemark/MRSF review comments with the @mrsf/rehype-mrsf plugin for Astro, Next.js MDX, Docusaurus, and the unified ecosystem."
+---
+
 # rehype Plugin
 
 The `@mrsf/rehype-mrsf` package is a [rehype](https://github.com/rehypejs/rehype) plugin that renders Sidemark review comments directly into your HTML output. It works with the entire [unified](https://unifiedjs.com/) ecosystem — **Astro**, **Next.js MDX**, **Docusaurus**, and any other tool that uses remark/rehype.

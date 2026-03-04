@@ -1,3 +1,7 @@
+---
+description: "Frequently asked questions about MRSF / Sidemark — why sidecar files, re-anchoring, Git workflows, AI integration, and more."
+---
+
 # Frequently Asked Questions
 
 ## Why sidecar files instead of inline comments?

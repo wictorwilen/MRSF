@@ -1,0 +1,97 @@
+# Sidemark (MRSF) — Markdown Review Sidecar Format
+
+> https://sidemark.org
+> https://github.com/wictorwilen/MRSF
+
+## What is Sidemark?
+
+Sidemark (formally MRSF — Markdown Review Sidecar Format) is a portable, version-controlled, and machine-actionable way to store review comments outside Markdown files. Review metadata lives in `.review.yaml` sidecar files alongside the documents they annotate.
+
+## Key Concepts
+
+- **Sidecar files**: YAML (or JSON) files named `<document>.review.yaml` co-located with Markdown documents
+- **Anchoring**: Comments anchor to lines, column spans, and `selected_text` for durability
+- **Re-anchoring**: When documents are edited, comments can be automatically repositioned using exact match, fuzzy matching, and git diff analysis
+- **Validation**: JSON Schema ensures sidecars are well-formed; the CLI validates anchors and schema compliance
+
+## Packages
+
+| Package | npm | Purpose |
+|---------|-----|---------|
+| `@mrsf/cli` | https://www.npmjs.com/package/@mrsf/cli | CLI binary + programmatic library |
+| `@mrsf/mcp` | https://www.npmjs.com/package/@mrsf/mcp | Model Context Protocol server for AI agents |
+| `@mrsf/markdown-it-mrsf` | https://www.npmjs.com/package/@mrsf/markdown-it-mrsf | markdown-it rendering plugin |
+| `@mrsf/rehype-mrsf` | https://www.npmjs.com/package/@mrsf/rehype-mrsf | rehype rendering plugin (unified ecosystem) |
+| `mrsf-vscode` | https://marketplace.visualstudio.com/items?itemName=wictor.mrsf-vscode | VS Code extension |
+
+## CLI Commands
+
+- `mrsf init <file>` — Create a sidecar for a Markdown file
+- `mrsf add <file> -l <line> "text"` — Add a review comment
+- `mrsf validate [files...]` — Validate sidecars against the schema
+- `mrsf reanchor [files...]` — Re-anchor comments after document edits
+- `mrsf status [files...]` — Show comment health (stale, orphaned, resolved)
+- `mrsf list [files...]` — List comments
+- `mrsf resolve <file> <id>` — Resolve a comment
+- `mrsf rename <old> <new>` — Rename a document and update its sidecar
+- `mrsf watch [dir]` — Watch for changes and re-anchor automatically
+
+## Library API
+
+The `@mrsf/cli` package exports a full programmatic API:
+
+- Discovery: `findWorkspaceRoot`, `loadConfig`, `discoverSidecar`, `discoverAllSidecars`
+- Parsing: `parseSidecar`, `parseSidecarContent`, `readDocumentLines`
+- Writing: `toYaml`, `toJson`, `writeSidecar`, `computeHash`
+- Validation: `validate`, `validateFile`
+- Re-anchoring: `reanchorComment`, `reanchorDocument`, `reanchorFile`
+- Comments: `addComment`, `resolveComment`, `removeComment`, `filterComments`, `getThreads`, `summarize`
+- Git: `isGitAvailable`, `getCurrentCommit`, `isStale`, `getDiff`, `getLineShift`, `detectRenames`
+- Fuzzy: `exactMatch`, `normalizedMatch`, `fuzzySearch`
+
+## MCP Server Tools
+
+The MCP server exposes these tools for AI agents:
+
+- `mrsf_discover` — Find sidecar files
+- `mrsf_read` — Read comments from a sidecar
+- `mrsf_add_comment` — Add a review comment
+- `mrsf_validate` — Validate a sidecar
+- `mrsf_reanchor` — Re-anchor comments
+- `mrsf_resolve` — Resolve a comment
+- `mrsf_status` — Check comment health
+
+## Sidecar File Format
+
+```yaml
+mrsf_version: "1.0"
+document: docs/architecture.md
+comments:
+  - id: abc123
+    author: Jane Doe (janedoe)
+    timestamp: "2026-03-02T18:22:59Z"
+    text: "Can you clarify this section?"
+    resolved: false
+    line: 9
+    selected_text: "The system uses a microservices architecture"
+```
+
+## Comment Fields
+
+Required: `id`, `text`
+Common: `author`, `timestamp`, `resolved`, `line`, `end_line`, `start_column`, `end_column`, `selected_text`, `selected_text_hash`, `anchored_text`, `commit`, `type`, `severity`, `category`, `labels`, `reply_to`, `suggested_edit`
+
+## Documentation
+
+- Specification: https://sidemark.org/specification
+- Guide: https://sidemark.org/guide/
+- CLI Reference: https://sidemark.org/cli/
+- Library API: https://sidemark.org/cli/api
+- MCP Server: https://sidemark.org/mcp/
+- VS Code Extension: https://sidemark.org/vscode/
+- FAQ: https://sidemark.org/guide/faq
+- CI/CD Integration: https://sidemark.org/guide/ci-integration
+
+## License
+
+MIT — Copyright © 2026 Wictor Wilén

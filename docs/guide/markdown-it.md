@@ -1,3 +1,7 @@
+---
+description: "Render Sidemark/MRSF review comments in HTML using the @mrsf/markdown-it-mrsf plugin — badges, line highlights, inline highlights, and tooltips."
+---
+
 # markdown-it Plugin
 
 The `@mrsf/markdown-it-mrsf` package is a standalone [markdown-it](https://github.com/markdown-it/markdown-it) plugin that renders Sidemark review comments directly into HTML output — badges, line highlights, inline text highlights, and tooltips.

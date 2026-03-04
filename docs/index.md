@@ -1,5 +1,6 @@
 ---
 layout: home
+description: "Sidemark (MRSF) — portable, version-controlled, machine-actionable review comments stored outside your Markdown files. CLI, MCP server, VS Code extension, and rendering plugins."
 
 hero:
   name: Sidemark
