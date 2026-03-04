@@ -67,7 +67,7 @@ const sampleSidecar = {
 async function renderDemo() {
   const [{ default: MarkdownIt }, { mrsfPlugin }] = await Promise.all([
     import("markdown-it"),
-    import("@mrsf/markdown-it-mrsf/browser"),
+    import("@mrsf/markdown-it-mrsf"),
   ]);
 
   const md = new MarkdownIt({ html: true });
@@ -118,6 +118,7 @@ watch(showResolved, renderDemo);
   border-radius: 8px;
   padding: 24px;
   background: var(--vp-c-bg);
+  overflow: visible;
 }
 
 /* Override some custom properties to match VitePress theme */

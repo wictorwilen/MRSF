@@ -10,6 +10,17 @@ Renders badges, line highlights, inline text highlights, and tooltips — no cli
 npm install @mrsf/markdown-it-mrsf
 ```
 
+## Browser & Bundler Support
+
+The plugin works seamlessly in both Node.js and browser environments. When bundled with tools like **Vite**, **webpack**, or **esbuild**, the `"browser"` export condition in `package.json` automatically resolves to a browser-safe entry point — no special imports required.
+
+```ts
+// Works everywhere — Node.js, Vite, webpack, etc.
+import { mrsfPlugin } from "@mrsf/markdown-it-mrsf";
+```
+
+In browser environments, only the `comments` and `loader` options are available (no file-system access). The `sidecarPath` and `documentPath` options require Node.js.
+
 ## Usage
 
 ### Inline data (recommended for testing and custom pipelines)

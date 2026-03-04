@@ -89,7 +89,8 @@
 
 .mrsf-tooltip-anchor {
   position: relative;
-  display: inline;
+  display: inline-block;
+  vertical-align: baseline;
 }
 
 .mrsf-tooltip {
