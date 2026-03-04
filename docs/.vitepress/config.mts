@@ -19,6 +19,9 @@ const HTML_TAGS = new Set([
   "time", "title", "tr", "track", "u", "ul", "var", "video", "wbr",
 ]);
 
+// Known Vue component names used in docs (not escaped by escapeNonHtmlTags)
+const VUE_COMPONENTS = new Set(["MrsfDemo"]);
+
 /**
  * markdown-it plugin: escape `<word>` patterns that are NOT real HTML tags.
  * This prevents Vue from choking on things like `<document>`, `<name>`, etc.
@@ -37,7 +40,7 @@ function escapeNonHtmlTags(md: any) {
   ) => {
     const content: string = tokens[idx].content;
     const m = content.match(/^<\/?([a-z][a-z0-9_-]*)\s*\/?>$/i);
-    if (m && !HTML_TAGS.has(m[1].toLowerCase())) {
+    if (m && !HTML_TAGS.has(m[1].toLowerCase()) && !VUE_COMPONENTS.has(m[1])) {
       return content.replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
     return defaultInline(tokens, idx, options, env, self);
