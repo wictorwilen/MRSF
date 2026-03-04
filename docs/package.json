@@ -3,9 +3,9 @@
   "name": "mrsf-docs",
   "description": "MRSF documentation site",
   "scripts": {
-    "docs:dev": "vitepress dev docs",
-    "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs"
+    "docs:dev": "vitepress dev",
+    "docs:build": "vitepress build",
+    "docs:preview": "vitepress preview"
   },
   "devDependencies": {
     "@mrsf/markdown-it-mrsf": "file:../markdown-it",
