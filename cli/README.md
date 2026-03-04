@@ -1,5 +1,10 @@
 # MRSF CLI
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![MRSF v1.0 Draft](https://img.shields.io/badge/MRSF-v1.0%20Draft-blue)](MRSF-v1.0.md)
+[![@mrsf/cli on npm](https://img.shields.io/npm/v/@mrsf/cli?label=%40mrsf%2Fcli)](https://www.npmjs.com/package/@mrsf/cli)
+[![npm downloads (cli)](https://img.shields.io/npm/dm/@mrsf/cli?label=cli%20downloads)](https://www.npmjs.com/package/@mrsf/cli)
+
 Command-line tool and Node.js library for the **Markdown Review Sidecar Format** ([MRSF v1.0](../MRSF-v1.0.md)).
 
 Validate sidecars, add and resolve review comments, re-anchor comments after document edits, and integrate MRSF into CI/CD pipelines — all from the terminal.

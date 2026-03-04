@@ -4,8 +4,9 @@ Add, manage, and navigate **Markdown Review Sidecar Format** ([MRSF](https://sid
 
 ![VS Code](https://img.shields.io/badge/VS%20Code-1.85%2B-blue?logo=visual-studio-code)
 ![License](https://img.shields.io/badge/license-MIT-green)
-
-[![Sidemark for VS Code](https://raw.githubusercontent.com/wictorwilen/MRSF/main/media/sidemark-vscode-screenshot.png)](https://github.com/wictorwilen/MRSF)
+[![MRSF v1.0 Draft](https://img.shields.io/badge/MRSF-v1.0%20Draft-blue)](MRSF-v1.0.md)
+[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/wictor.mrsf-vscode?label=VS%20Code)](https://marketplace.visualstudio.com/items?itemName=wictor.mrsf-vscode)
+[![VS Code Installs](https://img.shields.io/visual-studio-marketplace/i/wictor.mrsf-vscode?label=VS%20Code%20installs)](https://marketplace.visualstudio.com/items?itemName=wictor.mrsf-vscode)
 
 ## Features
 
