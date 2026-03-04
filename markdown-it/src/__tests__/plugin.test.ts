@@ -334,6 +334,19 @@ describe("html escaping", () => {
     expect(html).not.toContain("<b>Evil</b>");
     expect(html).toContain("&lt;b&gt;Evil&lt;/b&gt;");
   });
+
+  it("should use <span> (not <div>) for tooltip elements inside paragraphs", () => {
+    const html = render("Some text\n", [
+      { id: "c1", text: "Comment", line: 1 },
+    ]);
+    // All tooltip inner elements must be <span> for valid HTML inside <p>
+    expect(html).toContain('<span class="mrsf-tooltip"');
+    expect(html).toContain('<span class="mrsf-thread"');
+    expect(html).toContain('<span class="mrsf-comment"');
+    expect(html).not.toContain('<div class="mrsf-tooltip"');
+    expect(html).not.toContain('<div class="mrsf-thread"');
+    expect(html).not.toContain('<div class="mrsf-comment"');
+  });
 });
 
 // ── Resolved comment details (A) ──────────────────────────
@@ -367,6 +380,15 @@ describe("gutter position", () => {
       { id: "c1", text: "Comment", line: 1 },
     ]);
     expect(html).toContain("mrsf-gutter-right");
+  });
+
+  it("should support tight gutter position", () => {
+    const html = render("# Title\n", [
+      { id: "c1", text: "Comment", line: 1 },
+    ], { gutterPosition: "tight" });
+    expect(html).toContain("mrsf-gutter-tight");
+    expect(html).not.toContain("mrsf-gutter-right");
+    expect(html).not.toContain("mrsf-gutter-left");
   });
 
   it("should support left gutter position", () => {

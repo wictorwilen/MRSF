@@ -14,7 +14,7 @@ import type { LineMap, CommentThread } from "../types.js";
 /** Options forwarded from the plugin to the core rule. */
 export interface CoreOptions {
   interactive: boolean;
-  gutterPosition: "left" | "right";
+  gutterPosition: "left" | "tight" | "right";
   gutterForInline: boolean;
   inlineHighlights: boolean;
 }

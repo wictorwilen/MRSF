@@ -107,7 +107,8 @@ watch([showResolved, gutterPosition, gutterForInline, inlineHighlights], renderD
         Gutter position:
         <select v-model="gutterPosition">
           <option value="right">Right</option>
-          <option value="left">Left</option>
+          <option value="tight">Tight (before text)</option>
+          <option value="left">Left (margin gutter)</option>
         </select>
       </label>
     </div>

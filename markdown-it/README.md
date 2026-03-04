@@ -151,7 +151,7 @@ Each event's `detail` contains `{ commentId: string, line: number | null, action
 | `sidecarPath` | `string` | — | Explicit path to sidecar file |
 | `showResolved` | `boolean` | `true` | Whether to show resolved comments |
 | `interactive` | `boolean` | `false` | Add action buttons for host JS integration |
-| `gutterPosition` | `'left' \| 'right'` | `'right'` | Position of the gutter badge relative to line content |
+| `gutterPosition` | `'left' \| 'tight' \| 'right'` | `'right'` | Badge position: left margin gutter, tight (before text), or floated right |
 | `gutterForInline` | `boolean` | `true` | Show gutter badge for comments that also have inline highlights |
 | `inlineHighlights` | `boolean` | `true` | Render inline text highlights for `selected_text` |
 | `theme` | `'light' \| 'dark' \| 'auto'` | `'auto'` | Color scheme hint |

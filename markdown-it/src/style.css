@@ -44,6 +44,11 @@
   transition: background 0.15s ease;
 }
 
+/* Extra left padding when using the left gutter to make room for the badge */
+.mrsf-line-highlight:has(> .mrsf-gutter-left) {
+  margin-left: 40px;
+}
+
 .mrsf-line-highlight:hover {
   background: rgba(55, 148, 255, 0.12);
 }
@@ -103,10 +108,28 @@
   margin-left: 0;
 }
 
-/* Gutter position: left — badge stays in normal flow */
-.mrsf-tooltip-anchor.mrsf-gutter-left .mrsf-badge {
+/* Gutter position: tight — badge inline immediately before text */
+.mrsf-tooltip-anchor.mrsf-gutter-tight .mrsf-badge {
   margin-right: 6px;
   margin-left: 0;
+}
+
+/* Gutter position: left — badge in the left margin outside content */
+.mrsf-tooltip-anchor.mrsf-gutter-left {
+  position: absolute;
+  left: 0;
+  top: 2px;
+  transform: translateX(calc(-100% - 8px));
+}
+
+.mrsf-tooltip-anchor.mrsf-gutter-left .mrsf-badge {
+  margin-left: 0;
+}
+
+/* Tooltip anchored to left edge for left-gutter badges */
+.mrsf-tooltip-anchor.mrsf-gutter-left .mrsf-tooltip {
+  left: 0;
+  right: auto;
 }
 
 /* Inline highlight tooltip anchor */
@@ -139,7 +162,7 @@
 }
 
 /* Right-aligned gutter: anchor tooltip to the right edge */
-.mrsf-tooltip-anchor.mrsf-gutter-right .mrsf-tooltip {
+.mrsf-tooltip-anchor.mrsf-gutter-right > .mrsf-tooltip {
   left: auto;
   right: 0;
 }
@@ -162,8 +185,11 @@
 }
 
 /* ── Thread / Comment ───────────────────────────────────── */
+/* All inner elements use <span> for valid HTML inside <p>/<h> elements,
+   with display: block to maintain block layout. */
 
 .mrsf-thread {
+  display: block;
   padding: 4px 0;
 }
 
@@ -174,6 +200,7 @@
 }
 
 .mrsf-comment {
+  display: block;
   padding: 4px 0;
 }
 
@@ -185,6 +212,7 @@
 /* ── Replies ────────────────────────────────────────────── */
 
 .mrsf-replies {
+  display: block;
   margin-left: 16px;
   padding-left: 8px;
   border-left: 2px solid var(--mrsf-tooltip-border);
@@ -254,6 +282,7 @@
 /* ── Comment body ───────────────────────────────────────── */
 
 .mrsf-comment-body {
+  display: block;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -261,6 +290,7 @@
 /* ── Selected text quote in tooltip ─────────────────────── */
 
 .mrsf-selected-text {
+  display: block;
   font-family: monospace;
   font-size: 0.85em;
   background: rgba(127, 127, 127, 0.1);

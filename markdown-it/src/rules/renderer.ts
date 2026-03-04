@@ -37,10 +37,10 @@ function renderCommentHtml(
 ): string {
   const resolvedClass = comment.resolved ? " mrsf-resolved" : "";
   const replyClass = isReply ? " mrsf-reply" : "";
-  let html = `<div class="mrsf-comment${resolvedClass}${replyClass}" data-mrsf-comment-id="${escapeHtml(comment.id)}">`;
+  let html = `<span class="mrsf-comment${resolvedClass}${replyClass}" data-mrsf-comment-id="${escapeHtml(comment.id)}">`;
 
   // Header
-  html += `<div class="mrsf-comment-header">`;
+  html += `<span class="mrsf-comment-header">`;
   html += `<span class="mrsf-author">${escapeHtml(comment.author)}</span>`;
   if (comment.timestamp) {
     html += `<span class="mrsf-date">${escapeHtml(formatTime(comment.timestamp))}</span>`;
@@ -54,20 +54,20 @@ function renderCommentHtml(
   if (comment.resolved) {
     html += `<span class="mrsf-resolved-badge">✓ resolved</span>`;
   }
-  html += `</div>`;
+  html += `</span>`;
 
   // Selected text quote
   if (comment.selected_text) {
-    html += `<div class="mrsf-selected-text">${escapeHtml(comment.selected_text)}</div>`;
+    html += `<span class="mrsf-selected-text">${escapeHtml(comment.selected_text)}</span>`;
   }
 
   // Body
-  html += `<div class="mrsf-comment-body">${escapeHtml(comment.text)}</div>`;
+  html += `<span class="mrsf-comment-body">${escapeHtml(comment.text)}</span>`;
 
   // Action buttons (interactive mode)
   if (interactive) {
     const line = comment.line != null ? String(comment.line) : "";
-    html += `<div class="mrsf-actions">`;
+    html += `<span class="mrsf-actions">`;
     if (comment.resolved) {
       html += `<button class="mrsf-action-btn" data-mrsf-action="unresolve" data-mrsf-comment-id="${escapeHtml(comment.id)}" data-mrsf-line="${line}">Unresolve</button>`;
     } else {
@@ -75,24 +75,24 @@ function renderCommentHtml(
     }
     html += `<button class="mrsf-action-btn" data-mrsf-action="reply" data-mrsf-comment-id="${escapeHtml(comment.id)}" data-mrsf-line="${line}">Reply</button>`;
     html += `<button class="mrsf-action-btn" data-mrsf-action="edit" data-mrsf-comment-id="${escapeHtml(comment.id)}" data-mrsf-line="${line}">Edit</button>`;
-    html += `</div>`;
+    html += `</span>`;
   }
 
-  html += `</div>`;
+  html += `</span>`;
   return html;
 }
 
 function renderThreadHtml(thread: CommentThread, interactive: boolean): string {
-  let html = `<div class="mrsf-thread">`;
+  let html = `<span class="mrsf-thread">`;
   html += renderCommentHtml(thread.comment, false, interactive);
   if (thread.replies.length > 0) {
-    html += `<div class="mrsf-replies">`;
+    html += `<span class="mrsf-replies">`;
     for (const reply of thread.replies) {
       html += renderCommentHtml(reply, true, interactive);
     }
-    html += `</div>`;
+    html += `</span>`;
   }
-  html += `</div>`;
+  html += `</span>`;
   return html;
 }
 
@@ -104,7 +104,7 @@ export function installRendererRules(
 ): void {
   // Badge + tooltip (gutter)
   md.renderer.rules["mrsf_badge"] = (
-    tokens: { meta: { line: number; threads: CommentThread[]; interactive: boolean; gutterPosition: string } }[],
+    tokens: { meta: { line: number; threads: CommentThread[]; interactive: boolean; gutterPosition: "left" | "tight" | "right" } }[],
     idx: number,
   ): string => {
     const { line, threads, interactive, gutterPosition } = tokens[idx].meta;
@@ -125,9 +125,7 @@ export function installRendererRules(
     const severityClass = highestSeverity === "high" || highestSeverity === "medium"
       ? ` mrsf-badge-severity-${highestSeverity}`
       : "";
-    const positionClass = gutterPosition === "left"
-      ? " mrsf-gutter-left"
-      : " mrsf-gutter-right";
+    const positionClass = ` mrsf-gutter-${gutterPosition}`;
 
     const icon = allResolved ? "✓" : "💬";
 
@@ -137,11 +135,11 @@ export function installRendererRules(
     html += `<span class="mrsf-badge${resolvedClass}${severityClass}" data-mrsf-line="${line}" data-mrsf-action="navigate" data-mrsf-comment-id="${escapeHtml(threads[0].comment.id)}" tabindex="0">${icon} ${total}</span>`;
 
     // Tooltip
-    html += `<div class="mrsf-tooltip" data-mrsf-line="${line}">`;
+    html += `<span class="mrsf-tooltip" data-mrsf-line="${line}">`;
     for (const thread of threads) {
       html += renderThreadHtml(thread, interactive);
     }
-    html += `</div>`;
+    html += `</span>`;
 
     html += `</span>`;
     return html;
@@ -177,9 +175,9 @@ export function installRendererRules(
     if (meta?.thread) {
       const thread = meta.thread as CommentThread;
       const interactive = meta.interactive as boolean;
-      html += `<div class="mrsf-tooltip mrsf-inline-tooltip">`;
+      html += `<span class="mrsf-tooltip mrsf-inline-tooltip">`;
       html += renderThreadHtml(thread, interactive);
-      html += `</div>`;
+      html += `</span>`;
       html += `</span>`;
     }
 
