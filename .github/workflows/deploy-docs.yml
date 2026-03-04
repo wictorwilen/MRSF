@@ -8,7 +8,7 @@ on:
       - "MRSF-v1.0.md"
       - "cli/README.md"
       - "mcp/README.md"
-      - "markdown-it/**"
+      - "plugins/**"
       - "examples/**"
   workflow_dispatch:
 
@@ -28,9 +28,15 @@ jobs:
           npm ci
           npm run build
 
+      - name: Build shared plugin library
+        run: |
+          cd plugins/shared
+          npm ci
+          npm run build
+
       - name: Build markdown-it plugin
         run: |
-          cd markdown-it
+          cd plugins/markdown-it
           npm ci
           npm run build
 

@@ -110,6 +110,7 @@ export default withMermaid(defineConfig({
             { text: "Examples", link: "/guide/examples" },
             { text: "Agent Skill", link: "/guide/agent-skill" },
             { text: "markdown-it Plugin", link: "/guide/markdown-it" },
+            { text: "rehype Plugin", link: "/guide/rehype" },
             { text: "FAQ", link: "/guide/faq" },
           ],
         },

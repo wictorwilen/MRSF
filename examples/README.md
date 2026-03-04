@@ -30,6 +30,18 @@ The table below maps each §7.4 step to the example that exercises it:
 | **Step 3** | Contextual / fuzzy re-anchoring | [`deployment-guide.md.review.yaml`](https://github.com/wictorwilen/MRSF/blob/main/examples/deployment-guide.md.review.yaml) |
 | **Step 4** | Orphan — text removed, no match possible | [`contributing.md.review.yaml`](https://github.com/wictorwilen/MRSF/blob/main/examples/contributing.md.review.yaml) (Comments B, C, E) |
 
+## Plugin Demos
+
+Two runnable TypeScript demos show the rendering plugins in action. Both read
+`architecture.md` and its sidecar, render annotated HTML, and print it to the console.
+
+```bash
+cd examples
+npm install        # one-time — installs plugin dependencies
+npx tsx demo-markdown-it.ts   # markdown-it plugin demo
+npx tsx demo-rehype.ts        # rehype plugin demo
+```
+
 ## Trying the Examples
 
 If you have the MRSF CLI installed (`npm install -g @mrsf/cli` or via `npx`), you

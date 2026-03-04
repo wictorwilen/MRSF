@@ -1,0 +1,30 @@
+{
+  "private": true,
+  "name": "@mrsf/plugin-shared",
+  "version": "0.1.0",
+  "description": "Shared internals for MRSF rendering plugins",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./style.css": "./src/style.css",
+    "./controller": {
+      "import": "./dist/controller.js",
+      "types": "./dist/controller.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mrsf/cli": "file:../../cli"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}

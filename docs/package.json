@@ -8,7 +8,7 @@
     "docs:preview": "vitepress preview"
   },
   "devDependencies": {
-    "@mrsf/markdown-it-mrsf": "file:../markdown-it",
+    "@mrsf/markdown-it-mrsf": "file:../plugins/markdown-it",
     "markdown-it": "^14.1.1",
     "mermaid": "^11.12.3",
     "vitepress": "^1.6.3",

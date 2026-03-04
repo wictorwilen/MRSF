@@ -28,12 +28,12 @@
     "node": ">=18"
   },
   "scripts": {
-    "build": "tsc && cp src/style.css dist/style.css",
+    "build": "tsc && cp ../shared/src/style.css dist/style.css && cp ../shared/dist/controller.js dist/controller.js && cp ../shared/dist/controller.d.ts dist/controller.d.ts",
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
-    "prepublishOnly": "cp ../LICENSE . && npm run build && npm test",
+    "prepublishOnly": "cp ../../LICENSE . && npm run build && npm test",
     "postpublish": "rm -f LICENSE"
   },
   "keywords": [
@@ -48,14 +48,14 @@
   ],
   "license": "MIT",
   "author": "Wictor Wilén (https://github.com/wictorwilen)",
-  "homepage": "https://github.com/wictorwilen/MRSF/tree/main/markdown-it#readme",
+  "homepage": "https://github.com/wictorwilen/MRSF/tree/main/plugins/markdown-it#readme",
   "bugs": {
     "url": "https://github.com/wictorwilen/MRSF/issues"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/wictorwilen/MRSF.git",
-    "directory": "markdown-it"
+    "directory": "plugins/markdown-it"
   },
   "files": [
     "dist/**/*.js",
@@ -65,7 +65,8 @@
     "LICENSE"
   ],
   "dependencies": {
-    "@mrsf/cli": "file:../cli"
+    "@mrsf/cli": "file:../../cli",
+    "@mrsf/plugin-shared": "file:../shared"
   },
   "devDependencies": {
     "@types/markdown-it": "^14.1.2",

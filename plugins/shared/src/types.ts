@@ -1,10 +1,12 @@
 /**
- * MRSF markdown-it plugin — type definitions.
+ * Shared type definitions for MRSF rendering plugins.
+ *
+ * These types are used by both @mrsf/markdown-it-mrsf and @mrsf/rehype-mrsf.
  */
 
 import type { MrsfDocument } from "@mrsf/cli";
 
-/** Options for the MRSF markdown-it plugin. */
+/** Base options shared by all MRSF rendering plugins. */
 export interface MrsfPluginOptions {
   /**
    * Path to the Markdown document on disk.
