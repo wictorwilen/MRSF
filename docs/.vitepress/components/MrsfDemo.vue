@@ -67,7 +67,7 @@ const sampleSidecar = {
 async function renderDemo() {
   const [{ default: MarkdownIt }, { mrsfPlugin }] = await Promise.all([
     import("markdown-it"),
-    import("@mrsf/markdown-it-mrsf"),
+    import("@mrsf/markdown-it-mrsf/browser"),
   ]);
 
   const md = new MarkdownIt({ html: true });

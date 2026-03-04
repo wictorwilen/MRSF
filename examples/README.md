@@ -54,4 +54,4 @@ npx @mrsf/cli status examples/contributing.md.review.yaml
 
 ## Agent Skill
 
-The [`mrsf-review/`](mrsf-review/) folder contains a sample [Agent Skill](https://agentskills.io/) that teaches an AI agent to review Markdown documents using the MRSF MCP server. Copy the folder into your project's `.agent/skills/` directory (or wherever your agent discovers skills) to give any skills-compatible agent structured document review capabilities.
+The [`mrsf-review/`](https://github.com/wictorwilen/MRSF/tree/main/examples/mrsf-review) folder contains a sample [Agent Skill](https://agentskills.io/) that teaches an AI agent to review Markdown documents using the MRSF MCP server. Copy the folder into your project's `.agent/skills/` directory (or wherever your agent discovers skills) to give any skills-compatible agent structured document review capabilities.
