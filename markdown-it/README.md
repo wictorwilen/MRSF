@@ -2,7 +2,7 @@
 
 A [markdown-it](https://github.com/markdown-it/markdown-it) plugin for rendering [MRSF (Sidemark)](https://github.com/wictorwilen/MRSF) review comments directly into HTML output.
 
-Renders badges, line highlights, inline text highlights, and tooltips — no client-side JavaScript required for static use. An optional interactive mode adds action buttons for host applications (like VS Code) to hook into.
+Renders badges, line highlights, inline text highlights, and tooltips — no client-side JavaScript required for static use. An optional interactive mode adds action buttons for host applications to hook into.
 
 ## Install
 
@@ -114,14 +114,6 @@ document.addEventListener("mrsf:reply", (e) => {
 Events dispatched: `mrsf:resolve`, `mrsf:unresolve`, `mrsf:reply`, `mrsf:edit`, `mrsf:navigate`.
 
 Each event's `detail` contains `{ commentId: string, line: number | null, action: string }`.
-
-### VS Code Integration Path
-
-The plugin is designed so the VS Code extension can adopt it as its rendering engine:
-
-1. Use `mrsfPlugin` in `extendMarkdownIt()` with `interactive: true` and inline data from `SidecarStore`
-2. Include `controller.js` via `markdown.previewScripts`
-3. Add a thin bridge script mapping `mrsf:*` custom events → `vscode.postMessage()` → extension commands
 
 ## Options
 
