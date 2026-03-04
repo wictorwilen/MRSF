@@ -70,6 +70,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const reanchorController = new ReanchorController(store, statusBar);
   reanchorController.onReanchorComplete = (uri) => {
     dirtyDocs.delete(uri.fsPath);
+    store.clearPendingShifts(uri);
     statusBar.setDirtyAnchors(dirtyDocs.size > 0);
   };
   context.subscriptions.push(reanchorController);
@@ -140,8 +141,10 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
-  // ── Reanchor on save ─────────────────────────────────────
-  // Track documents with unsaved line changes — anchors may be drifted
+  // ── Live line tracking + reanchor on save ──────────────────
+  // Track documents with unsaved line changes — anchors may be drifted.
+  // Comment positions are adjusted in memory immediately so decorations
+  // stay aligned.  The real reanchor (fuzzy match) + persist happens on save.
   const dirtyDocs = new Set<string>();
 
   context.subscriptions.push(
@@ -150,17 +153,14 @@ export function activate(context: vscode.ExtensionContext): void {
       const doc = store.get(e.document.uri);
       if (!doc || doc.comments.length === 0) return;
 
-      // Detect line insertions / deletions
-      for (const change of e.contentChanges) {
-        const linesAdded =
-          change.text.split("\n").length - 1;
-        const linesRemoved =
-          change.range.end.line - change.range.start.line;
-        if (linesAdded !== linesRemoved) {
-          dirtyDocs.add(e.document.uri.fsPath);
-          statusBar.setDirtyAnchors(true);
-          return;
-        }
+      // Apply line-shift adjustments to in-memory comments so
+      // decorations track the edits in real-time.
+      const moved = store.applyLiveEdits(e.document.uri, e.contentChanges);
+
+      if (moved) {
+        dirtyDocs.add(e.document.uri.fsPath);
+        statusBar.setDirtyAnchors(true);
+        // Decorations auto-update via store.onDidChange → providers
       }
     }),
   );
@@ -172,8 +172,18 @@ export function activate(context: vscode.ExtensionContext): void {
       if (!config.get<boolean>("reanchorOnSave", true)) return;
 
       const uri = document.uri;
+
+      // Reload the sidecar from disk (original positions) before running
+      // the full reanchor.  This ensures we anchor against the on-disk
+      // state rather than the in-memory shifted positions.
+      await store.reloadFromDisk(uri);
+
       const doc = store.get(uri);
-      if (!doc || doc.comments.length === 0) return;
+      if (!doc || doc.comments.length === 0) {
+        dirtyDocs.delete(document.uri.fsPath);
+        statusBar.setDirtyAnchors(dirtyDocs.size > 0);
+        return;
+      }
 
       try {
         const threshold = config.get<number>("reanchorThreshold", 0.6);
@@ -192,6 +202,7 @@ export function activate(context: vscode.ExtensionContext): void {
       }
 
       // Clear dirty state after reanchor
+      store.clearPendingShifts(uri);
       dirtyDocs.delete(document.uri.fsPath);
       statusBar.setDirtyAnchors(dirtyDocs.size > 0);
     }),

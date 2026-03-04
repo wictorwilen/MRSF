@@ -2,7 +2,7 @@
   "name": "mrsf-vscode",
   "displayName": "Sidemark – MRSF Review Comments",
   "description": "Display, create, and manage Markdown Review Sidecar Format (MRSF) comments directly in VS Code",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "wictor",
   "license": "MIT",
   "author": "Wictor Wilén (https://github.com/wictorwilen)",

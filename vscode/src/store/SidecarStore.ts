@@ -32,6 +32,7 @@ import {
   getCurrentCommit,
   isStale,
 } from "@mrsf/cli";
+import { applyLineShifts } from "./LiveLineTracker.js";
 import * as path from "node:path";
 import * as fs from "node:fs";
 
@@ -48,6 +49,13 @@ export class SidecarStore implements vscode.Disposable {
 
   /** Guard: skip FileWatcher invalidation for our own saves. */
   private _savingPaths = new Set<string>();
+
+  /**
+   * Documents whose in-memory comment positions have been shifted by
+   * live edits but not yet persisted to disk.  Cleared after a successful
+   * save + reanchor cycle.
+   */
+  private _pendingShifts = new Set<string>();
 
   private readonly _onDidChange = new vscode.EventEmitter<vscode.Uri>();
   readonly onDidChange = this._onDidChange.event;
@@ -172,6 +180,56 @@ export class SidecarStore implements vscode.Disposable {
         return;
       }
     }
+  }
+
+  // ── Live editing ──────────────────────────────────────────────
+
+  /**
+   * Apply line-shift adjustments to in-memory comment positions based on
+   * document edits.  This keeps decorations aligned in real-time without
+   * touching the sidecar file on disk.
+   *
+   * Returns true if any comment was shifted (so the caller can update
+   * decorations).
+   */
+  applyLiveEdits(
+    documentUri: vscode.Uri,
+    changes: readonly import("vscode").TextDocumentContentChangeEvent[],
+  ): boolean {
+    const entry = this.cache.get(documentUri.fsPath);
+    if (!entry || entry.doc.comments.length === 0) return false;
+
+    const moved = applyLineShifts(entry.doc.comments, changes);
+    if (moved) {
+      this._pendingShifts.add(documentUri.fsPath);
+      this._onDidChange.fire(documentUri);
+    }
+    return moved;
+  }
+
+  /**
+   * Whether a document has in-memory position shifts that haven't been
+   * persisted yet.
+   */
+  hasPendingShifts(documentUri: vscode.Uri): boolean {
+    return this._pendingShifts.has(documentUri.fsPath);
+  }
+
+  /**
+   * Clear the pending-shifts flag for a document (after a successful
+   * save + reanchor cycle).
+   */
+  clearPendingShifts(documentUri: vscode.Uri): void {
+    this._pendingShifts.delete(documentUri.fsPath);
+  }
+
+  /**
+   * Reload comment positions from the on-disk sidecar, discarding any
+   * in-memory line shifts.  Called before full reanchor on save.
+   */
+  async reloadFromDisk(documentUri: vscode.Uri): Promise<void> {
+    await this.load(documentUri);
+    this._pendingShifts.delete(documentUri.fsPath);
   }
 
   /**
