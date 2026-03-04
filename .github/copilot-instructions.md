@@ -12,10 +12,11 @@ This is a **multi-package monorepo** with no root package.json. Each package is 
 |---------|------|----------|-------|---------|
 | CLI & library | `cli/` | `@mrsf/cli` | `tsc` | Core library + CLI binary (`mrsf`) |
 | MCP server | `mcp/` | `@mrsf/mcp` | `esbuild` | Model Context Protocol server for AI agents |
+| markdown-it plugin | `markdown-it/` | `@mrsf/markdown-it-mrsf` | `tsc` | Standalone markdown-it plugin for rendering comments |
 | VS Code extension | `vscode/` | `mrsf-vscode` | `esbuild` | Editor integration (marketplace: `wictor.mrsf-vscode`) |
 | Documentation | `docs/` | (private) | VitePress | Site deployed to Azure Static Web Apps |
 
-**Key dependency**: `@mrsf/mcp` depends on `@mrsf/cli` via `file:../cli` — changes to the CLI library directly affect the MCP server.
+**Key dependency**: `@mrsf/mcp` and `@mrsf/markdown-it-mrsf` both depend on `@mrsf/cli` via `file:../cli` — changes to the CLI library directly affect them.
 
 ## Build, Test, and Lint
 

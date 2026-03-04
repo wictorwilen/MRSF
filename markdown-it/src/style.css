@@ -1,0 +1,356 @@
+/*
+ * Sidemark — markdown-it plugin default styles
+ *
+ * Include via: import "@mrsf/markdown-it-mrsf/style.css"
+ * or <link rel="stylesheet" href=".../@mrsf/markdown-it-mrsf/dist/style.css">
+ *
+ * Customise with CSS custom properties (--mrsf-*).
+ */
+
+/* ── Custom property defaults ────────────────────────────── */
+
+:root {
+  --mrsf-accent: #3794ff;
+  --mrsf-badge-bg: #007acc;
+  --mrsf-badge-fg: #fff;
+  --mrsf-badge-resolved-bg: #388a34;
+  --mrsf-tooltip-bg: #252526;
+  --mrsf-tooltip-fg: #cccccc;
+  --mrsf-tooltip-border: #454545;
+  --mrsf-highlight-bg: rgba(255, 213, 79, 0.25);
+  --mrsf-highlight-border: rgba(255, 213, 79, 0.7);
+  --mrsf-severity-high: #e74c3c;
+  --mrsf-severity-medium: #f39c12;
+  --mrsf-severity-low: #3498db;
+  --mrsf-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --mrsf-tooltip-bg: #f3f3f3;
+    --mrsf-tooltip-fg: #333333;
+    --mrsf-tooltip-border: #cccccc;
+  }
+}
+
+/* ── Gutter container (left gutter mode) ────────────────── */
+
+.mrsf-gutter-container {
+  --mrsf-gutter-width: 44px;
+  position: relative;
+  padding-left: var(--mrsf-gutter-width);
+}
+
+/* In left gutter mode, line-highlight must be static so the badge's
+   position: absolute resolves against the gutter container — not the
+   individual line element, which may be deeply nested inside lists. */
+.mrsf-gutter-container .mrsf-line-highlight {
+  position: static;
+}
+
+/* ── Line highlight ─────────────────────────────────────── */
+
+.mrsf-line-highlight {
+  border-left: 3px solid var(--mrsf-accent);
+  padding-left: 8px;
+  background: rgba(55, 148, 255, 0.06);
+  border-radius: 2px;
+  position: relative;
+  transition: background 0.15s ease;
+}
+
+.mrsf-line-highlight:hover {
+  background: rgba(55, 148, 255, 0.12);
+}
+
+/* ── Badge ──────────────────────────────────────────────── */
+
+.mrsf-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 10px;
+  cursor: default;
+  user-select: none;
+  white-space: nowrap;
+  vertical-align: middle;
+  margin-left: 6px;
+
+  color: var(--mrsf-badge-fg);
+  background: var(--mrsf-badge-bg);
+  border-left: 3px solid transparent;
+
+  transition: opacity 0.15s ease;
+}
+
+.mrsf-badge-resolved {
+  background: var(--mrsf-badge-resolved-bg);
+  opacity: 0.7;
+}
+
+.mrsf-badge-severity-high {
+  border-left-color: var(--mrsf-severity-high);
+}
+
+.mrsf-badge-severity-medium {
+  border-left-color: var(--mrsf-severity-medium);
+}
+
+/* ── Tooltip container ──────────────────────────────────── */
+
+.mrsf-tooltip-anchor {
+  position: relative;
+  display: inline-block;
+  vertical-align: baseline;
+}
+
+/* Gutter position: right (default) — float the badge to the right */
+.mrsf-tooltip-anchor.mrsf-gutter-right {
+  float: right;
+  margin-left: 8px;
+}
+
+.mrsf-tooltip-anchor.mrsf-gutter-right .mrsf-badge {
+  margin-left: 0;
+}
+
+/* Gutter position: tight — badge inline immediately before text */
+.mrsf-tooltip-anchor.mrsf-gutter-tight .mrsf-badge {
+  margin-right: 6px;
+  margin-left: 0;
+}
+
+/* Gutter position: left — badge in the left margin gutter.
+   Positioned against the gutter container (not the line element). */
+.mrsf-tooltip-anchor.mrsf-gutter-left {
+  position: absolute;
+  left: 4px;
+}
+
+.mrsf-tooltip-anchor.mrsf-gutter-left .mrsf-badge {
+  margin-left: 0;
+}
+
+/* Tooltip for left-gutter badges */
+.mrsf-tooltip-anchor.mrsf-gutter-left > .mrsf-tooltip {
+  left: 0;
+  right: auto;
+}
+
+/* Inline highlight tooltip anchor */
+.mrsf-inline-anchor {
+  /* inherit inline-block from .mrsf-tooltip-anchor */
+}
+
+.mrsf-tooltip {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 100%;
+  z-index: 1000;
+  min-width: 300px;
+  max-width: 480px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 8px;
+  margin-top: 4px;
+  border-radius: 6px;
+
+  background: var(--mrsf-tooltip-bg);
+  border: 1px solid var(--mrsf-tooltip-border);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+
+  font-family: var(--mrsf-font-family);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--mrsf-tooltip-fg);
+}
+
+/* Right-aligned gutter: anchor tooltip to the right edge */
+.mrsf-tooltip-anchor.mrsf-gutter-right > .mrsf-tooltip {
+  left: auto;
+  right: 0;
+}
+
+/* Inline tooltip: smaller and anchored to the left of the highlight */
+.mrsf-inline-tooltip {
+  min-width: 260px;
+}
+
+/* Show tooltip on hover or focus-within (keyboard accessible) */
+.mrsf-tooltip-anchor:hover > .mrsf-tooltip,
+.mrsf-tooltip-anchor:focus-within > .mrsf-tooltip {
+  display: block;
+  animation: mrsf-fade-in 0.15s ease;
+}
+
+@keyframes mrsf-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Thread / Comment ───────────────────────────────────── */
+/* All inner elements use <span> for valid HTML inside <p>/<h> elements,
+   with display: block to maintain block layout. */
+
+.mrsf-thread {
+  display: block;
+  padding: 4px 0;
+}
+
+.mrsf-thread + .mrsf-thread {
+  border-top: 1px solid var(--mrsf-tooltip-border);
+  margin-top: 4px;
+  padding-top: 8px;
+}
+
+.mrsf-comment {
+  display: block;
+  padding: 4px 0;
+}
+
+.mrsf-comment.mrsf-resolved {
+  border-left: 2px solid var(--mrsf-badge-resolved-bg);
+  padding-left: 6px;
+}
+
+/* ── Replies ────────────────────────────────────────────── */
+
+.mrsf-replies {
+  display: block;
+  margin-left: 16px;
+  padding-left: 8px;
+  border-left: 2px solid var(--mrsf-tooltip-border);
+}
+
+.mrsf-reply {
+  font-size: 12px;
+}
+
+/* ── Comment header ─────────────────────────────────────── */
+
+.mrsf-comment-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 2px;
+}
+
+.mrsf-author {
+  font-weight: 600;
+}
+
+.mrsf-date {
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.mrsf-severity {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.mrsf-severity-high {
+  background: rgba(231, 76, 60, 0.2);
+  color: var(--mrsf-severity-high);
+}
+
+.mrsf-severity-medium {
+  background: rgba(243, 156, 18, 0.2);
+  color: var(--mrsf-severity-medium);
+}
+
+.mrsf-severity-low {
+  background: rgba(52, 152, 219, 0.2);
+  color: var(--mrsf-severity-low);
+}
+
+.mrsf-type {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: rgba(127, 127, 127, 0.15);
+  opacity: 0.8;
+}
+
+.mrsf-resolved-badge {
+  font-size: 10px;
+  color: var(--mrsf-badge-resolved-bg);
+  font-weight: 600;
+}
+
+/* ── Comment body ───────────────────────────────────────── */
+
+.mrsf-comment-body {
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Selected text quote in tooltip ─────────────────────── */
+
+.mrsf-selected-text {
+  display: block;
+  font-family: monospace;
+  font-size: 0.85em;
+  background: rgba(127, 127, 127, 0.1);
+  border-left: 3px solid rgba(127, 127, 127, 0.3);
+  padding: 4px 8px;
+  margin: 4px 0;
+  border-radius: 2px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Inline text highlight ──────────────────────────────── */
+
+.mrsf-highlight {
+  background: var(--mrsf-highlight-bg);
+  border-bottom: 2px solid var(--mrsf-highlight-border);
+  border-radius: 2px;
+  padding: 0 1px;
+  transition: background 0.15s ease;
+}
+
+.mrsf-highlight:hover {
+  background: rgba(255, 213, 79, 0.45);
+}
+
+/* ── Interactive action buttons ─────────────────────────── */
+
+.mrsf-actions {
+  display: none;
+  gap: 4px;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--mrsf-tooltip-border);
+}
+
+.mrsf-interactive .mrsf-actions {
+  display: flex;
+}
+
+.mrsf-action-btn {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--mrsf-tooltip-border);
+  background: transparent;
+  color: var(--mrsf-tooltip-fg);
+  cursor: pointer;
+  font-family: var(--mrsf-font-family);
+  transition: background 0.15s ease;
+}
+
+.mrsf-action-btn:hover {
+  background: rgba(127, 127, 127, 0.2);
+}

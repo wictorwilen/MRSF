@@ -3,11 +3,13 @@
   "name": "mrsf-docs",
   "description": "MRSF documentation site",
   "scripts": {
-    "docs:dev": "vitepress dev docs",
-    "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs"
+    "docs:dev": "vitepress dev",
+    "docs:build": "vitepress build",
+    "docs:preview": "vitepress preview"
   },
   "devDependencies": {
+    "@mrsf/markdown-it-mrsf": "file:../markdown-it",
+    "markdown-it": "^14.1.1",
     "mermaid": "^11.12.3",
     "vitepress": "^1.6.3",
     "vitepress-plugin-mermaid": "^2.0.17"
