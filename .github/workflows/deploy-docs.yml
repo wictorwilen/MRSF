@@ -8,6 +8,7 @@ on:
       - "MRSF-v1.0.md"
       - "cli/README.md"
       - "mcp/README.md"
+      - "markdown-it/**"
       - "examples/**"
   workflow_dispatch:
 
@@ -20,6 +21,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+
+      - name: Build CLI library
+        run: |
+          cd cli
+          npm ci
+          npm run build
+
+      - name: Build markdown-it plugin
+        run: |
+          cd markdown-it
+          npm ci
+          npm run build
 
       - name: Build docs
         run: |
