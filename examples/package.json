@@ -1,0 +1,15 @@
+{
+  "private": true,
+  "name": "mrsf-examples",
+  "type": "module",
+  "description": "Runnable demo scripts for MRSF rendering plugins",
+  "dependencies": {
+    "@mrsf/markdown-it-mrsf": "file:../plugins/markdown-it",
+    "@mrsf/rehype-mrsf": "file:../plugins/rehype",
+    "markdown-it": "^14.1.0",
+    "unified": "^11.0.5",
+    "remark-parse": "^11.0.0",
+    "remark-rehype": "^11.1.1",
+    "rehype-stringify": "^10.0.1"
+  }
+}
