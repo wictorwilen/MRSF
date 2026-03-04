@@ -1,15 +1,9 @@
 /**
- * Shared logic for @mrsf/markdown-it-mrsf.
- *
- * Contains the plugin factory, comment transformation, and grouping logic
- * used by both the Node.js (index.ts) and browser (browser.ts) entry points.
+ * Shared comment loading and grouping logic for MRSF rendering plugins.
  */
 
-import type MarkdownIt from "markdown-it";
 import type { MrsfDocument } from "@mrsf/cli";
 import type { MrsfPluginOptions, SlimComment, CommentThread, LineMap } from "./types.js";
-import { installCoreRule } from "./rules/core.js";
-import { installRendererRules } from "./rules/renderer.js";
 
 /**
  * A function that loads sidecar data from plugin options.
@@ -66,38 +60,27 @@ export function groupByLine(comments: SlimComment[]): LineMap {
 }
 
 /**
- * Create a markdown-it plugin function with the given comment loader.
- *
- * @param loader - Function that resolves sidecar data from plugin options
- * @returns A markdown-it plugin function
+ * Resolve options into a filtered LineMap ready for rendering.
+ * Returns null if there are no comments to render.
  */
-export function createMrsfPlugin(loader: CommentLoader) {
-  return function mrsfPlugin(md: MarkdownIt, options: MrsfPluginOptions = {}): void {
-    const showResolved = options.showResolved ?? true;
-    const interactive = options.interactive ?? false;
-    const gutterPosition = options.gutterPosition ?? "right";
-    const gutterForInline = options.gutterForInline ?? true;
-    const inlineHighlights = options.inlineHighlights ?? true;
+export function resolveComments(
+  loader: CommentLoader,
+  options: MrsfPluginOptions,
+): { lineMap: LineMap; comments: SlimComment[] } | null {
+  const showResolved = options.showResolved ?? true;
 
-    const doc = loader(options);
-    if (!doc || !doc.comments || doc.comments.length === 0) {
-      return;
-    }
+  const doc = loader(options);
+  if (!doc || !doc.comments || doc.comments.length === 0) {
+    return null;
+  }
 
-    let comments = toSlimComments(doc);
-    if (!showResolved) {
-      comments = comments.filter((c) => !c.resolved);
-    }
+  let comments = toSlimComments(doc);
+  if (!showResolved) {
+    comments = comments.filter((c) => !c.resolved);
+  }
 
-    if (comments.length === 0) return;
+  if (comments.length === 0) return null;
 
-    const lineMap = groupByLine(comments);
-    installCoreRule(md, lineMap, {
-      interactive,
-      gutterPosition,
-      gutterForInline,
-      inlineHighlights,
-    });
-    installRendererRules(md);
-  };
+  const lineMap = groupByLine(comments);
+  return { lineMap, comments };
 }

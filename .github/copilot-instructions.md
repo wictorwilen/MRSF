@@ -12,11 +12,15 @@ This is a **multi-package monorepo** with no root package.json. Each package is 
 |---------|------|----------|-------|---------|
 | CLI & library | `cli/` | `@mrsf/cli` | `tsc` | Core library + CLI binary (`mrsf`) |
 | MCP server | `mcp/` | `@mrsf/mcp` | `esbuild` | Model Context Protocol server for AI agents |
-| markdown-it plugin | `markdown-it/` | `@mrsf/markdown-it-mrsf` | `tsc` | Standalone markdown-it plugin for rendering comments |
+| Plugin shared | `plugins/shared/` | `@mrsf/plugin-shared` | `tsc` | Shared types, comment logic, CSS, and controller for rendering plugins (private) |
+| markdown-it plugin | `plugins/markdown-it/` | `@mrsf/markdown-it-mrsf` | `tsc` | Standalone markdown-it plugin for rendering comments |
+| rehype plugin | `plugins/rehype/` | `@mrsf/rehype-mrsf` | `tsc` | Standalone rehype plugin for rendering comments (unified ecosystem) |
 | VS Code extension | `vscode/` | `mrsf-vscode` | `esbuild` | Editor integration (marketplace: `wictor.mrsf-vscode`) |
 | Documentation | `docs/` | (private) | VitePress | Site deployed to Azure Static Web Apps |
 
-**Key dependency**: `@mrsf/mcp` and `@mrsf/markdown-it-mrsf` both depend on `@mrsf/cli` via `file:../cli` — changes to the CLI library directly affect them.
+**Key dependencies**:
+- `@mrsf/mcp` depends on `@mrsf/cli` via `file:../cli`
+- `@mrsf/markdown-it-mrsf` and `@mrsf/rehype-mrsf` depend on `@mrsf/plugin-shared` via `file:../shared` and `@mrsf/cli` via `file:../../cli`
 
 ## Build, Test, and Lint
 

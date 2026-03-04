@@ -28,7 +28,6 @@ import { createMrsfPlugin } from "./shared.js";
 
 // Re-export types for consumers
 export type { MrsfPluginOptions, SlimComment, CommentThread, LineMap } from "./types.js";
-export type { MrsfAction, MrsfActionDetail } from "./controller.js";
 
 /**
  * The markdown-it plugin function (Node.js — full feature set).

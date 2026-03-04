@@ -5,10 +5,7 @@
  * and dispatches CustomEvents on the document for host applications.
  *
  * Usage (ESM):
- *   import "@mrsf/markdown-it-mrsf/controller";
- *
- * Usage (script tag):
- *   <script src=".../@mrsf/markdown-it-mrsf/dist/controller.js"></script>
+ *   import "@mrsf/plugin-shared/controller";
  *
  * Events dispatched:
  *   - mrsf:resolve   { commentId, line }
