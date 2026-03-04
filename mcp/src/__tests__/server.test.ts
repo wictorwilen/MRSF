@@ -119,6 +119,8 @@ describe("tool registration", () => {
     "mrsf_status",
     "mrsf_rename",
     "mrsf_delete",
+    "mrsf_repair",
+    "mrsf_help",
   ];
 
   let toolNames: string[];
@@ -232,7 +234,7 @@ describe("mrsf_resolve", () => {
     const result = await client.callTool({
       name: "mrsf_resolve",
       arguments: {
-        sidecar: "test.md.review.yaml",
+        document: "test.md.review.yaml",
         id: "c-standalone",
         cwd: tmpDir,
       },
@@ -246,7 +248,7 @@ describe("mrsf_resolve", () => {
     const result = await client.callTool({
       name: "mrsf_resolve",
       arguments: {
-        sidecar: "test.md.review.yaml",
+        document: "test.md.review.yaml",
         id: "c-standalone",
         unresolve: true,
         cwd: tmpDir,
@@ -261,7 +263,7 @@ describe("mrsf_resolve", () => {
     const result = await client.callTool({
       name: "mrsf_resolve",
       arguments: {
-        sidecar: "test.md.review.yaml",
+        document: "test.md.review.yaml",
         id: "nonexistent",
         cwd: tmpDir,
       },
@@ -288,7 +290,7 @@ describe("mrsf_delete", () => {
     const result = await client.callTool({
       name: "mrsf_delete",
       arguments: {
-        sidecar: "test.md.review.yaml",
+        document: "test.md.review.yaml",
         id: "c-parent",
         cwd: tmpDir,
       },
@@ -322,7 +324,7 @@ describe("mrsf_delete", () => {
     const result = await client.callTool({
       name: "mrsf_delete",
       arguments: {
-        sidecar: "test.md.review.yaml",
+        document: "test.md.review.yaml",
         id: "nonexistent",
         cwd: tmpDir,
       },
@@ -382,5 +384,94 @@ describe("bundle healthcheck", () => {
     } catch {
       console.warn("dist/bin.js not found — skipping bundle test (run build first)");
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// mrsf_repair
+// ---------------------------------------------------------------------------
+
+describe("mrsf_repair", () => {
+  beforeEach(async () => {
+    await resetFixture();
+  });
+
+  it("resets a corrupted sidecar to empty", async () => {
+    // Write corrupted YAML
+    await fs.writeFile(
+      path.join(tmpDir, "test.md.review.yaml"),
+      "mrsf_version: '1.0'\ndocument: test.md\ncomments:\n  - id: c1\n    selected_text: - broken yaml\n",
+    );
+
+    const result = await client.callTool({
+      name: "mrsf_repair",
+      arguments: { document: "test.md.review.yaml", strategy: "reset", cwd: tmpDir },
+    });
+
+    expect(result.isError).toBeFalsy();
+    const data = JSON.parse((result.content as Array<{ text: string }>)[0].text);
+    expect(data.strategy).toBe("reset");
+    expect(data.commentsRecovered).toBe(0);
+  });
+
+  it("salvages comments from a valid sidecar", async () => {
+    const result = await client.callTool({
+      name: "mrsf_repair",
+      arguments: { document: "test.md.review.yaml", strategy: "salvage", cwd: tmpDir },
+    });
+
+    expect(result.isError).toBeFalsy();
+    const data = JSON.parse((result.content as Array<{ text: string }>)[0].text);
+    expect(data.strategy).toBe("salvage");
+    expect(data.commentsRecovered).toBe(3);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// mrsf_help
+// ---------------------------------------------------------------------------
+
+describe("mrsf_help", () => {
+  it("lists all tools when no tool name is specified", async () => {
+    const result = await client.callTool({
+      name: "mrsf_help",
+      arguments: {},
+    });
+
+    expect(result.isError).toBeFalsy();
+    const data = JSON.parse((result.content as Array<{ text: string }>)[0].text);
+    expect(Array.isArray(data)).toBe(true);
+    expect(data.length).toBeGreaterThanOrEqual(11);
+    const names = data.map((t: { tool: string }) => t.tool);
+    expect(names).toContain("mrsf_add");
+    expect(names).toContain("mrsf_repair");
+    expect(names).toContain("mrsf_help");
+  });
+
+  it("returns detailed schema for a specific tool", async () => {
+    const result = await client.callTool({
+      name: "mrsf_help",
+      arguments: { tool: "mrsf_add" },
+    });
+
+    expect(result.isError).toBeFalsy();
+    const data = JSON.parse((result.content as Array<{ text: string }>)[0].text);
+    expect(data.tool).toBe("mrsf_add");
+    expect(data.parameters.document).toBeDefined();
+    expect(data.parameters.document.required).toBe(true);
+    expect(data.parameters.text).toBeDefined();
+    expect(data.parameters.line.required).toBe(false);
+  });
+
+  it("returns error for unknown tool name", async () => {
+    const result = await client.callTool({
+      name: "mrsf_help",
+      arguments: { tool: "mrsf_nonexistent" },
+    });
+
+    expect(result.isError).toBe(true);
+    const text = (result.content as Array<{ text: string }>)[0].text;
+    expect(text).toContain("Unknown tool");
+    expect(text).toContain("mrsf_add");
   });
 });

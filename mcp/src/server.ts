@@ -1,9 +1,9 @@
 /**
- * MRSF MCP Server — Model Context Protocol server for
+ * Sidemark (MRSF) MCP Server — Model Context Protocol server for
  * the Markdown Review Sidecar Format.
  *
- * Exposes MRSF operations as MCP tools and resources so that
- * AI agents can discover, read, validate, and manage review
+ * Exposes Sidemark (MRSF) operations as MCP tools and resources so
+ * that AI agents can discover, read, validate, and manage review
  * sidecars through the standard protocol.
  */
 
@@ -11,6 +11,9 @@ import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mc
 import { z } from "zod";
 import path from "node:path";
 import fs from "node:fs/promises";
+
+/** Injected by esbuild at build time from package.json "version". */
+declare const PKG_VERSION: string;
 
 import {
   // Discovery
@@ -22,6 +25,7 @@ import {
 
   // Parsing & writing
   parseSidecar,
+  parseSidecarLenient,
   readDocumentLines,
   writeSidecar,
   computeHash,
@@ -71,8 +75,11 @@ import type {
 
 export function createMrsfServer(): McpServer {
   const server = new McpServer({
-    name: "mrsf",
-    version: "0.1.0",
+    name: "sidemark-mrsf",
+    version: typeof PKG_VERSION !== "undefined" ? PKG_VERSION : "0.0.0",
+    description: "MCP server exposing tools for managing Markdown Review Sidecar Format (MRSF)/Sidemark files",
+    websiteUrl: "https://sidemark.org",
+    title: "Sidemark (MRSF) MCP Server",
   }, {
     capabilities: {
       tools: {},
@@ -98,7 +105,7 @@ function registerTools(server: McpServer): void {
     {
       title: "Discover Sidecar",
       description:
-        "Find the MRSF sidecar file for a given Markdown document. " +
+        "Find the Sidemark (MRSF) sidecar for a given Markdown document. " +
         "Returns the absolute path to the sidecar, or an error if none exists.",
       inputSchema: {
         document: z.string().describe("Path to the Markdown document"),
@@ -136,7 +143,7 @@ function registerTools(server: McpServer): void {
     {
       title: "Validate Sidecars",
       description:
-        "Validate one or more MRSF sidecar files against the schema and " +
+        "Validate one or more Sidemark (MRSF) sidecars against the schema and " +
         "specification rules. Returns validation diagnostics.",
       inputSchema: {
         files: z.array(z.string()).optional().describe(
@@ -182,7 +189,7 @@ function registerTools(server: McpServer): void {
     {
       title: "Re-anchor Comments",
       description:
-        "Re-anchor comments in MRSF sidecar files after the document has been " +
+        "Re-anchor comments in Sidemark (MRSF) sidecars after the document has been " +
         "edited. Updates line numbers and populates anchored_text when the text " +
         "at the new position differs from selected_text.",
       inputSchema: {
@@ -191,7 +198,7 @@ function registerTools(server: McpServer): void {
         ),
         dryRun: z.boolean().optional().describe("Report without modifying files"),
         threshold: z.number().min(0).max(1).optional().describe("Fuzzy match threshold 0.0–1.0 (default 0.6)"),
-        updateText: z.boolean().optional().describe("Also replace selected_text with current document text (opt-in per §6.2)"),
+        updateText: z.boolean().optional().describe("Also replace selected_text with current document text"),
         force: z.boolean().optional().describe("Firmly anchor high-confidence results: update commit to HEAD and clear audit fields"),
         cwd: z.string().optional().describe("Working directory"),
       },
@@ -245,7 +252,7 @@ function registerTools(server: McpServer): void {
     {
       title: "Add Comment",
       description:
-        "Add a review comment to an MRSF sidecar file. Creates the sidecar " +
+        "Add a review comment to a Sidemark (MRSF) sidecar. Creates the sidecar " +
         "if it does not exist. Automatically populates selected_text from the " +
         "document and the current git commit.",
       inputSchema: {
@@ -333,18 +340,18 @@ function registerTools(server: McpServer): void {
     {
       title: "Resolve/Unresolve Comment",
       description:
-        "Resolve or unresolve a comment by ID in an MRSF sidecar file.",
+        "Resolve or unresolve a comment by ID in a Sidemark (MRSF) sidecar.",
       inputSchema: {
-        sidecar: z.string().describe("Path to the sidecar file or its Markdown document"),
+        document: z.string().describe("Path to the Markdown document or its sidecar"),
         id: z.string().describe("Comment ID to resolve/unresolve"),
         unresolve: z.boolean().optional().describe("Set to true to unresolve instead"),
         cwd: z.string().optional().describe("Working directory"),
       },
     },
-    async ({ sidecar, id, unresolve, cwd }) => {
+    async ({ document, id, unresolve, cwd }) => {
       try {
         const workDir = cwd ?? process.cwd();
-        const [sp] = await resolveSidecarPaths([sidecar], workDir);
+        const [sp] = await resolveSidecarPaths([document], workDir);
         const doc = await parseSidecar(sp);
 
         const ok = unresolve
@@ -385,7 +392,7 @@ function registerTools(server: McpServer): void {
     {
       title: "List Comments",
       description:
-        "List and filter review comments across one or more MRSF sidecar files. " +
+        "List and filter review comments across one or more Sidemark (MRSF) sidecars. " +
         "Supports filtering by status, author, type, and severity.",
       inputSchema: {
         files: z.array(z.string()).optional().describe(
@@ -456,7 +463,7 @@ function registerTools(server: McpServer): void {
     {
       title: "Anchor Status",
       description:
-        "Check the anchor health of all comments in one or more sidecar files. " +
+        "Check the anchor health of all comments in one or more Sidemark (MRSF) sidecars. " +
         "Reports whether each comment is fresh, stale, or orphaned.",
       inputSchema: {
         files: z.array(z.string()).optional().describe(
@@ -525,7 +532,7 @@ function registerTools(server: McpServer): void {
     {
       title: "Rename Document",
       description:
-        "Update a sidecar after its Markdown document has been renamed or moved. " +
+        "Update a Sidemark (MRSF) sidecar after its Markdown document has been renamed or moved. " +
         "Moves the sidecar file and updates the document reference inside it.",
       inputSchema: {
         oldDocument: z.string().describe("Old path to the Markdown document"),
@@ -579,12 +586,12 @@ function registerTools(server: McpServer): void {
     {
       title: "Delete Comment",
       description:
-        "Delete a comment by ID from an MRSF sidecar file. Per §9.1, direct " +
-        "replies are promoted: they inherit the parent's anchor and their " +
+        "Delete a comment by ID from a Sidemark (MRSF) sidecar. By default, " +
+        "direct replies are promoted: they inherit the parent's anchor and their " +
         "reply_to is re-pointed to the grandparent. Use cascade to delete " +
         "direct replies along with the parent instead.",
       inputSchema: {
-        sidecar: z.string().describe("Path to the sidecar file or its Markdown document"),
+        document: z.string().describe("Path to the Markdown document or its sidecar"),
         id: z.string().describe("Comment ID to delete"),
         cascade: z.boolean().optional().describe(
           "When true, also remove direct replies instead of promoting them (default: false)",
@@ -592,10 +599,10 @@ function registerTools(server: McpServer): void {
         cwd: z.string().optional().describe("Working directory"),
       },
     },
-    async ({ sidecar, id, cascade, cwd }) => {
+    async ({ document, id, cascade, cwd }) => {
       try {
         const workDir = cwd ?? process.cwd();
-        const [sp] = await resolveSidecarPaths([sidecar], workDir);
+        const [sp] = await resolveSidecarPaths([document], workDir);
         const doc = await parseSidecar(sp);
 
         const ok = removeComment(doc, id, cascade ? { cascade: true } : undefined);
@@ -628,6 +635,268 @@ function registerTools(server: McpServer): void {
       }
     },
   );
+
+  // ── mrsf_repair ───────────────────────────────────────────────────
+  server.registerTool(
+    "mrsf_repair",
+    {
+      title: "Repair Sidecar",
+      description:
+        "Repair or reset a corrupted Sidemark (MRSF) sidecar. Use 'salvage' strategy " +
+        "to attempt to recover parseable comments from a corrupted sidecar (rewrites " +
+        "it cleanly). Use 'reset' strategy to delete the sidecar and start " +
+        "fresh with an empty comment list.",
+      inputSchema: {
+        document: z.string().describe("Path to the Markdown document or its sidecar"),
+        strategy: z.enum(["salvage", "reset"]).optional().describe(
+          "Repair strategy: 'salvage' (default) attempts to recover comments; 'reset' starts fresh",
+        ),
+        cwd: z.string().optional().describe("Working directory"),
+      },
+    },
+    async ({ document, strategy, cwd }) => {
+      try {
+        const workDir = cwd ?? process.cwd();
+        const [sp] = await resolveSidecarPaths([document], workDir);
+        const effectiveStrategy = strategy ?? "salvage";
+
+        if (effectiveStrategy === "reset") {
+          // Infer document name from sidecar filename
+          const docName = path.basename(sp).replace(/\.review\.(yaml|json)$/, "");
+          const freshDoc: MrsfDocument = {
+            mrsf_version: "1.0",
+            document: docName,
+            comments: [],
+          };
+          await writeSidecar(sp, freshDoc);
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify({
+                strategy: "reset",
+                sidecarPath: sp,
+                result: "Sidecar reset to empty.",
+                commentsRecovered: 0,
+              }, null, 2),
+            }],
+          };
+        }
+
+        // Salvage strategy
+        const result = await parseSidecarLenient(sp);
+
+        if (result.doc) {
+          // Rewrite cleanly (toYaml path always produces valid YAML)
+          await writeSidecar(sp, result.doc);
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify({
+                strategy: "salvage",
+                sidecarPath: sp,
+                result: result.error ?? "File was already valid.",
+                commentsRecovered: result.doc.comments.length,
+                commentsSkipped: result.partialComments
+                  ? (result.partialComments.length < result.doc.comments.length ? 0 : undefined)
+                  : undefined,
+              }, null, 2),
+            }],
+          };
+        }
+
+        // Complete failure — reset as fallback
+        const docName = path.basename(sp).replace(/\.review\.(yaml|json)$/, "");
+        const freshDoc: MrsfDocument = {
+          mrsf_version: "1.0",
+          document: docName,
+          comments: [],
+        };
+        await writeSidecar(sp, freshDoc);
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              strategy: "salvage",
+              sidecarPath: sp,
+              result: `Could not salvage any comments: ${result.error}. File reset to empty.`,
+              commentsRecovered: 0,
+            }, null, 2),
+          }],
+        };
+      } catch (err) {
+        return {
+          content: [{ type: "text", text: `Repair failed: ${errorMessage(err)}` }],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  // ── mrsf_help ─────────────────────────────────────────────────────
+  server.registerTool(
+    "mrsf_help",
+    {
+      title: "Help / Tool Schema",
+      description:
+        "List all available Sidemark (MRSF) MCP tools with their parameter schemas. " +
+        "Optionally filter to a specific tool for detailed parameter info. " +
+        "Useful for discovering the API and understanding required/optional parameters.",
+      inputSchema: {
+        tool: z.string().optional().describe(
+          "Tool name to get detailed help for (e.g. 'mrsf_add'). "
+          + "Omit to list all tools.",
+        ),
+      },
+    },
+    async ({ tool: toolName }) => {
+      const toolSchemas: Record<string, {
+        description: string;
+        parameters: Record<string, { type: string; required: boolean; description: string }>;
+      }> = {
+        mrsf_discover: {
+          description: "Find the Sidemark (MRSF) sidecar for a given Markdown document.",
+          parameters: {
+            document: { type: "string", required: true, description: "Path to the Markdown document" },
+            cwd: { type: "string", required: false, description: "Working directory (defaults to process.cwd())" },
+          },
+        },
+        mrsf_validate: {
+          description: "Validate one or more Sidemark (MRSF) sidecars against the schema.",
+          parameters: {
+            files: { type: "string[]", required: false, description: "Sidecar or Markdown file paths. If omitted, discovers all sidecars." },
+            strict: { type: "boolean", required: false, description: "Treat warnings as errors" },
+            cwd: { type: "string", required: false, description: "Working directory" },
+          },
+        },
+        mrsf_reanchor: {
+          description: "Re-anchor Sidemark (MRSF) comments after the document has been edited.",
+          parameters: {
+            files: { type: "string[]", required: false, description: "Sidecar or Markdown file paths. If omitted, discovers all." },
+            dryRun: { type: "boolean", required: false, description: "Report without modifying files" },
+            threshold: { type: "number (0.0–1.0)", required: false, description: "Fuzzy match threshold (default 0.6)" },
+            updateText: { type: "boolean", required: false, description: "Replace selected_text with current document text" },
+            force: { type: "boolean", required: false, description: "Firmly anchor high-confidence results" },
+            cwd: { type: "string", required: false, description: "Working directory" },
+          },
+        },
+        mrsf_add: {
+          description: "Add a review comment to a Sidemark (MRSF) sidecar.",
+          parameters: {
+            document: { type: "string", required: true, description: "Path to the Markdown document" },
+            text: { type: "string", required: true, description: "Comment text" },
+            author: { type: "string", required: true, description: "Author identifier (e.g. 'Name (handle)')" },
+            line: { type: "integer (≥ 1)", required: false, description: "Starting line number (1-based)" },
+            end_line: { type: "integer (≥ 1)", required: false, description: "Ending line number (inclusive)" },
+            start_column: { type: "integer (≥ 0)", required: false, description: "Starting column (0-based)" },
+            end_column: { type: "integer (≥ 0)", required: false, description: "Ending column" },
+            type: { type: "string", required: false, description: "Comment type: suggestion, issue, question, accuracy, style, clarity" },
+            severity: { type: "enum: low | medium | high", required: false, description: "Severity level" },
+            reply_to: { type: "string", required: false, description: "Parent comment ID for threading" },
+            cwd: { type: "string", required: false, description: "Working directory" },
+          },
+        },
+        mrsf_resolve: {
+          description: "Resolve or unresolve a Sidemark (MRSF) comment by ID.",
+          parameters: {
+            document: { type: "string", required: true, description: "Path to the Markdown document or its sidecar" },
+            id: { type: "string", required: true, description: "Comment ID to resolve/unresolve" },
+            unresolve: { type: "boolean", required: false, description: "Set to true to unresolve instead" },
+            cwd: { type: "string", required: false, description: "Working directory" },
+          },
+        },
+        mrsf_list: {
+          description: "List and filter review comments across Sidemark (MRSF) sidecars.",
+          parameters: {
+            files: { type: "string[]", required: false, description: "Sidecar or Markdown file paths. If omitted, discovers all." },
+            open: { type: "boolean", required: false, description: "Only show unresolved comments" },
+            resolved: { type: "boolean", required: false, description: "Only show resolved comments" },
+            author: { type: "string", required: false, description: "Filter by author" },
+            type: { type: "string", required: false, description: "Filter by type" },
+            severity: { type: "enum: low | medium | high", required: false, description: "Filter by severity" },
+            summary: { type: "boolean", required: false, description: "Return summary statistics instead of full comments" },
+            cwd: { type: "string", required: false, description: "Working directory" },
+          },
+        },
+        mrsf_status: {
+          description: "Check the anchor health of all comments in Sidemark (MRSF) sidecars.",
+          parameters: {
+            files: { type: "string[]", required: false, description: "Sidecar or Markdown file paths. If omitted, discovers all." },
+            cwd: { type: "string", required: false, description: "Working directory" },
+          },
+        },
+        mrsf_rename: {
+          description: "Update a Sidemark (MRSF) sidecar after its Markdown document has been renamed.",
+          parameters: {
+            oldDocument: { type: "string", required: true, description: "Old path to the Markdown document" },
+            newDocument: { type: "string", required: true, description: "New path to the Markdown document" },
+            cwd: { type: "string", required: false, description: "Working directory" },
+          },
+        },
+        mrsf_delete: {
+          description: "Delete a comment by ID from a Sidemark (MRSF) sidecar.",
+          parameters: {
+            document: { type: "string", required: true, description: "Path to the Markdown document or its sidecar" },
+            id: { type: "string", required: true, description: "Comment ID to delete" },
+            cascade: { type: "boolean", required: false, description: "Also remove direct replies instead of promoting them" },
+            cwd: { type: "string", required: false, description: "Working directory" },
+          },
+        },
+        mrsf_repair: {
+          description: "Repair or reset a corrupted Sidemark (MRSF) sidecar.",
+          parameters: {
+            document: { type: "string", required: true, description: "Path to the Markdown document or its sidecar" },
+            strategy: { type: "enum: salvage | reset", required: false, description: "Repair strategy: 'salvage' (default) or 'reset'" },
+            cwd: { type: "string", required: false, description: "Working directory" },
+          },
+        },
+        mrsf_help: {
+          description: "List all available Sidemark (MRSF) tools with their parameter schemas.",
+          parameters: {
+            tool: { type: "string", required: false, description: "Tool name to get detailed help for" },
+          },
+        },
+      };
+
+      if (toolName) {
+        const schema = toolSchemas[toolName];
+        if (!schema) {
+          const available = Object.keys(toolSchemas).join(", ");
+          return {
+            content: [{
+              type: "text",
+              text: `Unknown tool '${toolName}'. Available tools: ${available}`,
+            }],
+            isError: true,
+          };
+        }
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({ tool: toolName, ...schema }, null, 2),
+          }],
+        };
+      }
+
+      // List all tools
+      const summary = Object.entries(toolSchemas).map(([name, info]) => ({
+        tool: name,
+        description: info.description,
+        requiredParams: Object.entries(info.parameters)
+          .filter(([, p]) => p.required)
+          .map(([k]) => k),
+        optionalParams: Object.entries(info.parameters)
+          .filter(([, p]) => !p.required)
+          .map(([k]) => k),
+      }));
+
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify(summary, null, 2),
+        }],
+      };
+    },
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -640,8 +909,8 @@ function registerResources(server: McpServer): void {
     "sidecar",
     new ResourceTemplate("mrsf://sidecar/{+path}", { list: undefined }),
     {
-      title: "MRSF Sidecar",
-      description: "Full parsed MRSF sidecar document as JSON",
+      title: "Sidemark (MRSF) Sidecar",
+      description: "Full parsed Sidemark (MRSF) sidecar document as JSON",
       mimeType: "application/json",
     },
     async (uri, { path: filePath }) => {
@@ -662,8 +931,8 @@ function registerResources(server: McpServer): void {
     "comment",
     new ResourceTemplate("mrsf://comment/{+path}/{id}", { list: undefined }),
     {
-      title: "MRSF Comment",
-      description: "A single review comment from a sidecar file",
+      title: "Sidemark (MRSF) Comment",
+      description: "A single review comment from a Sidemark sidecar file",
       mimeType: "application/json",
     },
     async (uri, { path: filePath, id }) => {
@@ -689,7 +958,7 @@ function registerResources(server: McpServer): void {
     "anchors",
     new ResourceTemplate("mrsf://anchors/{+path}", { list: undefined }),
     {
-      title: "MRSF Anchor Health",
+      title: "Sidemark (MRSF) Anchor Health",
       description: "All comments for a document with their anchor health status",
       mimeType: "application/json",
     },

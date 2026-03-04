@@ -863,3 +863,170 @@ comments:
     expect(result).toBe(original);
   });
 });
+
+/* ================================================================ */
+/*  YAML-special character quoting (Bug 1 regression tests)         */
+/* ================================================================ */
+
+describe("writeSidecar — YAML-special selected_text quoting", () => {
+  const yamlSpecialValues = [
+    { label: "leading dash (list indicator)", value: "- bullet item" },
+    { label: "leading hash (comment)", value: "# Heading" },
+    { label: "colon-space (mapping)", value: "key: value" },
+    { label: "opening bracket", value: "[link](url)" },
+    { label: "opening brace", value: "{foo: bar}" },
+    { label: "leading whitespace", value: "  indented text" },
+    { label: "trailing whitespace", value: "text with trailing " },
+    { label: "tab character", value: "before\tafter" },
+    { label: "newline", value: "line1\nline2" },
+    { label: "ampersand (anchor)", value: "&anchor" },
+    { label: "asterisk (alias)", value: "*alias" },
+    { label: "exclamation (tag)", value: "!important" },
+    { label: "percent (directive)", value: "%TAG" },
+    { label: "pipe (literal block)", value: "| not a block" },
+    { label: "greater-than (folded block)", value: "> not a fold" },
+    { label: "at sign", value: "@mention" },
+    { label: "backtick", value: "`code`" },
+    { label: "YAML boolean true", value: "true" },
+    { label: "YAML boolean false", value: "false" },
+    { label: "YAML null", value: "null" },
+    { label: "YAML tilde null", value: "~" },
+    { label: "YAML yes", value: "yes" },
+    { label: "YAML no", value: "no" },
+    { label: "digit-leading", value: "42 is the answer" },
+    { label: "empty string", value: "" },
+    { label: "bare dash", value: "-" },
+    { label: "double quote inside", value: 'say "hello"' },
+    { label: "inline comment marker", value: "some text # comment" },
+  ];
+
+  for (const { label, value } of yamlSpecialValues) {
+    it(`round-trips selected_text with ${label}`, async () => {
+      const fp = path.join(tmpDir, `special-${label.replace(/\W+/g, "-")}.review.yaml`);
+
+      // Write fresh (toYaml path — known safe)
+      const doc = makeDoc([makeComment({ selected_text: value })]);
+      await writeSidecar(fp, doc);
+
+      // Verify the file is parseable YAML
+      const raw = await readFile(fp, "utf-8");
+      const { default: jsYaml } = await import("js-yaml");
+      const parsed = jsYaml.load(raw) as MrsfDocument;
+      expect(parsed.comments[0].selected_text).toBe(value);
+
+      // Now round-trip through CST path (existing file)
+      const doc2 = makeDoc([
+        makeComment({ selected_text: value }),
+        makeComment({ id: "c-002", selected_text: "new comment" }),
+      ]);
+      await writeSidecar(fp, doc2);
+
+      const raw2 = await readFile(fp, "utf-8");
+      const parsed2 = jsYaml.load(raw2) as MrsfDocument;
+      expect(parsed2.comments[0].selected_text).toBe(value);
+      expect(parsed2.comments).toHaveLength(2);
+    });
+  }
+
+  it("round-trips a brand-new comment with YAML-special selected_text via CST path", async () => {
+    const fp = path.join(tmpDir, "cst-special.review.yaml");
+
+    // Create initial sidecar with a safe comment
+    const initial = makeDoc([makeComment({ id: "safe-1", selected_text: "normal text" })]);
+    await writeSidecar(fp, initial);
+
+    // Add a comment with YAML-dangerous selected_text via the CST round-trip path
+    const updated = makeDoc([
+      makeComment({ id: "safe-1", selected_text: "normal text" }),
+      makeComment({ id: "danger-1", selected_text: "- Why a given bullet point" }),
+      makeComment({ id: "danger-2", selected_text: "# Top-level heading" }),
+      makeComment({ id: "danger-3", selected_text: "key: value with colon" }),
+    ]);
+    await writeSidecar(fp, updated);
+
+    // Parse the result and verify all values survived
+    const raw = await readFile(fp, "utf-8");
+    const { default: jsYaml } = await import("js-yaml");
+    const parsed = jsYaml.load(raw) as MrsfDocument;
+
+    expect(parsed.comments).toHaveLength(4);
+    expect(parsed.comments[0].selected_text).toBe("normal text");
+    expect(parsed.comments[1].selected_text).toBe("- Why a given bullet point");
+    expect(parsed.comments[2].selected_text).toBe("# Top-level heading");
+    expect(parsed.comments[3].selected_text).toBe("key: value with colon");
+  });
+});
+
+/* ================================================================ */
+/*  Concurrent write serialization (Bug 3 regression tests)         */
+/* ================================================================ */
+
+describe("writeSidecar — concurrent writes", () => {
+  it("serializes 10 parallel writes to the same file without data loss", async () => {
+    const fp = path.join(tmpDir, "concurrent.review.yaml");
+
+    // Each write adds a cumulative set of comments (1, 1+2, 1+2+3, ...)
+    // Since writes are serialized, the last write wins — and it should
+    // produce valid YAML with all 10 comments.
+    const allComments: Comment[] = [];
+    for (let i = 1; i <= 10; i++) {
+      allComments.push(
+        makeComment({
+          id: `c-${String(i).padStart(3, "0")}`,
+          text: `Comment number ${i}`,
+          selected_text: `line ${i} content`,
+        }),
+      );
+    }
+
+    // Fire 10 writes in parallel, each with a growing list of comments
+    const writes = allComments.map((_, idx) => {
+      const doc = makeDoc(allComments.slice(0, idx + 1));
+      return writeSidecar(fp, doc);
+    });
+
+    await Promise.all(writes);
+
+    // The final state should be valid YAML
+    const raw = await readFile(fp, "utf-8");
+    const { default: jsYaml } = await import("js-yaml");
+    const parsed = jsYaml.load(raw) as MrsfDocument;
+
+    // The last write (with all 10 comments) should have won
+    expect(parsed.comments).toHaveLength(10);
+    for (let i = 0; i < 10; i++) {
+      expect(parsed.comments[i].id).toBe(`c-${String(i + 1).padStart(3, "0")}`);
+    }
+  });
+
+  it("serializes parallel writes that each add a single different comment", async () => {
+    const fp = path.join(tmpDir, "concurrent-single.review.yaml");
+
+    // Create initial file with one comment
+    const initial = makeDoc([makeComment({ id: "base", text: "base comment" })]);
+    await writeSidecar(fp, initial);
+
+    // Fire 5 parallel writes, each replacing with base + one new comment
+    // Since they're serialized, the last one in the queue wins
+    const writes = [];
+    for (let i = 1; i <= 5; i++) {
+      const doc = makeDoc([
+        makeComment({ id: "base", text: "base comment" }),
+        makeComment({ id: `new-${i}`, text: `New comment ${i}` }),
+      ]);
+      writes.push(writeSidecar(fp, doc));
+    }
+
+    await Promise.all(writes);
+
+    // Result should be valid YAML with 2 comments (base + last write's new comment)
+    const raw = await readFile(fp, "utf-8");
+    const { default: jsYaml } = await import("js-yaml");
+    const parsed = jsYaml.load(raw) as MrsfDocument;
+
+    expect(parsed.comments).toHaveLength(2);
+    expect(parsed.comments[0].id).toBe("base");
+    // The file should be valid YAML regardless of which concurrent write finished last
+    expect(parsed.mrsf_version).toBe("1.0");
+  });
+});

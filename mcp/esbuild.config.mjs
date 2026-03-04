@@ -24,6 +24,9 @@ await esbuild.build({
   banner: { js: binBanner },
 });
 
+// Read version from package.json to inject at build time
+const pkg = JSON.parse(await (await import("node:fs/promises")).readFile("package.json", "utf-8"));
+
 // Bundle server.ts (library entry)
 await esbuild.build({
   entryPoints: ["src/server.ts"],
@@ -35,6 +38,7 @@ await esbuild.build({
   sourcemap: false,
   minify: !isWatch,
   treeShaking: true,
+  define: { PKG_VERSION: JSON.stringify(pkg.version) },
 });
 
 // Also emit type declarations via tsc

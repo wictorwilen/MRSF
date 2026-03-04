@@ -11,12 +11,64 @@
  * Auto-computes selected_text_hash when selected_text changes.
  */
 
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile, rename, unlink } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import path from "node:path";
 import { Document, Parser, CST, parse as yamlParse } from "yaml";
 import type { MrsfDocument, Comment } from "./types.js";
+
+/* ------------------------------------------------------------------ */
+/*  Per-file write serialization                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Map of absolute file paths to pending write promises.
+ * Ensures that concurrent writes to the same sidecar file are serialized
+ * (queued), preventing race conditions during the read-modify-write cycle.
+ */
+const writeQueue = new Map<string, Promise<void>>();
+
+/**
+ * Enqueue a write operation for the given file path, ensuring only one
+ * write executes at a time per file.
+ */
+function enqueueWrite(abs: string, fn: () => Promise<void>): Promise<void> {
+  const prev = writeQueue.get(abs) ?? Promise.resolve();
+  const next = prev.then(fn, fn); // run fn even if previous write failed
+  writeQueue.set(abs, next);
+  // Clean up map entry when the queue drains
+  next.then(() => {
+    if (writeQueue.get(abs) === next) writeQueue.delete(abs);
+  }, () => {
+    if (writeQueue.get(abs) === next) writeQueue.delete(abs);
+  });
+  return next;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Atomic file write                                                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Atomically write content to a file by writing to a temporary file in
+ * the same directory, then renaming.  On POSIX this is atomic; on
+ * Windows it replaces the target.
+ */
+async function atomicWriteFile(
+  filePath: string,
+  content: string,
+): Promise<void> {
+  const tmp = filePath + "." + randomBytes(6).toString("hex") + ".tmp";
+  try {
+    await writeFile(tmp, content, "utf-8");
+    await rename(tmp, filePath);
+  } catch (err) {
+    // Clean up temp file on failure
+    try { await unlink(tmp); } catch { /* ignore */ }
+    throw err;
+  }
+}
 
 /* ------------------------------------------------------------------ */
 /*  Hash helpers                                                       */
@@ -66,23 +118,49 @@ const COMMENT_KEY_ORDER = [
  * Convert a JS value to its YAML source text representation.
  * Strings that require quoting get double-quoted; numbers and booleans
  * are plain scalars.
+ *
+ * Uses an allowlist approach: only strings that consist entirely of
+ * "safe" characters are emitted as bare scalars.  Everything else is
+ * double-quoted via JSON.stringify, which is always valid YAML.
  */
 function valueToSource(v: unknown): string {
   if (typeof v === "number" || typeof v === "boolean") return String(v);
   if (typeof v === "string") {
-    // Strings that need quoting
+    // Empty string must be quoted
+    if (v === "") return JSON.stringify(v);
+
+    // YAML reserved words / null aliases must be quoted
     if (
-      /[:\n"{}[\],&#*?|><!%@`]/.test(v) ||
-      v.includes(" #") ||
-      v === "" ||
-      v === "true" ||
-      v === "false" ||
-      v === "null" ||
-      /^\d/.test(v)
+      v === "true" || v === "false" || v === "null" ||
+      v === "True" || v === "False" || v === "Null" ||
+      v === "TRUE" || v === "FALSE" || v === "NULL" ||
+      v === "yes" || v === "no" || v === "on" || v === "off" ||
+      v === "Yes" || v === "No" || v === "On" || v === "Off" ||
+      v === "YES" || v === "NO" || v === "ON" || v === "OFF" ||
+      v === "~" || v === ".inf" || v === "-.inf" || v === ".nan"
     ) {
       return JSON.stringify(v);
     }
-    return v;
+
+    // Strings starting with digits (could be parsed as number) must be quoted
+    if (/^\d/.test(v)) return JSON.stringify(v);
+
+    // Allowlist: safe plain scalars consist of word chars, hyphens (not
+    // leading), dots, slashes, spaces (not leading/trailing), parentheses,
+    // and @ — but NO YAML indicators or ambiguous sequences.
+    // A safe string:
+    //   • starts with a letter, underscore
+    //   • contains only [A-Za-z0-9 _./()@+-] (note: hyphen mid-string is OK)
+    //   • does NOT contain " #" (inline comment)
+    //   • does NOT start with "- " or end with ":"
+    //   • has no leading/trailing whitespace
+    //   • contains no newlines or tabs
+    if (/^[A-Za-z_][A-Za-z0-9 _./()\-@+]*$/.test(v) && !v.includes(" #") && !/\s$/.test(v)) {
+      return v;
+    }
+
+    // Everything else: double-quote (JSON.stringify handles escaping)
+    return JSON.stringify(v);
   }
   return String(v);
 }
@@ -324,18 +402,31 @@ export function toJson(doc: MrsfDocument): string {
  * whitespace byte-for-byte for unchanged content.
  *
  * For new files or JSON, writes from scratch.
+ *
+ * Writes to the same file path are serialized (queued) to prevent race
+ * conditions from concurrent calls.  All writes are atomic (temp + rename).
  */
 export async function writeSidecar(
   filePath: string,
   doc: MrsfDocument,
 ): Promise<void> {
   const abs = path.resolve(filePath);
+  return enqueueWrite(abs, () => writeSidecarInternal(abs, doc));
+}
+
+/**
+ * Internal implementation of writeSidecar (runs inside the per-file queue).
+ */
+async function writeSidecarInternal(
+  abs: string,
+  doc: MrsfDocument,
+): Promise<void> {
   const isJson = abs.endsWith(".review.json");
 
   if (isJson) {
     // For JSON, always sync hashes and write fresh
     for (const comment of doc.comments) syncHash(comment);
-    await writeFile(abs, toJson(doc), "utf-8");
+    await atomicWriteFile(abs, toJson(doc));
     return;
   }
 
@@ -343,7 +434,7 @@ export async function writeSidecar(
 
   if (!existsSync(abs)) {
     for (const comment of doc.comments) syncHash(comment);
-    await writeFile(abs, toYaml(doc), "utf-8");
+    await atomicWriteFile(abs, toYaml(doc));
     return;
   }
 
@@ -351,7 +442,7 @@ export async function writeSidecar(
   try {
     raw = await readFile(abs, "utf-8");
   } catch {
-    await writeFile(abs, toYaml(doc), "utf-8");
+    await atomicWriteFile(abs, toYaml(doc));
     return;
   }
 
@@ -361,7 +452,7 @@ export async function writeSidecar(
     tokens = [...new Parser().parse(raw)];
   } catch {
     // Unparseable — write fresh
-    await writeFile(abs, toYaml(doc), "utf-8");
+    await atomicWriteFile(abs, toYaml(doc));
     return;
   }
 
@@ -372,6 +463,14 @@ export async function writeSidecar(
     currentDoc = yamlParse(raw) as MrsfDocument;
   } catch {
     // ignore — we'll fall through to source-level comparison
+  }
+
+  // ── Structural validation of parsed YAML ──────────────────────────
+  // If CST parsed OK but the content isn't a valid MrsfDocument shape
+  // (e.g. comments is not an array due to injection), discard and write fresh.
+  if (currentDoc && (!Array.isArray(currentDoc.comments))) {
+    await atomicWriteFile(abs, toYaml(doc));
+    return;
   }
 
   // Build lookup of current parsed values by comment id
@@ -406,7 +505,7 @@ export async function writeSidecar(
 
   const docToken = findCstDocument(tokens);
   if (!docToken?.value || docToken.value.type !== "block-map") {
-    await writeFile(abs, toYaml(doc), "utf-8");
+    await atomicWriteFile(abs, toYaml(doc));
     return;
   }
 
@@ -429,7 +528,7 @@ export async function writeSidecar(
   const commentsEntry = findCstMapEntry(body, "comments");
   if (!commentsEntry?.value || commentsEntry.value.type !== "block-seq") {
     // No existing comments seq — write fresh
-    await writeFile(abs, toYaml(doc), "utf-8");
+    await atomicWriteFile(abs, toYaml(doc));
     return;
   }
 
@@ -518,5 +617,5 @@ export async function writeSidecar(
   // ── Stringify via CST (byte-identical for untouched content) ───────
 
   const result = tokens.map((t: CstNode) => CST.stringify(t)).join("");
-  await writeFile(abs, result, "utf-8");
+  await atomicWriteFile(abs, result);
 }

@@ -42,8 +42,12 @@ export { resolveSidecarPaths } from "./lib/resolve-files.js";
 export {
   parseSidecar,
   parseSidecarContent,
+  parseSidecarLenient,
+  parseSidecarContentLenient,
   readDocumentLines,
 } from "./lib/parser.js";
+
+export type { LenientParseResult } from "./lib/parser.js";
 
 // Writing
 export {
