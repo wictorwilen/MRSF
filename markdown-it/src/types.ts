@@ -20,10 +20,17 @@ export interface MrsfPluginOptions {
 
   /**
    * Pre-loaded MRSF sidecar data.
-   * Takes precedence over both `documentPath` and `sidecarPath`.
+   * Takes precedence over `loader`, `sidecarPath`, and `documentPath`.
    * Enables browser use, custom pipelines, and testing.
    */
   comments?: MrsfDocument;
+
+  /**
+   * Custom loader function that returns sidecar data.
+   * Takes precedence over `sidecarPath` and `documentPath`.
+   * Useful for integrations that manage their own sidecar state.
+   */
+  loader?: () => MrsfDocument | null;
 
   /** Whether to show resolved comments (default: true). */
   showResolved?: boolean;

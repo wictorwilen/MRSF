@@ -92,7 +92,16 @@ function loadComments(options: MrsfPluginOptions): MrsfDocument | null {
     return options.comments;
   }
 
-  // Priority 2: explicit sidecar path
+  // Priority 2: custom loader function
+  if (options.loader) {
+    try {
+      return options.loader();
+    } catch {
+      return null;
+    }
+  }
+
+  // Priority 3: explicit sidecar path
   if (options.sidecarPath) {
     try {
       const abs = path.resolve(options.cwd || process.cwd(), options.sidecarPath);
@@ -103,7 +112,7 @@ function loadComments(options: MrsfPluginOptions): MrsfDocument | null {
     }
   }
 
-  // Priority 3: auto-discover from documentPath
+  // Priority 4: auto-discover from documentPath
   if (options.documentPath) {
     try {
       const cwd = options.cwd || process.cwd();

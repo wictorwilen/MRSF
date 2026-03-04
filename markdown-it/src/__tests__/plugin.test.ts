@@ -74,6 +74,36 @@ describe("badge injection", () => {
     const html = md.render("# Hello\n");
     expect(html).not.toContain("mrsf-badge");
   });
+
+  it("should load comments from a custom loader function", () => {
+    const md = new MarkdownIt();
+    md.use(mrsfPlugin, {
+      loader: () => makeSidecar([
+        { id: "ldr1", text: "From loader", line: 1 },
+      ]),
+    });
+    const html = md.render("# Hello\n");
+    expect(html).toContain("mrsf-badge");
+    expect(html).toContain("From loader");
+  });
+
+  it("should handle loader returning null", () => {
+    const md = new MarkdownIt();
+    md.use(mrsfPlugin, { loader: () => null });
+    const html = md.render("# Hello\n");
+    expect(html).not.toContain("mrsf-badge");
+  });
+
+  it("should prefer comments over loader", () => {
+    const md = new MarkdownIt();
+    md.use(mrsfPlugin, {
+      comments: makeSidecar([{ id: "inline1", text: "Inline", line: 1 }]),
+      loader: () => makeSidecar([{ id: "ldr1", text: "Loader", line: 1 }]),
+    });
+    const html = md.render("# Hello\n");
+    expect(html).toContain("Inline");
+    expect(html).not.toContain("Loader");
+  });
 });
 
 // ── Multiple comments on same line ─────────────────────────

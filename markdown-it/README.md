@@ -57,6 +57,21 @@ md.use(mrsfPlugin, {
 });
 ```
 
+### Custom loader function
+
+```ts
+md.use(mrsfPlugin, {
+  loader: () => {
+    // Load sidecar data however you like — from a database, API, in-memory store, etc.
+    return {
+      mrsf_version: "1.0",
+      document: "guide.md",
+      comments: [/* ... */],
+    };
+  },
+});
+```
+
 ## Stylesheet
 
 Include the default CSS for badges, tooltips, and highlights:
@@ -120,6 +135,7 @@ Each event's `detail` contains `{ commentId: string, line: number | null, action
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `comments` | `MrsfDocument` | — | Pre-loaded sidecar data (highest priority) |
+| `loader` | `() => MrsfDocument \| null` | — | Custom loader function for sidecar data |
 | `documentPath` | `string` | — | Path to Markdown file for auto-discovery |
 | `sidecarPath` | `string` | — | Explicit path to sidecar file |
 | `showResolved` | `boolean` | `true` | Whether to show resolved comments |
