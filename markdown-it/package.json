@@ -1,7 +1,7 @@
 {
   "name": "@mrsf/markdown-it-mrsf",
   "version": "0.1.0",
-  "description": "markdown-it plugin for rendering MRSF (Markdown Review Sidecar Format) review comments",
+  "description": "markdown-it plugin for rendering Sidemark/MRSF (Markdown Review Sidecar Format) review comments",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
