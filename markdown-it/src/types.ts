@@ -41,6 +41,28 @@ export interface MrsfPluginOptions {
    */
   interactive?: boolean;
 
+  /**
+   * Position of the gutter badge relative to the line content.
+   * 'left' places the badge before the text; 'right' floats it to the right.
+   * Default: 'right'.
+   */
+  gutterPosition?: "left" | "right";
+
+  /**
+   * Whether to show the gutter badge on lines that have inline-highlighted
+   * comments (i.e. comments with `selected_text`). When false, lines where
+   * ALL comments have inline highlights will not get a gutter badge — the
+   * inline tooltip is the only way to view the comment. Default: true.
+   */
+  gutterForInline?: boolean;
+
+  /**
+   * Whether to render inline text highlights for comments that have
+   * `selected_text`. When false, only gutter badges are shown.
+   * Default: true.
+   */
+  inlineHighlights?: boolean;
+
   /** Color scheme hint (default: 'auto'). */
   theme?: "light" | "dark" | "auto";
 

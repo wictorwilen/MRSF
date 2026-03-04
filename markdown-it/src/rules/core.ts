@@ -1,15 +1,23 @@
 /**
  * MRSF markdown-it plugin — core rule.
  *
- * Walks the parsed token stream and injects `mrsf_badge_open`/`close`
- * tokens at lines that have comments, and wraps `selected_text` matches
- * with `mrsf_highlight_open`/`close` tokens.
+ * Walks the parsed token stream and injects `mrsf_badge` tokens
+ * at lines that have comments, and wraps `selected_text` matches
+ * with `mrsf_highlight_open`/`close` tokens (with tooltip metadata).
  */
 
 import type Token from "markdown-it/lib/token.mjs";
 import type { Nesting } from "markdown-it/lib/token.mjs";
 import type StateCore from "markdown-it/lib/rules_core/state_core.mjs";
 import type { LineMap, CommentThread } from "../types.js";
+
+/** Options forwarded from the plugin to the core rule. */
+export interface CoreOptions {
+  interactive: boolean;
+  gutterPosition: "left" | "right";
+  gutterForInline: boolean;
+  inlineHighlights: boolean;
+}
 
 /**
  * Find the token index for a given 1-based source line.
@@ -31,16 +39,19 @@ function findTokenIndexForLine(
 
 /**
  * Wrap occurrences of `text` inside inline token children with
- * highlight open/close tokens.
+ * highlight open/close tokens. Stores thread data on the tokens
+ * so the renderer can produce an inline tooltip.
  */
 function highlightInlineText(
   token: Token,
-  text: string,
-  commentId: string,
+  thread: CommentThread,
+  interactive: boolean,
   Token: new (type: string, tag: string, nesting: Nesting) => Token,
 ): boolean {
   if (!token.children) return false;
 
+  const text = thread.comment.selected_text;
+  if (!text) return false;
   const trimmed = text.trim();
   if (!trimmed) return false;
 
@@ -61,10 +72,11 @@ function highlightInlineText(
       newTokens.push(before);
     }
 
-    // Highlight open
+    // Highlight open — carries thread metadata for inline tooltip
     const open = new Token("mrsf_highlight_open", "mark", 1);
     open.attrSet("class", "mrsf-highlight");
-    open.attrSet("data-mrsf-comment-id", commentId);
+    open.attrSet("data-mrsf-comment-id", thread.comment.id);
+    open.meta = { thread };
     newTokens.push(open);
 
     // Matched text
@@ -72,8 +84,9 @@ function highlightInlineText(
     matched.content = trimmed;
     newTokens.push(matched);
 
-    // Highlight close
+    // Highlight close — carries thread metadata for inline tooltip
     const close = new Token("mrsf_highlight_close", "mark", -1);
+    close.meta = { thread, interactive };
     newTokens.push(close);
 
     // Text after match
@@ -97,8 +110,10 @@ function highlightInlineText(
 export function installCoreRule(
   md: { core: { ruler: { push: (name: string, fn: (state: StateCore) => void) => void } } },
   lineMap: LineMap,
-  interactive: boolean,
+  options: CoreOptions,
 ): void {
+  const { interactive, gutterPosition, gutterForInline, inlineHighlights } = options;
+
   md.core.ruler.push("mrsf_inject", (state: StateCore) => {
     const tokens = state.tokens;
     const TokenCtor = state.Token;
@@ -133,42 +148,40 @@ export function installCoreRule(
         );
         token.attrSet("data-mrsf-line", String(line));
 
-        // Inject badge token after this block token's opening
-        const badgeToken = new TokenCtor("mrsf_badge", "", 0);
-        badgeToken.meta = { line, threads, interactive };
-        // Insert right after the current token
-        tokens.splice(i + 1, 0, badgeToken);
+        // Determine whether all threads on this line have inline highlights
+        const allHaveInline = inlineHighlights &&
+          threads.every((t) => !!t.comment.selected_text);
 
-        // Highlight selected_text in inline children
-        if (token.type === "inline") {
-          for (const thread of threads) {
-            if (thread.comment.selected_text) {
-              highlightInlineText(
-                token,
-                thread.comment.selected_text,
-                thread.comment.id,
-                TokenCtor,
-              );
-            }
-          }
+        // Inject badge unless gutterForInline is false AND all threads are inline-highlighted
+        const showBadge = gutterForInline || !allHaveInline || !inlineHighlights;
+        if (showBadge) {
+          const badgeToken = new TokenCtor("mrsf_badge", "", 0);
+          badgeToken.meta = { line, threads, interactive, gutterPosition };
+          tokens.splice(i + 1, 0, badgeToken);
         }
 
-        // Also check next token if it's inline (e.g., heading_open → inline)
-        const next = tokens[i + 1]; // +1 because we spliced badge at i+1
-        const inlineAfter = tokens[i + 2];
-        if (
-          inlineAfter &&
-          inlineAfter.type === "inline" &&
-          inlineAfter !== next
-        ) {
-          for (const thread of threads) {
-            if (thread.comment.selected_text) {
-              highlightInlineText(
-                inlineAfter,
-                thread.comment.selected_text,
-                thread.comment.id,
-                TokenCtor,
-              );
+        // Highlight selected_text in inline children (feature D: tooltips via token meta)
+        if (inlineHighlights) {
+          if (token.type === "inline") {
+            for (const thread of threads) {
+              if (thread.comment.selected_text) {
+                highlightInlineText(token, thread, interactive, TokenCtor);
+              }
+            }
+          }
+
+          // Also check next token if it's inline (e.g., heading_open → inline)
+          const offset = showBadge ? 2 : 1;
+          const inlineAfter = tokens[i + offset];
+          if (
+            inlineAfter &&
+            inlineAfter.type === "inline" &&
+            inlineAfter !== token
+          ) {
+            for (const thread of threads) {
+              if (thread.comment.selected_text) {
+                highlightInlineText(inlineAfter, thread, interactive, TokenCtor);
+              }
             }
           }
         }

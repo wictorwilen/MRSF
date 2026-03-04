@@ -3,6 +3,9 @@ import { ref, onMounted, watch } from "vue";
 
 const rendered = ref("");
 const showResolved = ref(true);
+const gutterPosition = ref("right");
+const gutterForInline = ref(true);
+const inlineHighlights = ref(true);
 
 const sampleMarkdown = `# Architecture Overview
 
@@ -74,12 +77,15 @@ async function renderDemo() {
   md.use(mrsfPlugin, {
     comments: sampleSidecar,
     showResolved: showResolved.value,
+    gutterPosition: gutterPosition.value,
+    gutterForInline: gutterForInline.value,
+    inlineHighlights: inlineHighlights.value,
   });
   rendered.value = md.render(sampleMarkdown);
 }
 
 onMounted(renderDemo);
-watch(showResolved, renderDemo);
+watch([showResolved, gutterPosition, gutterForInline, inlineHighlights], renderDemo);
 </script>
 
 <template>
@@ -88,6 +94,21 @@ watch(showResolved, renderDemo);
       <label>
         <input type="checkbox" v-model="showResolved" />
         Show resolved comments
+      </label>
+      <label>
+        <input type="checkbox" v-model="inlineHighlights" />
+        Inline highlights
+      </label>
+      <label>
+        <input type="checkbox" v-model="gutterForInline" />
+        Gutter for inline comments
+      </label>
+      <label>
+        Gutter position:
+        <select v-model="gutterPosition">
+          <option value="right">Right</option>
+          <option value="left">Left</option>
+        </select>
       </label>
     </div>
     <div class="mrsf-demo-output" v-html="rendered" />
@@ -104,6 +125,9 @@ watch(showResolved, renderDemo);
   border-radius: 8px;
   background: var(--vp-c-bg-soft);
   font-size: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
 }
 
 .mrsf-demo-controls label {
@@ -111,6 +135,15 @@ watch(showResolved, renderDemo);
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.mrsf-demo-controls select {
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--vp-c-divider);
+  background: var(--vp-c-bg);
+  color: var(--vp-c-text-1);
+  font-size: 13px;
 }
 
 .mrsf-demo-output {

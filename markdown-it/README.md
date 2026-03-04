@@ -151,8 +151,19 @@ Each event's `detail` contains `{ commentId: string, line: number | null, action
 | `sidecarPath` | `string` | — | Explicit path to sidecar file |
 | `showResolved` | `boolean` | `true` | Whether to show resolved comments |
 | `interactive` | `boolean` | `false` | Add action buttons for host JS integration |
+| `gutterPosition` | `'left' \| 'right'` | `'right'` | Position of the gutter badge relative to line content |
+| `gutterForInline` | `boolean` | `true` | Show gutter badge for comments that also have inline highlights |
+| `inlineHighlights` | `boolean` | `true` | Render inline text highlights for `selected_text` |
 | `theme` | `'light' \| 'dark' \| 'auto'` | `'auto'` | Color scheme hint |
 | `cwd` | `string` | `process.cwd()` | Working directory for file resolution |
+
+### Display Modes
+
+The plugin supports several display modes that can be combined:
+
+- **Gutter + inline** (default): Badges appear in the gutter, `selected_text` is highlighted inline with hover tooltips on both.
+- **Gutter only** (`inlineHighlights: false`): Only gutter badges shown, no inline highlights.
+- **Inline only** (`gutterForInline: false`): Lines with inline-highlighted comments show only the highlight (with tooltip) — no gutter badge. Lines without `selected_text` still show badges.
 
 ## DOM Contract
 

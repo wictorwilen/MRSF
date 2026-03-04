@@ -75,6 +75,9 @@ export function createMrsfPlugin(loader: CommentLoader) {
   return function mrsfPlugin(md: MarkdownIt, options: MrsfPluginOptions = {}): void {
     const showResolved = options.showResolved ?? true;
     const interactive = options.interactive ?? false;
+    const gutterPosition = options.gutterPosition ?? "right";
+    const gutterForInline = options.gutterForInline ?? true;
+    const inlineHighlights = options.inlineHighlights ?? true;
 
     const doc = loader(options);
     if (!doc || !doc.comments || doc.comments.length === 0) {
@@ -89,7 +92,12 @@ export function createMrsfPlugin(loader: CommentLoader) {
     if (comments.length === 0) return;
 
     const lineMap = groupByLine(comments);
-    installCoreRule(md, lineMap, interactive);
+    installCoreRule(md, lineMap, {
+      interactive,
+      gutterPosition,
+      gutterForInline,
+      inlineHighlights,
+    });
     installRendererRules(md);
   };
 }

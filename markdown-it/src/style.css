@@ -93,6 +93,27 @@
   vertical-align: baseline;
 }
 
+/* Gutter position: right (default) — float the badge to the right */
+.mrsf-tooltip-anchor.mrsf-gutter-right {
+  float: right;
+  margin-left: 8px;
+}
+
+.mrsf-tooltip-anchor.mrsf-gutter-right .mrsf-badge {
+  margin-left: 0;
+}
+
+/* Gutter position: left — badge stays in normal flow */
+.mrsf-tooltip-anchor.mrsf-gutter-left .mrsf-badge {
+  margin-right: 6px;
+  margin-left: 0;
+}
+
+/* Inline highlight tooltip anchor */
+.mrsf-inline-anchor {
+  /* inherit inline-block from .mrsf-tooltip-anchor */
+}
+
 .mrsf-tooltip {
   display: none;
   position: absolute;
@@ -117,9 +138,20 @@
   color: var(--mrsf-tooltip-fg);
 }
 
+/* Right-aligned gutter: anchor tooltip to the right edge */
+.mrsf-tooltip-anchor.mrsf-gutter-right .mrsf-tooltip {
+  left: auto;
+  right: 0;
+}
+
+/* Inline tooltip: smaller and anchored to the left of the highlight */
+.mrsf-inline-tooltip {
+  min-width: 260px;
+}
+
 /* Show tooltip on hover or focus-within (keyboard accessible) */
-.mrsf-tooltip-anchor:hover .mrsf-tooltip,
-.mrsf-tooltip-anchor:focus-within .mrsf-tooltip {
+.mrsf-tooltip-anchor:hover > .mrsf-tooltip,
+.mrsf-tooltip-anchor:focus-within > .mrsf-tooltip {
   display: block;
   animation: mrsf-fade-in 0.15s ease;
 }
@@ -146,7 +178,8 @@
 }
 
 .mrsf-comment.mrsf-resolved {
-  opacity: 0.6;
+  border-left: 2px solid var(--mrsf-badge-resolved-bg);
+  padding-left: 6px;
 }
 
 /* ── Replies ────────────────────────────────────────────── */

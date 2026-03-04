@@ -335,3 +335,165 @@ describe("html escaping", () => {
     expect(html).toContain("&lt;b&gt;Evil&lt;/b&gt;");
   });
 });
+
+// ── Resolved comment details (A) ──────────────────────────
+
+describe("resolved comment details", () => {
+  it("should show full comment details for resolved comments on hover", () => {
+    const html = render("# Title\n", [
+      { id: "c1", text: "Old issue", line: 1, resolved: true, severity: "low" },
+    ]);
+    // Tooltip should contain the author, text, and severity — NOT hidden by opacity
+    expect(html).toContain("mrsf-tooltip");
+    expect(html).toContain("Old issue");
+    expect(html).toContain("mrsf-severity-low");
+    expect(html).toContain("✓ resolved");
+  });
+
+  it("should render resolved badge with resolved class for styling", () => {
+    const html = render("# Title\n", [
+      { id: "c1", text: "Done", line: 1, resolved: true },
+    ]);
+    expect(html).toContain("mrsf-resolved-badge");
+    expect(html).toContain("mrsf-badge-resolved");
+  });
+});
+
+// ── Gutter position (B) ───────────────────────────────────
+
+describe("gutter position", () => {
+  it("should default to right gutter position", () => {
+    const html = render("# Title\n", [
+      { id: "c1", text: "Comment", line: 1 },
+    ]);
+    expect(html).toContain("mrsf-gutter-right");
+  });
+
+  it("should support left gutter position", () => {
+    const html = render("# Title\n", [
+      { id: "c1", text: "Comment", line: 1 },
+    ], { gutterPosition: "left" });
+    expect(html).toContain("mrsf-gutter-left");
+    expect(html).not.toContain("mrsf-gutter-right");
+  });
+
+  it("should support right gutter position explicitly", () => {
+    const html = render("# Title\n", [
+      { id: "c1", text: "Comment", line: 1 },
+    ], { gutterPosition: "right" });
+    expect(html).toContain("mrsf-gutter-right");
+    expect(html).not.toContain("mrsf-gutter-left");
+  });
+});
+
+// ── Gutter for inline (C) ─────────────────────────────────
+
+describe("gutterForInline", () => {
+  it("should show gutter badge for inline comments by default", () => {
+    const html = render("Hello world\n", [
+      { id: "c1", text: "Comment", line: 1, selected_text: "Hello" },
+    ]);
+    expect(html).toContain("mrsf-badge");
+    expect(html).toContain("mrsf-highlight");
+  });
+
+  it("should hide gutter badge when gutterForInline is false and all comments have selected_text", () => {
+    const html = render("Hello world\n", [
+      { id: "c1", text: "Comment", line: 1, selected_text: "Hello" },
+    ], { gutterForInline: false });
+    expect(html).not.toContain("mrsf-badge");
+    expect(html).toContain("mrsf-highlight");
+  });
+
+  it("should still show gutter badge when gutterForInline is false but some comments lack selected_text", () => {
+    const html = render("Hello world\n", [
+      { id: "c1", text: "Inline", line: 1, selected_text: "Hello" },
+      { id: "c2", text: "Line-only", line: 1 },
+    ], { gutterForInline: false });
+    expect(html).toContain("mrsf-badge");
+    expect(html).toContain("mrsf-highlight");
+  });
+
+  it("should ignore gutterForInline when inlineHighlights is false", () => {
+    const html = render("Hello world\n", [
+      { id: "c1", text: "Comment", line: 1, selected_text: "Hello" },
+    ], { gutterForInline: false, inlineHighlights: false });
+    // Badge should show since there are no inline highlights
+    expect(html).toContain("mrsf-badge");
+    expect(html).not.toContain("mrsf-highlight");
+  });
+});
+
+// ── Inline highlight tooltips (D) ─────────────────────────
+
+describe("inline highlight tooltips", () => {
+  it("should show tooltip when hovering inline highlight", () => {
+    const html = render("Hello world\n", [
+      { id: "c1", text: "Check this text", line: 1, selected_text: "Hello", author: "Jane" },
+    ]);
+    // The highlight should be wrapped in a tooltip anchor
+    expect(html).toContain("mrsf-inline-anchor");
+    expect(html).toContain("mrsf-inline-tooltip");
+    // Tooltip should contain the comment details
+    expect(html).toContain("Check this text");
+    expect(html).toContain("Jane");
+  });
+
+  it("should include thread replies in inline tooltip", () => {
+    const html = render("Hello world\n", [
+      { id: "c1", text: "Question", line: 1, selected_text: "Hello" },
+      { id: "r1", text: "Reply here", reply_to: "c1" },
+    ]);
+    expect(html).toContain("mrsf-inline-tooltip");
+    expect(html).toContain("Reply here");
+  });
+
+  it("should render interactive buttons in inline tooltip when interactive is true", () => {
+    const html = render("Hello world\n", [
+      { id: "c1", text: "Check", line: 1, selected_text: "Hello" },
+    ], { interactive: true });
+    expect(html).toContain("mrsf-inline-tooltip");
+    expect(html).toContain("mrsf-action-btn");
+  });
+
+  it("should add tabindex to highlighted text for keyboard accessibility", () => {
+    const html = render("Hello world\n", [
+      { id: "c1", text: "Check", line: 1, selected_text: "Hello" },
+    ]);
+    expect(html).toContain('<mark class="mrsf-highlight"');
+    expect(html).toContain('tabindex="0"');
+  });
+});
+
+// ── Inline highlights toggle (E) ──────────────────────────
+
+describe("inlineHighlights option", () => {
+  it("should show inline highlights by default", () => {
+    const html = render("Hello world\n", [
+      { id: "c1", text: "Comment", line: 1, selected_text: "Hello" },
+    ]);
+    expect(html).toContain("mrsf-highlight");
+    expect(html).toContain("mrsf-badge");
+  });
+
+  it("should hide inline highlights when inlineHighlights is false", () => {
+    const html = render("Hello world\n", [
+      { id: "c1", text: "Comment", line: 1, selected_text: "Hello" },
+    ], { inlineHighlights: false });
+    expect(html).not.toContain("mrsf-highlight");
+    expect(html).not.toContain("mrsf-inline-anchor");
+    // Badge should still be present
+    expect(html).toContain("mrsf-badge");
+  });
+
+  it("should still show gutter badges for all comments when inlineHighlights is false", () => {
+    const html = render("Hello world\n\nSecond line\n", [
+      { id: "c1", text: "Inline", line: 1, selected_text: "Hello" },
+      { id: "c2", text: "Line-only", line: 3 },
+    ], { inlineHighlights: false });
+    expect(html).not.toContain("mrsf-highlight");
+    // Both lines should have badges
+    expect(html).toContain('data-mrsf-line="1"');
+    expect(html).toContain('data-mrsf-line="3"');
+  });
+});

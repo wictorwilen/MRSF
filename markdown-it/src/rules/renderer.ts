@@ -2,8 +2,8 @@
  * MRSF markdown-it plugin — renderer rules.
  *
  * Adds custom renderer rules for MRSF tokens:
- *   - mrsf_badge: renders badge + tooltip HTML
- *   - mrsf_highlight_open/close: renders <mark> wrappers
+ *   - mrsf_badge: renders badge + tooltip HTML (gutter)
+ *   - mrsf_highlight_open/close: renders <mark> wrappers with inline tooltips
  */
 
 import type { CommentThread, SlimComment } from "../types.js";
@@ -102,12 +102,12 @@ function renderThreadHtml(thread: CommentThread, interactive: boolean): string {
 export function installRendererRules(
   md: { renderer: { rules: Record<string, ((...args: any[]) => string) | undefined> } },
 ): void {
-  // Badge + tooltip
+  // Badge + tooltip (gutter)
   md.renderer.rules["mrsf_badge"] = (
-    tokens: { meta: { line: number; threads: CommentThread[]; interactive: boolean } }[],
+    tokens: { meta: { line: number; threads: CommentThread[]; interactive: boolean; gutterPosition: string } }[],
     idx: number,
   ): string => {
-    const { line, threads, interactive } = tokens[idx].meta;
+    const { line, threads, interactive, gutterPosition } = tokens[idx].meta;
 
     const total = threads.reduce(
       (n, t) => n + 1 + t.replies.length,
@@ -125,10 +125,13 @@ export function installRendererRules(
     const severityClass = highestSeverity === "high" || highestSeverity === "medium"
       ? ` mrsf-badge-severity-${highestSeverity}`
       : "";
+    const positionClass = gutterPosition === "left"
+      ? " mrsf-gutter-left"
+      : " mrsf-gutter-right";
 
     const icon = allResolved ? "✓" : "💬";
 
-    let html = `<span class="mrsf-tooltip-anchor">`;
+    let html = `<span class="mrsf-tooltip-anchor${positionClass}">`;
 
     // Badge
     html += `<span class="mrsf-badge${resolvedClass}${severityClass}" data-mrsf-line="${line}" data-mrsf-action="navigate" data-mrsf-comment-id="${escapeHtml(threads[0].comment.id)}" tabindex="0">${icon} ${total}</span>`;
@@ -144,17 +147,42 @@ export function installRendererRules(
     return html;
   };
 
-  // Highlight open/close — simple <mark> wrapper
+  // Highlight open — wraps in tooltip-anchor for inline hover (feature D)
   md.renderer.rules["mrsf_highlight_open"] = (
     tokens: any[],
     idx: number,
   ): string => {
-    const cls = tokens[idx].attrGet("class") || "mrsf-highlight";
-    const commentId = tokens[idx].attrGet("data-mrsf-comment-id") || "";
-    return `<mark class="${escapeHtml(cls)}" data-mrsf-comment-id="${escapeHtml(commentId)}">`;
+    const token = tokens[idx];
+    const cls = token.attrGet("class") || "mrsf-highlight";
+    const commentId = token.attrGet("data-mrsf-comment-id") || "";
+    const thread = token.meta?.thread as CommentThread | undefined;
+
+    let html = "";
+    if (thread) {
+      html += `<span class="mrsf-tooltip-anchor mrsf-inline-anchor">`;
+    }
+    html += `<mark class="${escapeHtml(cls)}" data-mrsf-comment-id="${escapeHtml(commentId)}" tabindex="0">`;
+    return html;
   };
 
-  md.renderer.rules["mrsf_highlight_close"] = (): string => {
-    return `</mark>`;
+  // Highlight close — adds inline tooltip and closes tooltip-anchor
+  md.renderer.rules["mrsf_highlight_close"] = (
+    tokens: any[],
+    idx: number,
+  ): string => {
+    const token = tokens[idx];
+    const meta = token.meta;
+    let html = "</mark>";
+
+    if (meta?.thread) {
+      const thread = meta.thread as CommentThread;
+      const interactive = meta.interactive as boolean;
+      html += `<div class="mrsf-tooltip mrsf-inline-tooltip">`;
+      html += renderThreadHtml(thread, interactive);
+      html += `</div>`;
+      html += `</span>`;
+    }
+
+    return html;
   };
 }
