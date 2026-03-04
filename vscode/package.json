@@ -181,7 +181,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@mrsf/cli": "^0.2.2"
+    "@mrsf/cli": "^0.2.3"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",
