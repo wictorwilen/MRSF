@@ -129,6 +129,11 @@ export function installCoreRule(
       const map = token.map;
       if (!map) continue;
 
+      // Skip inline tokens — they share the same map as their parent block.
+      // We must process the parent block (paragraph_open, heading_open, etc.)
+      // so the badge and class land on the correct rendered element.
+      if (token.type === "inline") continue;
+
       // Check each line in this token's range for comments
       for (let line0 = map[0]; line0 < map[1]; line0++) {
         const line = line0 + 1; // 1-based
@@ -160,24 +165,11 @@ export function installCoreRule(
           tokens.splice(i + 1, 0, badgeToken);
         }
 
-        // Highlight selected_text in inline children (feature D: tooltips via token meta)
+        // Highlight selected_text in the following inline token
         if (inlineHighlights) {
-          if (token.type === "inline") {
-            for (const thread of threads) {
-              if (thread.comment.selected_text) {
-                highlightInlineText(token, thread, interactive, TokenCtor);
-              }
-            }
-          }
-
-          // Also check next token if it's inline (e.g., heading_open → inline)
           const offset = showBadge ? 2 : 1;
           const inlineAfter = tokens[i + offset];
-          if (
-            inlineAfter &&
-            inlineAfter.type === "inline" &&
-            inlineAfter !== token
-          ) {
+          if (inlineAfter && inlineAfter.type === "inline") {
             for (const thread of threads) {
               if (thread.comment.selected_text) {
                 highlightInlineText(inlineAfter, thread, interactive, TokenCtor);
