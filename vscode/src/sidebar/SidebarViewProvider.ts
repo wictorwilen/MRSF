@@ -6,6 +6,7 @@ import * as vscode from "vscode";
 import type { Comment, CommentSummary } from "@mrsf/cli";
 import type { SidecarStore } from "../store/SidecarStore.js";
 import { relativeTime, mrsfToVscodeRange } from "../util/positions.js";
+import { setPreviewScrollTarget } from "../extension.js";
 
 interface WebviewMessage {
   type: string;
@@ -24,11 +25,21 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
   private disposables: vscode.Disposable[] = [];
   private currentDocUri?: vscode.Uri;
   private sortMode: "line" | "date" = "line";
+  private static readonly STATE_KEY = "mrsf.lastDocUri";
 
   constructor(
     private store: SidecarStore,
     private extensionUri: vscode.Uri,
+    private workspaceState?: vscode.Memento,
   ) {
+    // Restore last-known document URI from workspace state
+    // (survives reload when only a preview tab is open).
+    if (workspaceState) {
+      const saved = workspaceState.get<string>(SidebarViewProvider.STATE_KEY);
+      if (saved) {
+        this.currentDocUri = vscode.Uri.parse(saved);
+      }
+    }
     this.disposables.push(
       this.store.onDidChange(() => this.refresh()),
     );
@@ -36,6 +47,23 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
       vscode.window.onDidChangeActiveTextEditor((editor) => {
         if (editor && editor.document.languageId === "markdown") {
           this.currentDocUri = editor.document.uri;
+          this.persistDocUri();
+          this.refresh();
+        }
+        // When no editor is active (e.g., preview focused), keep
+        // showing the last document's comments — don't clear.
+      }),
+    );
+    // Also detect when the visible editors list changes (e.g., opening
+    // a markdown file side-by-side with preview), and retain the last
+    // known markdown document URI.
+    this.disposables.push(
+      vscode.window.onDidChangeVisibleTextEditors((editors) => {
+        if (this.currentDocUri) return; // already tracking
+        const md = editors.find((e) => e.document.languageId === "markdown");
+        if (md) {
+          this.currentDocUri = md.document.uri;
+          this.persistDocUri();
           this.refresh();
         }
       }),
@@ -60,13 +88,43 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
       this.disposables,
     );
 
-    // Set current doc from active editor
+    // Set current doc from active editor, or any visible markdown editor
     const editor = vscode.window.activeTextEditor;
     if (editor && editor.document.languageId === "markdown") {
       this.currentDocUri = editor.document.uri;
+      this.persistDocUri();
+    } else if (!this.currentDocUri) {
+      // Preview may be focused — fall back to any visible markdown editor
+      const mdEditor = vscode.window.visibleTextEditors.find(
+        (e) => e.document.languageId === "markdown",
+      );
+      if (mdEditor) {
+        this.currentDocUri = mdEditor.document.uri;
+        this.persistDocUri();
+      } else {
+        // Last resort: check open text documents (VS Code loads the
+        // document model even for previewed markdown files).
+        const mdDoc = vscode.workspace.textDocuments.find(
+          (d) => d.languageId === "markdown" && d.uri.scheme === "file",
+        );
+        if (mdDoc) {
+          this.currentDocUri = mdDoc.uri;
+          this.persistDocUri();
+        }
+      }
     }
 
     this.refresh();
+  }
+
+  /** Persist the current document URI so it survives window reload. */
+  private persistDocUri(): void {
+    if (this.workspaceState && this.currentDocUri) {
+      this.workspaceState.update(
+        SidebarViewProvider.STATE_KEY,
+        this.currentDocUri.toString(),
+      );
+    }
   }
 
   async refresh(): Promise<void> {
@@ -158,13 +216,13 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
         }
         break;
       case "init":
-        await vscode.commands.executeCommand("mrsf.addLineComment");
+        await vscode.commands.executeCommand("mrsf.addLineComment", undefined, this.currentDocUri);
         break;
       case "addComment":
-        await vscode.commands.executeCommand("mrsf.addLineComment");
+        await vscode.commands.executeCommand("mrsf.addLineComment", undefined, this.currentDocUri);
         break;
       case "reanchor":
-        await vscode.commands.executeCommand("mrsf.reanchor");
+        await vscode.commands.executeCommand("mrsf.reanchor", this.currentDocUri);
         break;
       case "sort":
         if (msg.sortMode === "line" || msg.sortMode === "date") {
@@ -187,11 +245,36 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
     const comment = this.store.findComment(this.currentDocUri, commentId);
     if (!comment || comment.line == null) return;
 
-    const editor = await vscode.window.showTextDocument(this.currentDocUri);
-    const range = mrsfToVscodeRange(comment, editor.document);
-    if (range) {
-      editor.selection = new vscode.Selection(range.start, range.start);
-      editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
+    // Check whether a source editor is already visible for this document
+    const sourceEditorVisible = vscode.window.visibleTextEditors.some(
+      (e) => e.document.uri.toString() === this.currentDocUri?.toString(),
+    );
+
+    if (sourceEditorVisible) {
+      // Source editor is open (side-by-side or otherwise) — navigate
+      // directly and let VS Code's scroll-sync handle the preview.
+      const previewVisible = vscode.window.tabGroups.all.some((group) =>
+        group.tabs.some(
+          (tab) =>
+            tab.isActive &&
+            tab.input instanceof vscode.TabInputWebview,
+        ),
+      );
+
+      const editor = await vscode.window.showTextDocument(this.currentDocUri, {
+        preserveFocus: previewVisible,
+      });
+      const range = mrsfToVscodeRange(comment, editor.document);
+      if (range) {
+        editor.selection = new vscode.Selection(range.start, range.start);
+        editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
+      }
+    } else {
+      // Preview is fullscreen — no source editor visible.
+      // Scroll the preview directly by embedding a scroll target
+      // in the data div, then triggering a preview refresh.
+      setPreviewScrollTarget(comment.line);
+      await vscode.commands.executeCommand("markdown.preview.refresh");
     }
   }
 

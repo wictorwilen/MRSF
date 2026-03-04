@@ -251,6 +251,48 @@ export class SidecarStore implements vscode.Disposable {
     return { doc, uri };
   }
 
+  /**
+   * Like getForActiveEditor but also checks visible editors and open
+   * text documents (covers preview mode where activeTextEditor is undefined).
+   * An explicit URI can be passed to skip discovery entirely.
+   */
+  async getForActiveOrVisible(explicitUri?: vscode.Uri): Promise<{
+    doc: MrsfDocument;
+    uri: vscode.Uri;
+  } | null> {
+    // 1. Explicit URI
+    if (explicitUri) {
+      let doc = this.get(explicitUri);
+      if (!doc) doc = await this.load(explicitUri);
+      return doc ? { doc, uri: explicitUri } : null;
+    }
+
+    // 2. Active editor
+    const fromActive = await this.getForActiveEditor();
+    if (fromActive) return fromActive;
+
+    // 3. Any visible markdown editor (side-by-side with preview)
+    for (const editor of vscode.window.visibleTextEditors) {
+      if (editor.document.languageId === "markdown") {
+        const uri = editor.document.uri;
+        let doc = this.get(uri);
+        if (!doc) doc = await this.load(uri);
+        if (doc) return { doc, uri };
+      }
+    }
+
+    // 4. Any open markdown document (preview loads the document model)
+    for (const td of vscode.workspace.textDocuments) {
+      if (td.languageId === "markdown" && td.uri.scheme === "file") {
+        let doc = this.get(td.uri);
+        if (!doc) doc = await this.load(td.uri);
+        if (doc) return { doc, uri: td.uri };
+      }
+    }
+
+    return null;
+  }
+
   // ── Comment operations ──────────────────────────────────────
 
   /**

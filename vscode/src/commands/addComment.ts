@@ -43,16 +43,42 @@ async function getAuthor(): Promise<string | undefined> {
 export function registerAddLineComment(store: SidecarStore): vscode.Disposable {
   return vscode.commands.registerCommand(
     "mrsf.addLineComment",
-    async (lineArg?: number) => {
-      const editor = vscode.window.activeTextEditor;
+    async (lineArg?: number, uriArg?: vscode.Uri) => {
+      let editor = vscode.window.activeTextEditor;
+
+      // Fallback: when a preview is focused, find a visible markdown editor
       if (!editor || editor.document.languageId !== "markdown") {
+        editor = vscode.window.visibleTextEditors.find(
+          (e) => e.document.languageId === "markdown",
+        ) as vscode.TextEditor | undefined;
+      }
+
+      // Determine the target URI and line
+      const docUri = editor?.document.languageId === "markdown"
+        ? editor.document.uri
+        : uriArg;
+
+      if (!docUri) {
         vscode.window.showWarningMessage(
           "Open a Markdown file to add review comments.",
         );
         return;
       }
 
-      const line = lineArg ?? editor.selection.active.line + 1; // Convert to 1-based
+      let line = lineArg;
+      if (line == null && editor && editor.document.uri.toString() === docUri.toString()) {
+        line = editor.selection.active.line + 1; // 1-based
+      }
+      if (line == null) {
+        // No editor available (fullscreen preview) — prompt for line
+        const input = await vscode.window.showInputBox({
+          prompt: "Line number to add comment on",
+          placeHolder: "e.g. 10",
+          validateInput: (v) => /^\d+$/.test(v.trim()) ? null : "Enter a valid line number",
+        });
+        if (!input) return;
+        line = parseInt(input, 10);
+      }
 
       const text = await vscode.window.showInputBox({
         prompt: `Add comment on line ${line}`,
@@ -78,7 +104,7 @@ export function registerAddLineComment(store: SidecarStore): vscode.Disposable {
       if (!author) return;
 
       try {
-        await store.addComment(editor.document.uri, {
+        await store.addComment(docUri, {
           text,
           author,
           line,
@@ -103,7 +129,16 @@ export function registerAddInlineComment(
   return vscode.commands.registerCommand(
     "mrsf.addInlineComment",
     async () => {
-      const editor = vscode.window.activeTextEditor;
+      let editor = vscode.window.activeTextEditor;
+
+      // Fallback: find a visible markdown editor with a selection
+      if (!editor || editor.document.languageId !== "markdown") {
+        editor = vscode.window.visibleTextEditors.find(
+          (e) =>
+            e.document.languageId === "markdown" && !e.selection.isEmpty,
+        ) as vscode.TextEditor | undefined;
+      }
+
       if (!editor || editor.document.languageId !== "markdown") {
         vscode.window.showWarningMessage(
           "Open a Markdown file to add review comments.",

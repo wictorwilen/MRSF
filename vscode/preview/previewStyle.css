@@ -1,0 +1,278 @@
+/*
+ * Sidemark — Markdown Preview Styles
+ *
+ * Injected into VS Code's Markdown preview via
+ * `contributes.markdown.previewStyles`.
+ */
+
+/* ── Line highlight ─────────────────────────────────────── */
+
+.mrsf-line-highlight {
+  border-left: 3px solid var(--vscode-editorInfo-foreground, #3794ff);
+  padding-left: 8px !important;
+  background: rgba(55, 148, 255, 0.06);
+  border-radius: 2px;
+  margin-left: -11px !important;
+  transition: background 0.15s ease;
+  position: relative;
+}
+
+.mrsf-line-highlight:hover {
+  background: rgba(55, 148, 255, 0.12);
+}
+
+/* Table rows/cells need special handling so relative positioning
+   doesn't break the table layout engine. */
+tr.mrsf-line-highlight,
+td.mrsf-line-highlight,
+th.mrsf-line-highlight {
+  /* Tables don't support position: relative reliably;
+     the badge wrapper handles its own positioning. */
+  position: static;
+}
+
+/* ── Badge ──────────────────────────────────────────────── */
+
+.mrsf-badge {
+  position: absolute;
+  right: calc(100% + 4px);
+  top: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 10px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  z-index: 10;
+
+  color: var(--vscode-badge-foreground, #fff);
+  background: var(--vscode-badge-background, #007acc);
+  border-left: 3px solid transparent;
+
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+/* For table elements the badge is placed in an overlay wrapper
+   positioned relative to the table itself. */
+.mrsf-table-badge-anchor {
+  position: absolute;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.mrsf-table-badge-anchor .mrsf-badge {
+  position: relative;
+  right: auto;
+  top: auto;
+  pointer-events: auto;
+}
+
+.mrsf-badge:hover {
+  opacity: 0.85;
+  transform: scale(1.05);
+}
+
+.mrsf-badge-resolved {
+  background: var(--vscode-testing-iconPassed, #388a34);
+  opacity: 0.7;
+}
+
+/* ── Tooltip container ──────────────────────────────────── */
+
+.mrsf-tooltip {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 100%;
+  z-index: 1000;
+  min-width: 300px;
+  max-width: 480px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 8px;
+  margin-top: 4px;
+  border-radius: 6px;
+
+  background: var(--vscode-editorHoverWidget-background, #252526);
+  border: 1px solid var(--vscode-editorHoverWidget-border, #454545);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+
+  font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, sans-serif);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--vscode-editorHoverWidget-foreground, #cccccc);
+}
+
+.mrsf-tooltip-visible {
+  display: block;
+  animation: mrsf-fade-in 0.15s ease;
+}
+
+@keyframes mrsf-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Thread / Comment ───────────────────────────────────── */
+
+.mrsf-thread {
+  padding: 4px 0;
+}
+
+.mrsf-thread + .mrsf-thread {
+  border-top: 1px solid var(--vscode-editorHoverWidget-border, #454545);
+  margin-top: 4px;
+  padding-top: 8px;
+}
+
+.mrsf-comment {
+  padding: 4px 0;
+}
+
+.mrsf-comment.mrsf-resolved {
+  opacity: 0.6;
+}
+
+/* ── Replies ────────────────────────────────────────────── */
+
+.mrsf-replies {
+  margin-left: 16px;
+  padding-left: 8px;
+  border-left: 2px solid var(--vscode-editorHoverWidget-border, #454545);
+}
+
+.mrsf-reply {
+  font-size: 12px;
+}
+
+/* ── Comment header ─────────────────────────────────────── */
+
+.mrsf-comment-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 2px;
+}
+
+.mrsf-author {
+  font-weight: 600;
+  color: var(--vscode-editorHoverWidget-foreground, #cccccc);
+}
+
+.mrsf-date {
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.mrsf-severity {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.mrsf-severity-high {
+  background: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+}
+
+.mrsf-severity-medium {
+  background: rgba(243, 156, 18, 0.2);
+  color: #f39c12;
+}
+
+.mrsf-severity-low {
+  background: rgba(52, 152, 219, 0.2);
+  color: #3498db;
+}
+
+.mrsf-type {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  opacity: 0.8;
+}
+
+.mrsf-resolved-badge {
+  font-size: 10px;
+  color: var(--vscode-testing-iconPassed, #388a34);
+  font-weight: 600;
+}
+
+/* ── Comment body ───────────────────────────────────────── */
+
+.mrsf-comment-body {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Inline text highlight ──────────────────────────────── */
+
+.mrsf-inline-highlight {
+  background: rgba(255, 213, 79, 0.25);
+  border-bottom: 2px solid rgba(255, 213, 79, 0.7);
+  border-radius: 2px;
+  padding: 0 1px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.mrsf-inline-highlight:hover {
+  background: rgba(255, 213, 79, 0.45);
+}
+
+/* ── Selected text quote in tooltip ─────────────────────── */
+
+.mrsf-selected-text {
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.85em;
+  background: var(--vscode-textBlockQuote-background, rgba(127, 127, 127, 0.1));
+  border-left: 3px solid var(--vscode-textBlockQuote-border, rgba(127, 127, 127, 0.3));
+  padding: 4px 8px;
+  margin: 4px 0;
+  border-radius: 2px;
+  color: var(--vscode-editor-foreground, inherit);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Sidebar hint (preview tooltips are read-only) ──────── */
+
+.mrsf-sidebar-hint {
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px solid var(--vscode-editorHoverWidget-border, #454545);
+  font-size: 11px;
+  opacity: 0.6;
+  font-style: italic;
+}
+
+/* ── Hide the data element ──────────────────────────────── */
+
+#mrsf-comment-data {
+  display: none !important;
+}
+
+/* ── Scrollbar styling inside tooltip ───────────────────── */
+
+.mrsf-tooltip::-webkit-scrollbar {
+  width: 6px;
+}
+
+.mrsf-tooltip::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+.mrsf-tooltip::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}

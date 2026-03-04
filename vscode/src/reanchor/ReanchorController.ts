@@ -26,14 +26,54 @@ export class ReanchorController implements vscode.Disposable {
     private statusBar: MrsfStatusBar,
   ) {}
 
+  /**
+   * Resolve the target document URI for reanchoring.
+   * Tries (in order): explicit URI arg, active editor, any visible markdown editor.
+   */
+  private async resolveTarget(
+    explicitUri?: vscode.Uri,
+  ): Promise<{ doc: any; uri: vscode.Uri } | null> {
+    if (explicitUri) {
+      let doc = this.store.get(explicitUri);
+      if (!doc) doc = await this.store.load(explicitUri);
+      return doc ? { doc, uri: explicitUri } : null;
+    }
+
+    // Try active editor first
+    const result = await this.store.getForActiveEditor();
+    if (result) return result;
+
+    // Fallback: any visible markdown editor (preview mode)
+    for (const editor of vscode.window.visibleTextEditors) {
+      if (editor.document.languageId === "markdown") {
+        const uri = editor.document.uri;
+        let doc = this.store.get(uri);
+        if (!doc) doc = await this.store.load(uri);
+        if (doc) return { doc, uri };
+      }
+    }
+
+    // Last resort: any open markdown document (e.g. preview-only tab)
+    for (const textDoc of vscode.workspace.textDocuments) {
+      if (textDoc.languageId === "markdown" && textDoc.uri.scheme === "file") {
+        const uri = textDoc.uri;
+        let doc = this.store.get(uri);
+        if (!doc) doc = await this.store.load(uri);
+        if (doc) return { doc, uri };
+      }
+    }
+
+    return null;
+  }
+
   register(): vscode.Disposable {
-    return vscode.commands.registerCommand("mrsf.reanchor", () =>
-      this.runReanchor(),
+    return vscode.commands.registerCommand("mrsf.reanchor", (uri?: vscode.Uri) =>
+      this.runReanchor(uri),
     );
   }
 
-  private async runReanchor(): Promise<void> {
-    const active = await this.store.getForActiveEditor();
+  private async runReanchor(explicitUri?: vscode.Uri): Promise<void> {
+    const active = await this.resolveTarget(explicitUri);
     if (!active) {
       vscode.window.showWarningMessage(
         "No review sidecar found for the active Markdown file.",

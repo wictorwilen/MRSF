@@ -33,12 +33,16 @@ export class FileWatcher implements vscode.Disposable {
 
     try {
       const docPath = sidecarToDocument(sidecarUri.fsPath);
-      // Reload directly into cache (fires _onDidChange inside load())
-      for (const editor of vscode.window.visibleTextEditors) {
-        if (editor.document.uri.fsPath === docPath) {
-          this.store.load(editor.document.uri);
-        }
-      }
+      const docUri = vscode.Uri.file(docPath);
+
+      // Always reload into cache so the sidebar, decorations and
+      // Markdown preview pick up external changes (e.g. from an AI
+      // review agent running in the background).
+      // load() fires _onDidChange which cascades to:
+      //  • sidebar refresh
+      //  • decoration update
+      //  • markdown.preview.refresh
+      this.store.load(docUri);
     } catch {
       // sidecarToDocument may fail if the naming is unexpected
     }

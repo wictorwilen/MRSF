@@ -23,7 +23,7 @@ async function pickComment(
   label: string,
   filterResolved?: boolean,
 ): Promise<string | undefined> {
-  const active = await store.getForActiveEditor();
+  const active = await store.getForActiveOrVisible();
   if (!active) {
     vscode.window.showWarningMessage("No review sidecar found for this file.");
     return undefined;
@@ -60,7 +60,7 @@ export function registerReplyToComment(
   return vscode.commands.registerCommand(
     "mrsf.replyToComment",
     async (commentIdArg?: string) => {
-      const active = await store.getForActiveEditor();
+      const active = await store.getForActiveOrVisible();
       if (!active) {
         vscode.window.showWarningMessage("No review sidecar found.");
         return;
@@ -115,7 +115,7 @@ export function registerResolveComment(
   return vscode.commands.registerCommand(
     "mrsf.resolveComment",
     async (commentIdArg?: string) => {
-      const active = await store.getForActiveEditor();
+      const active = await store.getForActiveOrVisible();
       if (!active) {
         vscode.window.showWarningMessage("No review sidecar found.");
         return;
@@ -162,7 +162,7 @@ export function registerUnresolveComment(
   return vscode.commands.registerCommand(
     "mrsf.unresolveComment",
     async (commentIdArg?: string) => {
-      const active = await store.getForActiveEditor();
+      const active = await store.getForActiveOrVisible();
       if (!active) {
         vscode.window.showWarningMessage("No review sidecar found.");
         return;
@@ -189,7 +189,7 @@ export function registerDeleteComment(
   return vscode.commands.registerCommand(
     "mrsf.deleteComment",
     async (commentIdArg?: string) => {
-      const active = await store.getForActiveEditor();
+      const active = await store.getForActiveOrVisible();
       if (!active) {
         vscode.window.showWarningMessage("No review sidecar found.");
         return;
