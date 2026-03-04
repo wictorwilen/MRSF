@@ -51,8 +51,8 @@ export default withMermaid(defineConfig({
 
   ignoreDeadLinks: [
     // Links valid on GitHub but not in the docs site
-    /\.\.\/MRSF-v1\.0/,
-    /\.\.\/LICENSE/,
+    /MRSF-v1\.0/,
+    /LICENSE/,
     /mrsf-review/,
     /\.\.\/examples\//,
   ],

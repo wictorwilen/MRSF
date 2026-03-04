@@ -1,6 +1,6 @@
 # @mrsf/mcp
 
-Model Context Protocol (MCP) server for the **Markdown Review Sidecar Format** (MRSF).
+Model Context Protocol (MCP) server for **Sidemark** — the **Markdown Review Sidecar Format** (MRSF).
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MRSF v1.0 Draft](https://img.shields.io/badge/MRSF-v1.0%20Draft-blue)](MRSF-v1.0.md)
@@ -8,7 +8,7 @@ Model Context Protocol (MCP) server for the **Markdown Review Sidecar Format** (
 [![npm downloads (mcp)](https://img.shields.io/npm/dm/@mrsf/mcp?label=mcp%20downloads)](https://www.npmjs.com/package/@mrsf/mcp)
 [![MCP Compatible](https://img.shields.io/badge/MCP-compatible-blueviolet?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyem0wIDE4Yy00LjQyIDAtOC0zLjU4LTgtOHMzLjU4LTggOC04IDggMy41OCA4IDgtMy41OCA4LTggOHoiLz48L3N2Zz4=)](https://modelcontextprotocol.io)
 
-Exposes MRSF operations as MCP tools and resources so that AI assistants (Claude Desktop, Cursor, VS Code Copilot, etc.) can discover, validate, and manage review sidecars through the standard [MCP protocol](https://modelcontextprotocol.io/).
+Exposes Sidemark (MRSF) operations as MCP tools and resources so that AI assistants (Claude Desktop, Cursor, VS Code Copilot, etc.) can discover, validate, and manage review sidecars through the standard [MCP protocol](https://modelcontextprotocol.io/).
 
 ## Installation
 
@@ -76,33 +76,36 @@ The server exposes the following MCP tools:
 
 | Tool | Description |
 | --- | --- |
-| `mrsf_discover` | Find the sidecar file for a Markdown document |
-| `mrsf_validate` | Validate sidecar files against the MRSF schema |
+| `mrsf_discover` | Find the sidecar for a Markdown document |
+| `mrsf_validate` | Validate sidecars against the MRSF schema |
 | `mrsf_reanchor` | Re-anchor comments after a document has been edited |
 | `mrsf_add` | Add a new review comment to a sidecar |
 | `mrsf_resolve` | Resolve or unresolve a comment by ID |
 | `mrsf_list` | List and filter comments (by status, author, type, severity) |
 | `mrsf_status` | Check anchor health (fresh / stale / orphaned) |
 | `mrsf_rename` | Update a sidecar after its document has been renamed |
+| `mrsf_delete` | Delete a comment by ID (with optional cascade) |
+| `mrsf_repair` | Repair or reset a corrupted sidecar |
+| `mrsf_help` | List all tools and their parameter schemas |
 
 ### Tool Details
 
 #### `mrsf_discover`
 
-Find the MRSF sidecar for a Markdown document.
+Find the Sidemark (MRSF) sidecar for a Markdown document.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `document` | string | ✔ | Path to the Markdown document |
-| `cwd` | string | | Working directory |
+| `cwd` | string | | Working directory (defaults to process.cwd()) |
 
 #### `mrsf_validate`
 
-Validate one or more sidecar files.
+Validate one or more Sidemark (MRSF) sidecars.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `files` | string[] | | Sidecar or Markdown paths (discovers all if omitted) |
+| `files` | string[] | | Sidecar or Markdown file paths. If omitted, discovers all sidecars in the workspace. |
 | `strict` | boolean | | Treat warnings as errors |
 | `cwd` | string | | Working directory |
 
@@ -112,28 +115,29 @@ Re-anchor comments after document edits.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `files` | string[] | | Sidecar or Markdown paths |
-| `dryRun` | boolean | | Report without writing changes |
+| `files` | string[] | | Sidecar or Markdown file paths. If omitted, discovers all sidecars. |
+| `dryRun` | boolean | | Report without modifying files |
 | `threshold` | number | | Fuzzy match threshold 0.0–1.0 (default 0.6) |
-| `updateText` | boolean | | Also update `selected_text` with current text |
+| `updateText` | boolean | | Also replace `selected_text` with current document text |
+| `force` | boolean | | Firmly anchor high-confidence results: update commit to HEAD and clear audit fields |
 | `cwd` | string | | Working directory |
 
 #### `mrsf_add`
 
-Add a review comment.
+Add a review comment to a Sidemark (MRSF) sidecar.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `document` | string | ✔ | Path to the Markdown document |
 | `text` | string | ✔ | Comment text |
-| `author` | string | ✔ | Author identifier |
-| `line` | number | | Starting line (1-based) |
-| `end_line` | number | | Ending line (inclusive) |
+| `author` | string | ✔ | Author identifier (e.g. 'Name (handle)') |
+| `line` | number | | Starting line number (1-based) |
+| `end_line` | number | | Ending line number (inclusive) |
 | `start_column` | number | | Starting column (0-based) |
 | `end_column` | number | | Ending column |
-| `type` | string | | Comment type |
-| `severity` | `"low"` \| `"medium"` \| `"high"` | | Severity |
-| `reply_to` | string | | Parent comment ID |
+| `type` | string | | Comment type: suggestion, issue, question, accuracy, style, clarity |
+| `severity` | `"low"` \| `"medium"` \| `"high"` | | Severity level |
+| `reply_to` | string | | Parent comment ID for threading |
 | `cwd` | string | | Working directory |
 
 #### `mrsf_resolve`
@@ -142,33 +146,33 @@ Resolve or unresolve a comment.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `sidecar` | string | ✔ | Sidecar path or its Markdown document |
-| `id` | string | ✔ | Comment ID |
-| `unresolve` | boolean | | Set true to unresolve |
+| `document` | string | ✔ | Path to the Markdown document or its sidecar |
+| `id` | string | ✔ | Comment ID to resolve/unresolve |
+| `unresolve` | boolean | | Set to true to unresolve instead |
 | `cwd` | string | | Working directory |
 
 #### `mrsf_list`
 
-List and filter comments.
+List and filter comments across Sidemark (MRSF) sidecars.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `files` | string[] | | Sidecar or Markdown paths |
-| `open` | boolean | | Only unresolved comments |
-| `resolved` | boolean | | Only resolved comments |
+| `files` | string[] | | Sidecar or Markdown file paths. If omitted, discovers all sidecars. |
+| `open` | boolean | | Only show unresolved comments |
+| `resolved` | boolean | | Only show resolved comments |
 | `author` | string | | Filter by author |
 | `type` | string | | Filter by type |
 | `severity` | `"low"` \| `"medium"` \| `"high"` | | Filter by severity |
-| `summary` | boolean | | Return summary statistics |
+| `summary` | boolean | | Return summary statistics instead of full comments |
 | `cwd` | string | | Working directory |
 
 #### `mrsf_status`
 
-Check anchor health of all comments.
+Check anchor health of all comments in Sidemark (MRSF) sidecars.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `files` | string[] | | Sidecar or Markdown paths |
+| `files` | string[] | | Sidecar or Markdown file paths. If omitted, discovers all sidecars. |
 | `cwd` | string | | Working directory |
 
 #### `mrsf_rename`
@@ -181,15 +185,44 @@ Update sidecar after a document rename/move.
 | `newDocument` | string | ✔ | New path to the Markdown document |
 | `cwd` | string | | Working directory |
 
+#### `mrsf_delete`
+
+Delete a comment by ID from a sidecar. By default, direct replies are promoted (they inherit the parent's anchor and their `reply_to` is re-pointed to the grandparent). Use `cascade` to delete direct replies along with the parent instead.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `document` | string | ✔ | Path to the Markdown document or its sidecar |
+| `id` | string | ✔ | Comment ID to delete |
+| `cascade` | boolean | | When true, also remove direct replies instead of promoting them (default: false) |
+| `cwd` | string | | Working directory |
+
+#### `mrsf_repair`
+
+Repair or reset a corrupted sidecar. Use `salvage` strategy to attempt recovering parseable comments from a corrupted sidecar (rewrites it cleanly). Use `reset` strategy to delete the sidecar and start fresh with an empty comment list.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `document` | string | ✔ | Path to the Markdown document or its sidecar |
+| `strategy` | `"salvage"` \| `"reset"` | | Repair strategy: `salvage` (default) attempts to recover comments; `reset` starts fresh |
+| `cwd` | string | | Working directory |
+
+#### `mrsf_help`
+
+List all available Sidemark (MRSF) MCP tools with their parameter schemas. Optionally filter to a specific tool for detailed parameter info.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `tool` | string | | Tool name to get detailed help for (e.g. `mrsf_add`). Omit to list all tools. |
+
 ## Resources
 
 The server also exposes MCP resources for direct data access:
 
 | URI Pattern | Description |
 | --- | --- |
-| `mrsf://sidecar/{path}` | Full parsed sidecar document as JSON |
-| `mrsf://comment/{path}/{id}` | A single review comment |
-| `mrsf://anchors/{path}` | Anchor health status for all comments |
+| `mrsf://sidecar/{path}` | Full parsed Sidemark (MRSF) sidecar as JSON |
+| `mrsf://comment/{path}/{id}` | A single review comment from a sidecar |
+| `mrsf://anchors/{path}` | Anchor health status for all comments in a sidecar |
 
 ## Agent Skill Example
 

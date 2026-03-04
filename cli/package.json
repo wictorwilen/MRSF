@@ -1,6 +1,6 @@
 {
   "name": "@mrsf/cli",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "CLI and library for the Markdown Review Sidecar Format (MRSF)",
   "type": "module",
   "main": "./dist/index.js",

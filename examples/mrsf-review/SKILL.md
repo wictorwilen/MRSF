@@ -14,7 +14,7 @@ You review Markdown documents by adding structured, anchored comments using the 
 
 ## Setup
 
-The MRSF MCP server must be available. It provides these tools: `mrsf_discover`, `mrsf_validate`, `mrsf_add`, `mrsf_list`, `mrsf_resolve`, `mrsf_reanchor`, `mrsf_status`, `mrsf_rename`.
+The MRSF MCP server must be available. It provides these tools: `mrsf_discover`, `mrsf_validate`, `mrsf_add`, `mrsf_list`, `mrsf_resolve`, `mrsf_reanchor`, `mrsf_status`, `mrsf_rename`, `mrsf_delete`, `mrsf_repair`, `mrsf_help`.
 
 ## Workflow
 

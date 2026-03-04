@@ -193,7 +193,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@mrsf/cli": "^0.2.3"
+    "@mrsf/cli": "^0.3.0"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
