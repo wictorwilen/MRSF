@@ -20,6 +20,7 @@ import { registerList } from "./commands/list.js";
 import { registerInit } from "./commands/init.js";
 import { registerStatus } from "./commands/status.js";
 import { registerRename } from "./commands/rename.js";
+import { registerWatch } from "./commands/watch.js";
 
 /* ── Banner ────────────────────────────────────────────────────────── */
 
@@ -85,5 +86,6 @@ registerList(program);
 registerInit(program);
 registerStatus(program);
 registerRename(program);
+registerWatch(program);
 
 program.parse();

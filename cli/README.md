@@ -242,6 +242,48 @@ mrsf rename docs/old-name.md docs/new-name.md
 
 Updates the `document` field inside the sidecar, writes it to the new path, and removes the old sidecar file.
 
+### `mrsf watch [files...]`
+
+Watch files for changes and continuously validate (and optionally reanchor).
+
+```bash
+# Validate all sidecars on every change
+mrsf watch
+
+# Watch specific files
+mrsf watch docs/api.md docs/guide.md
+
+# Auto-reanchor when Markdown files change
+mrsf watch --reanchor
+
+# Preview reanchor changes without writing
+mrsf watch --reanchor --dry-run
+
+# Custom threshold and strict validation
+mrsf watch --reanchor --threshold 0.8 --strict
+```
+
+**Trigger rules** (avoids feedback loops):
+
+| File type | Action |
+|---|---|
+| `.md` (Markdown) | Reanchor (if `--reanchor` is set), then validate sidecar |
+| `.review.yaml` / `.review.json` | Validate only |
+
+| Option | Description |
+|---|---|
+| `--reanchor` | Auto-reanchor when Markdown files change |
+| `-n, --dry-run` | Preview reanchor changes without writing |
+| `-t, --threshold <n>` | Fuzzy match threshold 0.0–1.0 (default `0.6`) |
+| `-s, --strict` | Treat validation warnings as errors |
+| `--no-git` | Disable git integration |
+| `--from <commit>` | Override from-commit for reanchor |
+| `--update-text` | Update `selected_text` on reanchor |
+| `-f, --force` | Force reanchor — update commit, clear audit fields |
+| `--debounce <ms>` | Debounce interval in ms (default `300`) |
+
+Press `Ctrl+C` to stop — a summary of events, reanchors, and errors is printed.
+
 ## Global Options
 
 These apply to all commands:

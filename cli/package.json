@@ -1,6 +1,6 @@
 {
   "name": "@mrsf/cli",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "CLI and library for the Markdown Review Sidecar Format (MRSF)",
   "type": "module",
   "main": "./dist/index.js",
@@ -55,6 +55,7 @@
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "chalk": "^5.4.1",
+    "chokidar": "^4.0.3",
     "commander": "^13.1.0",
     "fastest-levenshtein": "^1.0.16",
     "js-yaml": "^4.1.0",

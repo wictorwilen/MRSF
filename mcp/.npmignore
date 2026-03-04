@@ -2,6 +2,10 @@
 src/
 tsconfig.json
 
+# Tests & coverage
+coverage/
+__tests__/
+
 # Dev artifacts
 *.tgz
 .gitignore
