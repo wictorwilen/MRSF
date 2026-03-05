@@ -112,7 +112,12 @@ Customise with CSS custom properties:
 
 ## Interactive Mode
 
-Enable `interactive: true` to add action buttons (Resolve, Reply, Edit) inside tooltips. These render as `<button data-mrsf-action="..." data-mrsf-comment-id="...">` elements — inert without JavaScript.
+Enable `interactive: true` to add action buttons (Resolve, Reply, Edit) inside tooltips, plus:
+
+- Gutter “Add comment” buttons for each line badge
+- An inline “Add comment” floater that appears when users select text
+
+Buttons render as `<button data-mrsf-action="..." data-mrsf-comment-id="...">` elements — inert without JavaScript.
 
 ```ts
 md.use(mrsfPlugin, {
@@ -135,11 +140,15 @@ document.addEventListener("mrsf:resolve", (e) => {
 document.addEventListener("mrsf:reply", (e) => {
   console.log("Reply to:", e.detail.commentId);
 });
+
+document.addEventListener("mrsf:add", (e) => {
+  console.log("Add on line", e.detail.line, "selection", e.detail.selectionText);
+});
 ```
 
-Events dispatched: `mrsf:resolve`, `mrsf:unresolve`, `mrsf:reply`, `mrsf:edit`, `mrsf:navigate`.
+Events dispatched: `mrsf:add`, `mrsf:resolve`, `mrsf:unresolve`, `mrsf:reply`, `mrsf:edit`, `mrsf:navigate`.
 
-Each event's `detail` contains `{ commentId: string, line: number | null, action: string }`.
+Each event's `detail` contains `{ commentId: string | null, line: number | null, action: string, selectionText?: string | null, start_line?: number | null, end_line?: number | null, start_column?: number | null, end_column?: number | null }` (snake_case to align with the CLI SDK parameters).
 
 ## Options
 
@@ -171,7 +180,8 @@ All rendered elements follow a strict data-attribute contract:
 
 - `data-mrsf-line` — source line number (1-based)
 - `data-mrsf-comment-id` — comment identifier
-- `data-mrsf-action` — action type (`resolve`, `unresolve`, `reply`, `edit`, `navigate`)
+- `data-mrsf-action` — action type (`add`, `resolve`, `unresolve`, `reply`, `edit`, `navigate`)
+- `data-mrsf-start-line`, `data-mrsf-end-line`, `data-mrsf-start-column`, `data-mrsf-end-column` — optional selection anchors when present
 
 ## License
 

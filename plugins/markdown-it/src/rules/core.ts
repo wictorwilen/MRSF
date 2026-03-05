@@ -134,48 +134,73 @@ export function installCoreRule(
       // so the badge and class land on the correct rendered element.
       if (token.type === "inline") continue;
 
+      // Always expose source line metadata for selection-based adds
+      const startLine1 = map[0] + 1;
+      const endLine1 = map[1];
+      token.attrSet("data-mrsf-line", String(startLine1));
+      token.attrSet("data-mrsf-start-line", String(startLine1));
+      token.attrSet("data-mrsf-end-line", String(endLine1));
+
+      // Mark line elements as hover targets (for gutter add visibility)
+      if (interactive) {
+        const existingClass = token.attrGet("class") || "";
+        token.attrSet(
+          "class",
+          existingClass
+            ? `${existingClass} mrsf-line-hover-target`
+            : "mrsf-line-hover-target",
+        );
+      }
+
       // Check each line in this token's range for comments
       for (let line0 = map[0]; line0 < map[1]; line0++) {
         const line = line0 + 1; // 1-based
         if (processed.has(line)) continue;
 
-        const threads = lineMap.get(line);
-        if (!threads || threads.length === 0) continue;
+        const threads = lineMap.get(line) || [];
+        const hasThreads = threads.length > 0;
         processed.add(line);
 
-        // Add line-highlight class to the block token
-        const existingClass = token.attrGet("class") || "";
-        token.attrSet(
-          "class",
-          existingClass
-            ? `${existingClass} mrsf-line-highlight`
-            : "mrsf-line-highlight",
-        );
-        token.attrSet("data-mrsf-line", String(line));
+        // Add line-highlight class to the block token if we have threads on this line
+        if (hasThreads) {
+          const existingClass = token.attrGet("class") || "";
+          token.attrSet(
+            "class",
+            existingClass
+              ? `${existingClass} mrsf-line-highlight`
+              : "mrsf-line-highlight",
+          );
+          token.attrSet("data-mrsf-line", String(line));
 
-        // Determine whether all threads on this line have inline highlights
-        const allHaveInline = inlineHighlights &&
-          threads.every((t) => !!t.comment.selected_text);
+          // Determine whether all threads on this line have inline highlights
+          const allHaveInline = inlineHighlights &&
+            threads.every((t) => !!t.comment.selected_text);
 
-        // Inject badge unless gutterForInline is false AND all threads are inline-highlighted
-        const showBadge = gutterForInline || !allHaveInline || !inlineHighlights;
-        if (showBadge) {
-          const badgeToken = new TokenCtor("mrsf_badge", "", 0);
-          badgeToken.meta = { line, threads, interactive, gutterPosition };
-          tokens.splice(i + 1, 0, badgeToken);
-        }
+          // Inject badge unless gutterForInline is false AND all threads are inline-highlighted
+          const showBadge = gutterForInline || !allHaveInline || !inlineHighlights;
+          if (showBadge) {
+            const badgeToken = new TokenCtor("mrsf_badge", "", 0);
+            badgeToken.meta = { line, threads, interactive, gutterPosition };
+            tokens.splice(i + 1, 0, badgeToken);
+          }
 
-        // Highlight selected_text in the following inline token
-        if (inlineHighlights) {
-          const offset = showBadge ? 2 : 1;
-          const inlineAfter = tokens[i + offset];
-          if (inlineAfter && inlineAfter.type === "inline") {
-            for (const thread of threads) {
-              if (thread.comment.selected_text) {
-                highlightInlineText(inlineAfter, thread, interactive, TokenCtor);
+          // Highlight selected_text in the following inline token
+          if (inlineHighlights) {
+            const offset = showBadge ? 2 : 1;
+            const inlineAfter = tokens[i + offset];
+            if (inlineAfter && inlineAfter.type === "inline") {
+              for (const thread of threads) {
+                if (thread.comment.selected_text) {
+                  highlightInlineText(inlineAfter, thread, interactive, TokenCtor);
+                }
               }
             }
           }
+        } else if (interactive) {
+          // No existing threads: inject a gutter add button for this line
+          const addToken = new TokenCtor("mrsf_gutter_add", "", 0);
+          addToken.meta = { line, gutterPosition };
+          tokens.splice(i + 1, 0, addToken);
         }
       }
     }

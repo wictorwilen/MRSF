@@ -12,6 +12,16 @@ The `@mrsf/rehype-mrsf` package is a [rehype](https://github.com/rehypejs/rehype
 npm install @mrsf/rehype-mrsf
 ```
 
+## Live Demo
+
+The panel below renders a sample document with the rehype plugin. Hover the gutter badges or inline highlights to see tooltips, toggle options, and try the interactive actions.
+
+<script setup>
+import MrsfRehypeDemo from '../.vitepress/components/MrsfRehypeDemo.vue'
+</script>
+
+<MrsfRehypeDemo />
+
 ## Quick Start
 
 ```ts
@@ -118,17 +128,19 @@ export default withMDX(nextConfig);
 .use(rehypeMrsf, { comments, interactive: true })
 ```
 
-Hook into events with the controller:
+Hook into events with the controller (adds inline + gutter action buttons and built-in modals for add/reply/edit/resolve/unresolve/delete):
 
 ```ts
 import "@mrsf/rehype-mrsf/controller";
 
-document.addEventListener("mrsf:resolve", (e) => {
-  console.log("Resolve:", e.detail.commentId);
+document.addEventListener("mrsf:submit", async (e) => {
+  // Persist to your API; payload is snake_case and matches the CLI types
+  // { action, commentId, text?, line?, end_line?, start_column?, end_column?, selection_text? }
+  await saveComment(e.detail);
 });
 ```
 
-Events: `mrsf:resolve`, `mrsf:unresolve`, `mrsf:reply`, `mrsf:edit`, `mrsf:navigate`.
+Events fired after user confirmation: `mrsf:add`, `mrsf:reply`, `mrsf:edit`, `mrsf:resolve`, `mrsf:unresolve`, `mrsf:delete`, `mrsf:navigate`, plus `mrsf:submit` (always includes the full payload). Set `window.mrsfDisableBuiltinUi = true` before loading the controller to opt out of the built-in dialogs and render your own.
 
 ## CSS Customization
 

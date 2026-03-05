@@ -9,7 +9,7 @@
 import type { Root, Element, ElementContent, Text } from "hast";
 import { visit } from "unist-util-visit";
 import type { LineMap, CommentThread } from "./types.js";
-import { createBadge, createHighlight, createGutterContainer } from "./hast-utils.js";
+import { createBadge, createHighlight, createGutterContainer, createAddControl } from "./hast-utils.js";
 
 /** Options forwarded from the plugin to the transform. */
 export interface TransformOptions {
@@ -136,36 +136,59 @@ export function transformTree(
       if (processed.has(line)) continue;
 
       const threads = lineMap.get(line);
-      if (!threads || threads.length === 0) continue;
+      const hasThreads = !!threads && threads.length > 0;
+      const shouldProcess = hasThreads || interactive; // inject add button even without threads
+      if (!shouldProcess) continue;
+
       processed.add(line);
-      hasComments = true;
-
-      // Add line-highlight class and data attribute
-      addClass(node, "mrsf-line-highlight");
-      node.properties["data-mrsf-line"] = String(line);
-
-      // Determine whether all threads have inline highlights
-      const allHaveInline = inlineHighlights &&
-        threads.every((t) => !!t.comment.selected_text);
-
-      // Inject badge
-      const showBadge = gutterForInline || !allHaveInline || !inlineHighlights;
-      if (showBadge) {
-        const badge = createBadge(line, threads, interactive, gutterPosition);
-        // For tight/left, prepend badge before content; for right, append
-        if (gutterPosition === "tight" || gutterPosition === "left") {
-          node.children.unshift(badge);
-        } else {
-          node.children.unshift(badge);
-        }
+      if (gutterPosition === "left") {
+        hasComments = true; // ensure we wrap for left gutter to position add buttons
+      } else if (hasThreads) {
+        hasComments = true;
       }
 
-      // Highlight selected_text in children
-      if (inlineHighlights) {
-        for (const thread of threads) {
-          if (thread.comment.selected_text) {
-            highlightTextInChildren(node, thread, interactive);
+      // Base data attributes for selection capture
+      node.properties["data-mrsf-line"] = String(line);
+
+      if (interactive) {
+        addClass(node, "mrsf-line-hover-target");
+      }
+
+      if (hasThreads && threads) {
+        // Add line-highlight class and data attribute
+        addClass(node, "mrsf-line-highlight");
+
+        // Determine whether all threads have inline highlights
+        const allHaveInline = inlineHighlights &&
+          threads.every((t) => !!t.comment.selected_text);
+
+        // Inject badge
+        const showBadge = gutterForInline || !allHaveInline || !inlineHighlights;
+        if (showBadge) {
+          const badge = createBadge(line, threads, interactive, gutterPosition);
+          // For tight/left, prepend badge before content; for right, prepend to keep consistent
+          if (gutterPosition === "tight" || gutterPosition === "left") {
+            node.children.unshift(badge);
+          } else {
+            node.children.unshift(badge);
           }
+        }
+
+        // Highlight selected_text in children
+        if (inlineHighlights) {
+          for (const thread of threads) {
+            if (thread.comment.selected_text) {
+              highlightTextInChildren(node, thread, interactive);
+            }
+          }
+        }
+      } else if (interactive) {
+        // No threads on this line: inject a gutter add control
+        const addControl = createAddControl(line, gutterPosition);
+        if (gutterPosition === "tight" || gutterPosition === "left") {
+          node.children.unshift(addControl);
+        } else {
+          node.children.unshift(addControl);
         }
       }
     }

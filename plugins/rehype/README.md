@@ -117,7 +117,7 @@ export default withMDX(nextConfig);
 
 ## Interactive Mode
 
-Enable action buttons and hook into events:
+Enable action buttons and hook into events (includes gutter “Add comment” buttons and an inline “Add comment” floater that appears when users select text):
 
 ```ts
 .use(rehypeMrsf, { comments, interactive: true })
@@ -129,9 +129,14 @@ import "@mrsf/rehype-mrsf/controller";
 document.addEventListener("mrsf:resolve", (e) => {
   console.log("Resolve:", e.detail.commentId);
 });
+
+document.addEventListener("mrsf:add", (e) => {
+  console.log("Add comment on line", e.detail.line, "selection", e.detail.selectionText);
+});
 ```
 
-Events: `mrsf:resolve`, `mrsf:unresolve`, `mrsf:reply`, `mrsf:edit`, `mrsf:navigate`.
+Events: `mrsf:add`, `mrsf:resolve`, `mrsf:unresolve`, `mrsf:reply`, `mrsf:edit`, `mrsf:navigate`.
+Each event has `detail = { commentId: string | null, line: number | null, action, selectionText?: string | null, start_line?: number | null, end_line?: number | null, start_column?: number | null, end_column?: number | null }` (snake_case matches CLI SDK parameters).
 
 ## CSS Customization
 

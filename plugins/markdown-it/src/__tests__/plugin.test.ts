@@ -302,8 +302,8 @@ describe("edge cases", () => {
     const html = render("# Short\n", [
       { id: "c1", text: "Beyond", line: 999 },
     ]);
-    // Should not crash, badge may or may not appear
-    expect(html).toContain("<h1>");
+    // Should not crash; heading should render and may carry data attributes
+    expect(html).toMatch(/<h1\b/);
   });
 
   it("should handle multiple comments on different lines", () => {

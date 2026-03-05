@@ -20,7 +20,7 @@ const HTML_TAGS = new Set([
 ]);
 
 // Known Vue component names used in docs (not escaped by escapeNonHtmlTags)
-const VUE_COMPONENTS = new Set(["MrsfDemo"]);
+const VUE_COMPONENTS = new Set(["MrsfDemo", "MrsfRehypeDemo"]);
 
 /**
  * markdown-it plugin: escape `<word>` patterns that are NOT real HTML tags.

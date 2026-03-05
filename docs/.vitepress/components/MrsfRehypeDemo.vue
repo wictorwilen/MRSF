@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from "vue";
 
 const rendered = ref("");
@@ -69,29 +69,36 @@ const sampleSidecar = {
 };
 
 async function renderDemo() {
-  const [{ default: MarkdownIt }, { mrsfPlugin }] = await Promise.all([
-    import("markdown-it"),
-    import("@mrsf/markdown-it-mrsf"),
+  const [unifiedMod, remarkParseMod, remarkRehypeMod, rehypeStringifyMod, rehypeMrsfMod] = await Promise.all([
+    import("unified"),
+    import("remark-parse"),
+    import("remark-rehype"),
+    import("rehype-stringify"),
+    import("@mrsf/rehype-mrsf"),
   ]);
 
-  if (interactive.value && !window.__mrsfControllerLoaded) {
-    await import("@mrsf/markdown-it-mrsf/controller");
-    window.__mrsfControllerLoaded = true;
+  if (interactive.value && !(window as any).__mrsfRehypeControllerLoaded) {
+    await import("@mrsf/rehype-mrsf/controller");
+    (window as any).__mrsfRehypeControllerLoaded = true;
   }
 
-  const md = new MarkdownIt({ html: true });
-  md.use(mrsfPlugin, {
-    comments: sampleSidecar,
-    showResolved: showResolved.value,
-    gutterPosition: gutterPosition.value,
-    gutterForInline: gutterForInline.value,
-    inlineHighlights: inlineHighlights.value,
-    interactive: interactive.value,
-  });
-  rendered.value = md.render(sampleMarkdown);
+  const file = await unifiedMod.unified()
+    .use(remarkParseMod.default)
+    .use(remarkRehypeMod.default)
+    .use(rehypeMrsfMod.rehypeMrsf, {
+      comments: sampleSidecar,
+      showResolved: showResolved.value,
+      gutterPosition: gutterPosition.value,
+      gutterForInline: gutterForInline.value,
+      inlineHighlights: inlineHighlights.value,
+      interactive: interactive.value,
+    })
+    .use(rehypeStringifyMod.default, { allowDangerousHtml: true })
+    .process(sampleMarkdown);
+
+  rendered.value = String(file);
 }
 
-onMounted(renderDemo);
 watch([showResolved, gutterPosition, gutterForInline, inlineHighlights, interactive], renderDemo);
 
 const handler = (e) => {
@@ -113,6 +120,7 @@ const events = [
 ];
 
 onMounted(() => {
+  renderDemo();
   for (const evt of events) {
     document.addEventListener(evt, handler);
   }
@@ -158,7 +166,7 @@ onUnmounted(() => {
 </template>
 
 <style>
-@import "@mrsf/markdown-it-mrsf/style.css";
+@import "@mrsf/rehype-mrsf/style.css";
 
 .mrsf-demo-controls {
   margin-bottom: 16px;

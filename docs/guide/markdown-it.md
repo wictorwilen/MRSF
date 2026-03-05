@@ -59,3 +59,21 @@ import "@mrsf/markdown-it-mrsf/style.css";
 | `cwd` | `string` | `process.cwd()` | Working directory for file resolution |
 
 See the full documentation in the [package README](https://github.com/wictorwilen/MRSF/tree/main/plugins/markdown-it#readme).
+
+## Interactive Mode
+
+```ts
+md.use(mrsfPlugin, { comments, interactive: true });
+import "@mrsf/markdown-it-mrsf/controller";
+```
+
+The controller wires up inline + gutter buttons and shows built-in modals for add/reply/edit/resolve/unresolve/delete. Listen for events and forward them to your API:
+
+```ts
+document.addEventListener("mrsf:submit", async (e) => {
+  // { action, commentId, text?, line?, end_line?, start_column?, end_column?, selection_text? }
+  await saveComment(e.detail);
+});
+```
+
+Events fired after user confirmation: `mrsf:add`, `mrsf:reply`, `mrsf:edit`, `mrsf:resolve`, `mrsf:unresolve`, `mrsf:delete`, `mrsf:navigate`, plus `mrsf:submit` (full payload). Disable the built-in UI by setting `window.mrsfDisableBuiltinUi = true` before loading the controller.

@@ -54,11 +54,18 @@ export function createBadge(
   for (const thread of threads) {
     tooltipInner += renderThreadHtml(thread, interactive);
   }
+  if (interactive) {
+    tooltipInner += `<span class="mrsf-tooltip-actions"><button class="mrsf-action-btn" data-mrsf-action="add" data-mrsf-line="${line}" data-mrsf-start-line="${line}" data-mrsf-end-line="${line}">Add comment</button></span>`;
+  }
+  const tooltipClasses = ["mrsf-tooltip"];
+  if (interactive) {
+    tooltipClasses.push("mrsf-interactive");
+  }
   const tooltip: Element = {
     type: "element",
     tagName: "span",
     properties: {
-      className: ["mrsf-tooltip"],
+      className: tooltipClasses,
       "data-mrsf-line": String(line),
     },
     children: [{ type: "raw", value: tooltipInner } as unknown as ElementContent],
@@ -71,7 +78,56 @@ export function createBadge(
     properties: {
       className: ["mrsf-tooltip-anchor", `mrsf-gutter-${gutterPosition}`],
     },
-    children: [badge, tooltip],
+    children: interactive
+      ? [
+        badge,
+        {
+          type: "element",
+          tagName: "button",
+          properties: {
+            className: ["mrsf-gutter-add"],
+            "data-mrsf-action": "add",
+            "data-mrsf-line": String(line),
+            "data-mrsf-start-line": String(line),
+            "data-mrsf-end-line": String(line),
+            ariaLabel: "Add comment",
+          },
+          children: [{ type: "text", value: "+" }],
+        },
+        tooltip,
+      ]
+      : [badge, tooltip],
+  };
+}
+
+/**
+ * Create a gutter add button for lines without existing threads.
+ */
+export function createAddControl(
+  line: number,
+  gutterPosition: "left" | "tight" | "right",
+): Element {
+  return {
+    type: "element",
+    tagName: "span",
+    properties: {
+      className: ["mrsf-tooltip-anchor", "mrsf-gutter-add-only", `mrsf-gutter-${gutterPosition}`],
+    },
+    children: [
+      {
+        type: "element",
+        tagName: "button",
+        properties: {
+          className: ["mrsf-gutter-add"],
+          "data-mrsf-action": "add",
+          "data-mrsf-line": String(line),
+          "data-mrsf-start-line": String(line),
+          "data-mrsf-end-line": String(line),
+          ariaLabel: "Add comment",
+        },
+        children: [{ type: "text", value: "+" }],
+      },
+    ],
   };
 }
 
@@ -96,11 +152,15 @@ export function createHighlight(
     children: [{ type: "text", value: text }],
   };
 
+  const inlineTooltipClasses = ["mrsf-tooltip", "mrsf-inline-tooltip"];
+  if (interactive) {
+    inlineTooltipClasses.push("mrsf-interactive");
+  }
   const tooltip: Element = {
     type: "element",
     tagName: "span",
     properties: {
-      className: ["mrsf-tooltip", "mrsf-inline-tooltip"],
+      className: inlineTooltipClasses,
     },
     children: [{ type: "raw", value: tooltipHtml } as unknown as ElementContent],
   };
@@ -110,6 +170,11 @@ export function createHighlight(
     tagName: "span",
     properties: {
       className: ["mrsf-tooltip-anchor", "mrsf-inline-anchor"],
+      "data-mrsf-line": thread.comment.line ?? undefined,
+      "data-mrsf-start-line": thread.comment.line ?? undefined,
+      "data-mrsf-end-line": thread.comment.end_line ?? thread.comment.line ?? undefined,
+      "data-mrsf-start-column": thread.comment.start_column ?? undefined,
+      "data-mrsf-end-column": thread.comment.end_column ?? undefined,
     },
     children: [mark, tooltip],
   };
