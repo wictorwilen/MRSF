@@ -49,8 +49,8 @@ features:
   - icon: 🐍
     title: Python CLI & SDK
     details: "pip install mrsf — validate, add, resolve, reanchor, and more from the terminal."
-    link: /guide/python
-    linkText: "Python SDK docs"
+    link: https://pypi.org/project/mrsf/
+    linkText: "mrsf on PyPI"
   - icon: 💻
     title: VS Code Extension
     details: "Sidemark for VS Code — gutter icons, inline previews, hover cards, sidebar panel, and automatic reanchoring built right into your editor."

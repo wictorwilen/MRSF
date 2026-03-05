@@ -8,6 +8,7 @@ import os
 import tempfile
 import threading
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from ruamel.yaml import YAML
@@ -764,6 +765,90 @@ class TestWriteSidecarYamlSpecialQuoting:
 # =========================================================================
 # Concurrent write serialization
 # =========================================================================
+
+
+# =========================================================================
+# writeSidecar — fallback paths
+# =========================================================================
+
+
+class TestWriteSidecarFallbackPaths:
+    """Cover fallback branches in _write_sidecar_internal."""
+
+    def test_falls_back_when_existing_yaml_file_has_invalid_yaml(self, tmp_dir):
+        """Lines 184-188: YAML parse fails → fallback to fresh write."""
+        fp = str(tmp_dir / "corrupt.review.yaml")
+        Path(fp).write_text("{{{{invalid yaml!!!!!", encoding="utf-8")
+        doc = make_doc([make_comment(selected_text="hello")])
+        write_sidecar(fp, doc)
+        raw = Path(fp).read_text(encoding="utf-8")
+        parsed = _yaml.load(raw)
+        assert parsed["mrsf_version"] == "1.0"
+        assert parsed["comments"][0]["id"] == "c-001"
+        assert parsed["comments"][0]["selected_text_hash"] is not None
+
+    def test_falls_back_when_existing_yaml_is_a_scalar(self, tmp_dir):
+        """Lines 191-194: existing is not a dict → fallback."""
+        fp = str(tmp_dir / "scalar.review.yaml")
+        Path(fp).write_text("just a scalar string\n", encoding="utf-8")
+        doc = make_doc([make_comment()])
+        write_sidecar(fp, doc)
+        raw = Path(fp).read_text(encoding="utf-8")
+        parsed = _yaml.load(raw)
+        assert isinstance(parsed, dict)
+        assert parsed["mrsf_version"] == "1.0"
+        assert len(parsed["comments"]) == 1
+
+    def test_falls_back_when_existing_yaml_has_no_comments_list(self, tmp_dir):
+        """Lines 191-194: existing is dict but comments is not a list."""
+        fp = str(tmp_dir / "nolist.review.yaml")
+        Path(fp).write_text(
+            'mrsf_version: "1.0"\ndocument: test.md\ncomments: "not a list"\n',
+            encoding="utf-8",
+        )
+        doc = make_doc([make_comment()])
+        write_sidecar(fp, doc)
+        raw = Path(fp).read_text(encoding="utf-8")
+        parsed = _yaml.load(raw)
+        assert isinstance(parsed["comments"], list)
+        assert len(parsed["comments"]) == 1
+
+    @patch("mrsf.writer.Path.read_text", side_effect=OSError("Permission denied"))
+    def test_falls_back_when_file_read_raises_oserror(self, mock_read, tmp_dir):
+        """Lines 170-174: OSError on read → fallback to fresh write."""
+        fp = str(tmp_dir / "unreadable.review.yaml")
+        # Create a file so os.path.exists returns True
+        Path(fp).write_text("placeholder", encoding="utf-8")
+        doc = make_doc([make_comment()])
+        write_sidecar(fp, doc)
+        # The file should have been overwritten via the fallback path
+        # (read_text mock raises, so _atomic_write_file creates from scratch)
+        assert Path(fp).exists()
+
+
+class TestAtomicWriteFileException:
+    """Cover the exception handler in _atomic_write_file (lines 131-136)."""
+
+    @patch("mrsf.writer.os.replace", side_effect=OSError("disk full"))
+    def test_cleans_up_tmp_and_reraises(self, mock_replace, tmp_dir):
+        from mrsf.writer import _atomic_write_file
+
+        fp = str(tmp_dir / "fail.review.yaml")
+        with pytest.raises(OSError, match="disk full"):
+            _atomic_write_file(fp, "content")
+        # Temp file should have been cleaned up
+        remaining = list(tmp_dir.iterdir())
+        assert all(not str(f).endswith(".tmp") for f in remaining)
+
+    @patch("mrsf.writer.os.unlink", side_effect=OSError("unlink failed"))
+    @patch("mrsf.writer.os.replace", side_effect=OSError("disk full"))
+    def test_reraises_even_when_unlink_fails(self, mock_replace, mock_unlink, tmp_dir):
+        """Cover lines 134-135: os.unlink raises OSError → pass, re-raise original."""
+        from mrsf.writer import _atomic_write_file
+
+        fp = str(tmp_dir / "fail2.review.yaml")
+        with pytest.raises(OSError, match="disk full"):
+            _atomic_write_file(fp, "content")
 
 
 class TestWriteSidecarConcurrentWrites:

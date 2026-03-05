@@ -14,6 +14,7 @@ import {
   populateSelectedText,
 } from "../lib/comments.js";
 import type { Comment, MrsfDocument } from "../lib/types.js";
+import { findRepoRoot } from "../lib/git.js";
 
 function makeDoc(): MrsfDocument {
   return {
@@ -61,6 +62,21 @@ describe("addComment", () => {
     expect(c.end_line).toBe(12);
     expect(c.type).toBe("suggestion");
     expect(c.severity).toBe("medium");
+  });
+
+  it("auto-detects commit from HEAD when repoRoot is provided", async () => {
+    const doc = makeDoc();
+    const repoRoot = await findRepoRoot();
+    if (!repoRoot) return; // Skip in non-git environments
+    const c = await addComment(doc, { author: "Dave", text: "With git" }, repoRoot);
+    expect(c.commit).toBeTruthy();
+    expect(c.commit!.length).toBe(40); // SHA-1 hex
+  });
+
+  it("does not set commit when no repoRoot provided", async () => {
+    const doc = makeDoc();
+    const c = await addComment(doc, { author: "Eve", text: "No git" });
+    expect(c.commit).toBeUndefined();
   });
 });
 
@@ -132,6 +148,11 @@ describe("unresolveComment", () => {
     });
     expect(unresolveComment(doc, "c-1")).toBe(true);
     expect(doc.comments[0].resolved).toBe(false);
+  });
+
+  it("returns false for unknown ID", () => {
+    const doc = makeDoc();
+    expect(unresolveComment(doc, "missing")).toBe(false);
   });
 });
 
@@ -233,6 +254,32 @@ describe("filterComments", () => {
     expect(result).toHaveLength(2);
   });
 
+  it("filters by type", () => {
+    const result = filterComments(comments, { type: "issue" });
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe("1");
+  });
+
+  it("filters by severity", () => {
+    const result = filterComments(comments, { severity: "high" });
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe("1");
+  });
+
+  it("filters by orphaned status", () => {
+    const commentsWithOrphan: Comment[] = [
+      { id: "1", author: "A", timestamp: "", text: "a", resolved: false, x_reanchor_status: "orphaned" },
+      { id: "2", author: "B", timestamp: "", text: "b", resolved: false },
+    ];
+    const orphaned = filterComments(commentsWithOrphan, { orphaned: true });
+    expect(orphaned).toHaveLength(1);
+    expect(orphaned[0].id).toBe("1");
+
+    const notOrphaned = filterComments(commentsWithOrphan, { orphaned: false });
+    expect(notOrphaned).toHaveLength(1);
+    expect(notOrphaned[0].id).toBe("2");
+  });
+
   it("combines filters", () => {
     const result = filterComments(comments, { open: true, author: "Alice" });
     expect(result).toHaveLength(2);
@@ -303,5 +350,80 @@ describe("populateSelectedText", () => {
     const lines = ["Hello World"];
     populateSelectedText(comment, lines);
     expect(comment.selected_text).toBe("Worl");
+  });
+
+  it("handles multi-line spans", () => {
+    const comment: Comment = {
+      id: "c-1",
+      author: "A",
+      timestamp: "",
+      text: "x",
+      resolved: false,
+      line: 1,
+      end_line: 3,
+    };
+    const lines = ["first line", "second line", "third line"];
+    populateSelectedText(comment, lines);
+    expect(comment.selected_text).toBe("first line\nsecond line\nthird line");
+    expect(comment.selected_text_hash).toBeTruthy();
+  });
+
+  it("handles multi-line spans with columns", () => {
+    const comment: Comment = {
+      id: "c-1",
+      author: "A",
+      timestamp: "",
+      text: "x",
+      resolved: false,
+      line: 1,
+      end_line: 3,
+      start_column: 6,
+      end_column: 5,
+    };
+    const lines = ["Hello World", "middle line", "third line"];
+    populateSelectedText(comment, lines);
+    expect(comment.selected_text).toBe("World\nmiddle line\nthird");
+  });
+
+  it("does nothing when selected_text already exists", () => {
+    const comment: Comment = {
+      id: "c-1",
+      author: "A",
+      timestamp: "",
+      text: "x",
+      resolved: false,
+      line: 1,
+      selected_text: "pre-existing",
+    };
+    const lines = ["first line"];
+    populateSelectedText(comment, lines);
+    expect(comment.selected_text).toBe("pre-existing");
+  });
+
+  it("does nothing when no line is set", () => {
+    const comment: Comment = {
+      id: "c-1",
+      author: "A",
+      timestamp: "",
+      text: "x",
+      resolved: false,
+    };
+    const lines = ["first line"];
+    populateSelectedText(comment, lines);
+    expect(comment.selected_text).toBeUndefined();
+  });
+
+  it("handles out-of-bounds line gracefully", () => {
+    const comment: Comment = {
+      id: "c-1",
+      author: "A",
+      timestamp: "",
+      text: "x",
+      resolved: false,
+      line: 100,
+    };
+    const lines = ["first line"];
+    populateSelectedText(comment, lines);
+    expect(comment.selected_text).toBeUndefined();
   });
 });

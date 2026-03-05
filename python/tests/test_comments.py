@@ -263,6 +263,16 @@ class TestGetThreads:
         assert len(threads["root"]) == 3  # root + 2 replies
         assert len(threads["standalone"]) == 1
 
+    def test_creates_thread_for_reply_with_missing_root(self):
+        """Cover line 236: root_id not in threads → create empty list."""
+        comments = [
+            Comment(id="orphan-reply", author="B", timestamp="", text="reply", resolved=False, reply_to="missing-root"),
+        ]
+        threads = get_threads(comments)
+        assert "missing-root" in threads
+        assert len(threads["missing-root"]) == 1
+        assert threads["missing-root"][0].id == "orphan-reply"
+
 
 # ---------------------------------------------------------------------------
 # summarize
@@ -306,3 +316,189 @@ class TestPopulateSelectedText:
         lines = ["Hello World"]
         populate_selected_text(comment, lines)
         assert comment.selected_text == "Worl"
+
+    def test_multi_line_span(self):
+        comment = Comment(
+            id="c-1", author="A", timestamp="", text="x", resolved=False,
+            line=1, end_line=2,
+        )
+        lines = ["first line", "second line", "third line"]
+        populate_selected_text(comment, lines)
+        assert comment.selected_text == "first line\nsecond line"
+        assert comment.selected_text_hash
+
+    def test_multi_line_with_columns(self):
+        comment = Comment(
+            id="c-1", author="A", timestamp="", text="x", resolved=False,
+            line=1, end_line=2, start_column=6, end_column=6,
+        )
+        lines = ["Hello World", "Second Line"]
+        populate_selected_text(comment, lines)
+        assert comment.selected_text == "World\nSecond"
+
+    def test_does_not_overwrite_existing_selected_text(self):
+        comment = Comment(
+            id="c-1", author="A", timestamp="", text="x", resolved=False,
+            line=2, selected_text="already set",
+        )
+        lines = ["first", "second", "third"]
+        populate_selected_text(comment, lines)
+        assert comment.selected_text == "already set"
+
+    def test_no_op_when_no_line(self):
+        comment = Comment(id="c-1", author="A", timestamp="", text="x", resolved=False)
+        lines = ["first", "second"]
+        populate_selected_text(comment, lines)
+        assert comment.selected_text is None
+
+    def test_out_of_bounds_line(self):
+        comment = Comment(
+            id="c-1", author="A", timestamp="", text="x", resolved=False, line=999,
+        )
+        lines = ["first line"]
+        populate_selected_text(comment, lines)
+        assert comment.selected_text is None
+
+
+# ---------------------------------------------------------------------------
+# addComment with git
+# ---------------------------------------------------------------------------
+
+
+class TestAddCommentWithGit:
+    def test_auto_detects_commit_when_repo_root_provided(self):
+        from unittest.mock import patch, MagicMock
+        from mrsf.git import reset_git_cache
+        reset_git_cache()
+        with patch("mrsf.comments.is_git_available", return_value=True):
+            with patch("mrsf.comments.get_current_commit", return_value="abc123"):
+                doc = make_doc()
+                c = add_comment(
+                    doc,
+                    AddCommentOptions(author="Alice", text="Fix"),
+                    repo_root="/repo",
+                )
+                assert c.commit == "abc123"
+
+    def test_no_commit_when_no_repo_root(self):
+        doc = make_doc()
+        c = add_comment(doc, AddCommentOptions(author="Alice", text="Fix"))
+        assert c.commit is None
+
+
+# ---------------------------------------------------------------------------
+# unresolveComment — returns false
+# ---------------------------------------------------------------------------
+
+
+class TestUnresolveCommentExtended:
+    def test_returns_false_for_non_existent_id(self):
+        doc = make_doc()
+        assert unresolve_comment(doc, "non-existent") is False
+
+
+# ---------------------------------------------------------------------------
+# filterComments — extended
+# ---------------------------------------------------------------------------
+
+
+class TestFilterCommentsExtended:
+    comments = [
+        Comment(id="1", author="Alice", timestamp="", text="a", resolved=False, type="issue", severity="high"),
+        Comment(id="2", author="Bob", timestamp="", text="b", resolved=True, type="suggestion"),
+        Comment(id="3", author="Alice", timestamp="", text="c", resolved=False),
+        Comment(id="4", author="Carol", timestamp="", text="d", resolved=False, extra={"x_reanchor_status": "orphaned"}),
+    ]
+
+    def test_filters_by_type(self):
+        result = filter_comments(self.comments, CommentFilter(type="issue"))
+        assert len(result) == 1
+        assert result[0].id == "1"
+
+    def test_filters_by_severity(self):
+        result = filter_comments(self.comments, CommentFilter(severity="high"))
+        assert len(result) == 1
+        assert result[0].id == "1"
+
+    def test_filters_by_orphaned_true(self):
+        result = filter_comments(self.comments, CommentFilter(orphaned=True))
+        assert len(result) == 1
+        assert result[0].id == "4"
+
+    def test_filters_by_orphaned_false(self):
+        result = filter_comments(self.comments, CommentFilter(orphaned=False))
+        assert len(result) == 3
+        assert all(r.id != "4" for r in result)
+
+
+# ---------------------------------------------------------------------------
+# summarize — extended
+# ---------------------------------------------------------------------------
+
+
+class TestSummarizeExtended:
+    def test_counts_orphaned(self):
+        comments = [
+            Comment(id="1", author="A", timestamp="", text="a", resolved=False, extra={"x_reanchor_status": "orphaned"}),
+            Comment(id="2", author="B", timestamp="", text="b", resolved=False),
+        ]
+        s = summarize(comments)
+        assert s.orphaned == 1
+        assert s.total == 2
+
+    def test_counts_by_severity(self):
+        """Cover line 236: summary.by_severity counting."""
+        comments = [
+            Comment(id="1", author="A", timestamp="", text="a", resolved=False, severity="high"),
+            Comment(id="2", author="B", timestamp="", text="b", resolved=False, severity="high"),
+            Comment(id="3", author="C", timestamp="", text="c", resolved=False, severity="low"),
+        ]
+        s = summarize(comments)
+        assert s.by_severity == {"high": 2, "low": 1}
+
+
+# ---------------------------------------------------------------------------
+# addComment — optional fields coverage
+# ---------------------------------------------------------------------------
+
+
+class TestAddCommentOptionalFields:
+    """Cover lines 61, 63, 69, 71-72 in comments.py."""
+
+    def test_sets_end_line(self):
+        doc = make_doc()
+        c = add_comment(doc, AddCommentOptions(author="A", text="t", line=5, end_line=10))
+        assert c.end_line == 10
+
+    def test_sets_start_column(self):
+        doc = make_doc()
+        c = add_comment(doc, AddCommentOptions(author="A", text="t", line=5, start_column=3))
+        assert c.start_column == 3
+
+    def test_sets_end_column(self):
+        doc = make_doc()
+        c = add_comment(doc, AddCommentOptions(author="A", text="t", line=5, end_column=20))
+        assert c.end_column == 20
+
+    def test_sets_type(self):
+        doc = make_doc()
+        c = add_comment(doc, AddCommentOptions(author="A", text="t", type="issue"))
+        assert c.type == "issue"
+
+    def test_sets_severity(self):
+        doc = make_doc()
+        c = add_comment(doc, AddCommentOptions(author="A", text="t", severity="high"))
+        assert c.severity == "high"
+
+    def test_sets_reply_to(self):
+        doc = make_doc()
+        c = add_comment(doc, AddCommentOptions(author="A", text="t", reply_to="parent-id"))
+        assert c.reply_to == "parent-id"
+
+    def test_sets_selected_text_and_hash(self):
+        """Cover lines 71-72: selected_text assignment + hash computation."""
+        doc = make_doc()
+        c = add_comment(doc, AddCommentOptions(author="A", text="t", selected_text="some code"))
+        assert c.selected_text == "some code"
+        assert c.selected_text_hash is not None
+        assert len(c.selected_text_hash) == 64

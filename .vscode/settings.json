@@ -1,0 +1,9 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "pip": true,
+        "/^cd /home/wictorwilen/code/github/wictorwilen/MRSF/python && python3 -m venv \\.venv && source \\.venv/bin/activate && pip install -e \"\\.\\[dev\\]\" 2>&1 \\| tail -5$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
