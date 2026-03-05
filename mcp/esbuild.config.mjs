@@ -25,7 +25,11 @@ await esbuild.build({
 });
 
 // Read version from package.json to inject at build time
-const pkg = JSON.parse(await (await import("node:fs/promises")).readFile("package.json", "utf-8"));
+const fs = await import("node:fs/promises");
+const pkg = JSON.parse(await fs.readFile("package.json", "utf-8"));
+
+// Copy mrsf.schema.json next to the bundle so the validator can find it at runtime
+await fs.copyFile("../cli/mrsf.schema.json", "dist/mrsf.schema.json");
 
 // Bundle server.ts (library entry)
 await esbuild.build({

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +13,12 @@ from .parser import parse_sidecar
 from .schemas import MRSF_SCHEMA_PATH
 from .types import MrsfDocument, ValidateOptions, ValidationDiagnostic, ValidationResult
 from .writer import compute_hash
+
+# Strict RFC 3339 with mandatory timezone offset (§6.1)
+_RFC3339_TZ = re.compile(
+    r"^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$",
+    re.IGNORECASE,
+)
 
 _schema_cache: dict[str, Any] | None = None
 
@@ -52,12 +59,65 @@ def validate(doc: MrsfDocument, options: ValidateOptions | None = None) -> Valid
             )
         )
 
+    # Top-level field checks (§4)
+    if not doc.document:
+        errors.append(
+            ValidationDiagnostic(
+                severity="error",
+                message='/document: "document" must be a non-empty string',
+                path="/document",
+            )
+        )
+
     # Cross-field validation (§10)
     comments = doc.comments
     ids: set[str] = set()
 
     for i, c in enumerate(comments):
         prefix = f"/comments/{i}"
+
+        # Required field emptiness checks (§6.1)
+        # Python's Comment.from_dict fills "" defaults for missing required
+        # string fields; we must catch empties that the JSON Schema misses.
+        if not c.author:
+            errors.append(
+                ValidationDiagnostic(
+                    severity="error",
+                    message=f'{prefix}/author: required field "author" is missing or empty',
+                    path=f"{prefix}/author",
+                    comment_id=c.id,
+                )
+            )
+        if not c.timestamp:
+            errors.append(
+                ValidationDiagnostic(
+                    severity="error",
+                    message=f'{prefix}/timestamp: required field "timestamp" is missing or empty',
+                    path=f"{prefix}/timestamp",
+                    comment_id=c.id,
+                )
+            )
+        elif isinstance(c.timestamp, str) and not _RFC3339_TZ.match(c.timestamp):
+            errors.append(
+                ValidationDiagnostic(
+                    severity="error",
+                    message=(
+                        f'{prefix}/timestamp: "{c.timestamp}" is not valid'
+                        f" RFC 3339 with timezone offset"
+                    ),
+                    path=f"{prefix}/timestamp",
+                    comment_id=c.id,
+                )
+            )
+        if not c.text:
+            errors.append(
+                ValidationDiagnostic(
+                    severity="error",
+                    message=f'{prefix}/text: required field "text" is missing or empty',
+                    path=f"{prefix}/text",
+                    comment_id=c.id,
+                )
+            )
 
         # Unique id check
         if c.id:

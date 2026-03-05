@@ -19,7 +19,7 @@ class Comment:
     author: str
     timestamp: str
     text: str
-    resolved: bool = False
+    resolved: bool | None = None
 
     # Optional — anchoring
     line: int | None = None
@@ -46,8 +46,9 @@ class Comment:
             "author": self.author,
             "timestamp": self.timestamp,
             "text": self.text,
-            "resolved": self.resolved,
         }
+        if self.resolved is not None:
+            d["resolved"] = self.resolved
         if self.line is not None:
             d["line"] = self.line
         if self.end_line is not None:
@@ -100,7 +101,7 @@ class Comment:
             author=d.get("author", ""),
             timestamp=d.get("timestamp", ""),
             text=d.get("text", ""),
-            resolved=bool(d.get("resolved", False)),
+            resolved=d.get("resolved"),
             line=d.get("line"),
             end_line=d.get("end_line"),
             start_column=d.get("start_column"),

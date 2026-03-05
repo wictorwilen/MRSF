@@ -181,6 +181,35 @@ describe("mrsf_validate", () => {
     const parsed = JSON.parse(text);
     expect(parsed.valid).toBe(true);
   });
+
+  it("rejects a sidecar missing required fields (schema loaded)", async () => {
+    // Write a sidecar with a comment missing the required "resolved" field.
+    // If the JSON Schema is loaded correctly this must be invalid.
+    const badSidecar = `mrsf_version: "1.0"
+document: test.md
+comments:
+  - id: c-bad
+    author: Alice
+    timestamp: "2026-01-01T00:00:00Z"
+    text: Missing resolved field
+`;
+    const badPath = "bad.md.review.yaml";
+    await fs.writeFile(path.join(tmpDir, "bad.md"), "# Bad\n");
+    await fs.writeFile(path.join(tmpDir, badPath), badSidecar);
+
+    const result = await client.callTool({
+      name: "mrsf_validate",
+      arguments: { files: [badPath], cwd: tmpDir },
+    });
+    const text = (result.content as Array<{ text: string }>)[0].text;
+    const parsed = JSON.parse(text);
+    expect(parsed.valid).toBe(false);
+    // Verify the error mentions the missing "resolved" field
+    const allErrors = parsed.files.flatMap(
+      (f: any) => f.result.errors.map((e: any) => e.message),
+    );
+    expect(allErrors.some((m: string) => /resolved/i.test(m))).toBe(true);
+  });
 });
 
 describe("mrsf_list", () => {

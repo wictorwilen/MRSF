@@ -29,6 +29,7 @@ async function loadSchema(): Promise<object> {
   // The schema lives at the repo root, two levels up from dist/lib/
   // When installed as a package, it's at the package root (cli/)
   const candidates = [
+    path.resolve(__dirname, "mrsf.schema.json"),                // same dir (esbuild bundle, e.g. MCP server)
     path.resolve(__dirname, "../../mrsf.schema.json"),          // from dist/lib/ → cli/ (installed package)
     path.resolve(__dirname, "../../../mrsf.schema.json"),       // from dist/lib/ → repo root (dev)
     path.resolve(__dirname, "../../../../mrsf.schema.json"),    // fallback

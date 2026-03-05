@@ -73,7 +73,7 @@ class TestCommentSerialization:
         assert c.author == ""
         assert c.timestamp == ""
         assert c.text == ""
-        assert c.resolved is False
+        assert c.resolved is None
 
 
 # ---------------------------------------------------------------------------
