@@ -17,21 +17,11 @@ import { transformTree } from "./transform.js";
  */
 export function createRehypeMrsf(loader: CommentLoader) {
   return function rehypeMrsf(options: MrsfPluginOptions = {}) {
-    const interactive = options.interactive ?? false;
-    const gutterPosition = options.gutterPosition ?? "right";
-    const gutterForInline = options.gutterForInline ?? true;
-    const inlineHighlights = options.inlineHighlights ?? true;
-
     return (tree: Root) => {
       const result = resolveComments(loader, options);
       if (!result) return;
 
-      transformTree(tree, result.lineMap, {
-        interactive,
-        gutterPosition,
-        gutterForInline,
-        inlineHighlights,
-      });
+      transformTree(tree, result.lineMap);
     };
   };
 }

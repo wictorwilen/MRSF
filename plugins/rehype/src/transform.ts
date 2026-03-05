@@ -1,23 +1,19 @@
 /**
- * MRSF rehype plugin — hast tree transformation.
+ * MRSF rehype plugin — hast tree transformation (overlay gutter architecture).
  *
- * Walks the hast tree and injects badge elements at commented lines,
- * wraps `selected_text` in `<mark>` highlights, and optionally wraps
- * the whole tree in a gutter container for left gutter mode.
+ * Walks the hast tree and annotates block elements with `data-mrsf-line`
+ * attributes. Adds a highlight class on commented lines. Appends a
+ * `<script type="application/mrsf+json">` with serialized comment data
+ * for the client-side MrsfController to consume.
+ *
+ * NO visual DOM is injected — all badges, tooltips, and gutter elements
+ * are created at runtime by the controller.
  */
 
-import type { Root, Element, ElementContent, Text } from "hast";
+import type { Root, Element, ElementContent } from "hast";
 import { visit } from "unist-util-visit";
 import type { LineMap, CommentThread } from "./types.js";
-import { createBadge, createHighlight, createGutterContainer, createAddControl } from "./hast-utils.js";
-
-/** Options forwarded from the plugin to the transform. */
-export interface TransformOptions {
-  interactive: boolean;
-  gutterPosition: "left" | "tight" | "right";
-  gutterForInline: boolean;
-  inlineHighlights: boolean;
-}
+import { createDataScript } from "./hast-utils.js";
 
 /** Block-level tag names that can carry line-anchored comments. */
 const BLOCK_TAGS = new Set([
@@ -31,9 +27,38 @@ const BLOCK_TAGS = new Set([
  */
 function elementSpansLine(node: Element, line: number): boolean {
   if (!node.position) return false;
-  const startLine = node.position.start.line;
-  const endLine = node.position.end.line;
-  return startLine <= line && line <= endLine;
+  return node.position.start.line <= line && line <= node.position.end.line;
+}
+
+/**
+ * Check whether a parent block already covers this node's position,
+ * meaning we should skip this node to avoid duplicate annotations.
+ */
+function coveredByParentBlock(node: Element, parent: any): boolean {
+  if (!parent || parent.type !== "element") return false;
+  const p = parent as Element;
+  if (!BLOCK_TAGS.has(p.tagName)) return false;
+  if (!node.position || !p.position) return false;
+  const s = node.position.start.line;
+  const e = node.position.end.line;
+  return p.position.start.line <= s && e <= p.position.end.line;
+}
+
+/**
+ * Check whether a line is owned by a descendant block element.
+ */
+function lineOwnedByDescendant(node: Element, line: number): boolean {
+  for (const child of node.children) {
+    if (child.type !== "element") continue;
+    if (!child.position) continue;
+    if (BLOCK_TAGS.has(child.tagName) && elementSpansLine(child, line)) {
+      return true;
+    }
+    if (!BLOCK_TAGS.has(child.tagName) && lineOwnedByDescendant(child, line)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -51,152 +76,52 @@ function addClass(node: Element, cls: string): void {
 }
 
 /**
- * Attempt to highlight `selected_text` within an element's text node children.
- * Splits the first matching text node into: before + highlight + after.
- * Returns true if a highlight was inserted.
- */
-function highlightTextInChildren(
-  node: Element,
-  thread: CommentThread,
-  interactive: boolean,
-): boolean {
-  const text = thread.comment.selected_text;
-  if (!text) return false;
-  const trimmed = text.trim();
-  if (!trimmed) return false;
-
-  // Search direct children and children of inline elements
-  return highlightInNode(node, trimmed, thread, interactive);
-}
-
-function highlightInNode(
-  parent: Element,
-  needle: string,
-  thread: CommentThread,
-  interactive: boolean,
-): boolean {
-  for (let i = 0; i < parent.children.length; i++) {
-    const child = parent.children[i];
-
-    if (child.type === "text") {
-      const idx = child.value.indexOf(needle);
-      if (idx === -1) continue;
-
-      const newNodes: ElementContent[] = [];
-
-      // Text before match
-      if (idx > 0) {
-        newNodes.push({ type: "text", value: child.value.slice(0, idx) });
-      }
-
-      // Highlighted match with tooltip
-      newNodes.push(createHighlight(needle, thread, interactive));
-
-      // Text after match
-      if (idx + needle.length < child.value.length) {
-        newNodes.push({ type: "text", value: child.value.slice(idx + needle.length) });
-      }
-
-      parent.children.splice(i, 1, ...newNodes);
-      return true;
-    }
-
-    // Recurse into inline elements (span, strong, em, a, code, etc.)
-    if (child.type === "element" && !BLOCK_TAGS.has(child.tagName)) {
-      if (highlightInNode(child, needle, thread, interactive)) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
-/**
- * Transform a hast tree to inject MRSF review comment UI.
+ * Transform a hast tree: annotate elements with data-mrsf-line and
+ * append embedded comment data for the MrsfController.
  */
 export function transformTree(
   tree: Root,
   lineMap: LineMap,
-  options: TransformOptions,
 ): void {
-  const { interactive, gutterPosition, gutterForInline, inlineHighlights } = options;
   const processed = new Set<number>();
-  let hasComments = false;
 
-  visit(tree, "element", (node: Element, index, parent) => {
+  visit(tree, "element", (node: Element, _index, parent) => {
     if (!node.position) return;
     if (!BLOCK_TAGS.has(node.tagName)) return;
+    if (coveredByParentBlock(node, parent)) return;
+    // Tables can't carry data attributes; let <tr> children handle their rows.
+    if (node.tagName === "table") return;
     if (!node.properties) node.properties = {};
 
     const startLine = node.position.start.line;
     const endLine = node.position.end.line;
 
+    // Annotate the element with line range
+    node.properties["data-mrsf-line"] = String(startLine);
+    node.properties["data-mrsf-start-line"] = String(startLine);
+    node.properties["data-mrsf-end-line"] = String(endLine);
+
+    // Mark lines with comments
     for (let line = startLine; line <= endLine; line++) {
       if (processed.has(line)) continue;
+      if (line !== startLine && lineOwnedByDescendant(node, line)) continue;
 
       const threads = lineMap.get(line);
-      const hasThreads = !!threads && threads.length > 0;
-      const shouldProcess = hasThreads || interactive; // inject add button even without threads
-      if (!shouldProcess) continue;
-
-      processed.add(line);
-      if (gutterPosition === "left") {
-        hasComments = true; // ensure we wrap for left gutter to position add buttons
-      } else if (hasThreads) {
-        hasComments = true;
-      }
-
-      // Base data attributes for selection capture
-      node.properties["data-mrsf-line"] = String(line);
-
-      if (interactive) {
-        addClass(node, "mrsf-line-hover-target");
-      }
-
-      if (hasThreads && threads) {
-        // Add line-highlight class and data attribute
+      if (threads && threads.length > 0) {
         addClass(node, "mrsf-line-highlight");
-
-        // Determine whether all threads have inline highlights
-        const allHaveInline = inlineHighlights &&
-          threads.every((t) => !!t.comment.selected_text);
-
-        // Inject badge
-        const showBadge = gutterForInline || !allHaveInline || !inlineHighlights;
-        if (showBadge) {
-          const badge = createBadge(line, threads, interactive, gutterPosition);
-          // For tight/left, prepend badge before content; for right, prepend to keep consistent
-          if (gutterPosition === "tight" || gutterPosition === "left") {
-            node.children.unshift(badge);
-          } else {
-            node.children.unshift(badge);
-          }
-        }
-
-        // Highlight selected_text in children
-        if (inlineHighlights) {
-          for (const thread of threads) {
-            if (thread.comment.selected_text) {
-              highlightTextInChildren(node, thread, interactive);
-            }
-          }
-        }
-      } else if (interactive) {
-        // No threads on this line: inject a gutter add control
-        const addControl = createAddControl(line, gutterPosition);
-        if (gutterPosition === "tight" || gutterPosition === "left") {
-          node.children.unshift(addControl);
-        } else {
-          node.children.unshift(addControl);
-        }
       }
+      processed.add(line);
     }
   });
 
-  // Wrap in gutter container for left mode
-  if (gutterPosition === "left" && hasComments) {
-    const container = createGutterContainer([...tree.children] as ElementContent[]);
-    tree.children = [container];
+  // Collect all threads into a flat array for the data script
+  const allThreads: CommentThread[] = [];
+  for (const threads of lineMap.values()) {
+    allThreads.push(...threads);
+  }
+
+  if (allThreads.length > 0) {
+    const script = createDataScript(allThreads);
+    tree.children.push(script as ElementContent);
   }
 }

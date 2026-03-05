@@ -11,15 +11,69 @@ const interactive = ref(true);
 const sampleMarkdown = `# Architecture Overview
 
 ## Introduction
-This document outlines the architecture decisions for the system.
+This document outlines the **architecture decisions** for the system.
+
+> Product: System X
+> Author: John Doe
+> Date: 2026-02-19
+> Status: Draft
 
 ## Components
 - API Gateway handles ingress traffic and routing.
 - Worker processes jobs asynchronously.
 - Database stores transactional data.
+  - Primary (write) cluster
+  - Read replicas
+
+## Service Matrix
+
+| Service        | Port | Protocol | Status      |
+|----------------|------|----------|-------------|
+| API Gateway    | 443  | HTTPS    | Production  |
+| Worker         | 8080 | gRPC     | Production  |
+| Database       | 5432 | TCP      | Production  |
+| Cache          | 6379 | TCP      | Staging     |
+
+## Configuration
+
+The main entry point is configured in \`config.yaml\`:
+
+\`\`\`yaml
+server:
+  host: 0.0.0.0
+  port: 8080
+  workers: 4
+
+database:
+  url: postgres://localhost:5432/app
+  pool_size: 20
+\`\`\`
+
+For the API layer, use the following handler:
+
+\`\`\`typescript
+export async function handleRequest(req: Request): Promise<Response> {
+  const data = await db.query(req.params.id);
+  return Response.json(data);
+}
+\`\`\`
+
+## Deployment
+
+1. Build the container image.
+2. Push to the registry.
+3. Update the deployment manifest.
+   1. Set the new image tag.
+   2. Adjust replica count if needed.
+4. Apply with \`kubectl apply -f deploy.yaml\`.
+
+---
 
 ## Notes
-Further details will be expanded in subsequent sections.`;
+
+Further details will be expanded in subsequent sections.
+
+See the [contributing guide](https://example.com/contributing) for *workflow conventions* and **branch naming**.`;
 
 const sampleSidecar = {
   mrsf_version: "1.0",
@@ -36,14 +90,24 @@ const sampleSidecar = {
       type: "suggestion",
     },
     {
+      id: "bq-status",
+      author: "Diana (diana)",
+      timestamp: "2026-03-02T19:10:00Z",
+      text: "Should this still say Draft? We're past that stage.",
+      resolved: false,
+      line: 9,
+      type: "question",
+      selected_text: "Status: Draft",
+    },
+    {
       id: "3eeccbd3",
       author: "Bob (bob)",
       timestamp: "2026-03-02T18:24:51Z",
       text: "Is this phrasing accurate? Workers also handle scheduled tasks.",
       type: "question",
       resolved: false,
-      line: 8,
-      end_line: 8,
+      line: 13,
+      end_line: 13,
       start_column: 2,
       end_column: 21,
       selected_text: "Worker processes jobs",
@@ -57,21 +121,66 @@ const sampleSidecar = {
       reply_to: "3eeccbd3",
     },
     {
+      id: "tbl-cache",
+      author: "Eve (eve)",
+      timestamp: "2026-03-03T08:15:00Z",
+      text: "Cache should be promoted to Production before the next release.",
+      resolved: false,
+      line: 25,
+      severity: "high",
+      type: "action-item",
+      selected_text: "Staging",
+    },
+    {
+      id: "cfg-pool",
+      author: "Bob (bob)",
+      timestamp: "2026-03-03T09:00:00Z",
+      text: "Pool size of 20 seems low for production load. Recommend 50+.",
+      resolved: false,
+      line: 39,
+      severity: "medium",
+      type: "suggestion",
+      selected_text: "pool_size: 20",
+    },
+    {
+      id: "code-handler",
+      author: "Alice (alice)",
+      timestamp: "2026-03-03T09:30:00Z",
+      text: "This handler is missing error handling and input validation.",
+      resolved: false,
+      line: 45,
+      end_line: 48,
+      severity: "high",
+      type: "issue",
+    },
+    {
+      id: "deploy-step",
+      author: "Charlie (charlie)",
+      timestamp: "2026-03-03T10:00:00Z",
+      text: "Add a rollback step in case the deployment fails.",
+      resolved: true,
+      line: 55,
+      severity: "medium",
+      type: "suggestion",
+    },
+    {
       id: "resolved1",
       author: "Charlie (charlie)",
       timestamp: "2026-03-01T10:00:00Z",
       text: "Typo fixed in previous commit.",
       resolved: true,
-      line: 12,
+      line: 11,
       severity: "low",
     },
   ],
 };
 
 async function renderDemo() {
-  const [unifiedMod, remarkParseMod, remarkRehypeMod, rehypeStringifyMod, rehypeMrsfMod] = await Promise.all([
+  const [unifiedMod, remarkParseMod, remarkGfmMod, remarkBreaksMod, remarkRehypeMod, rehypeStringifyMod, rehypeMrsfMod] = await Promise.all([
     import("unified"),
     import("remark-parse"),
+    import("remark-gfm"),
+    import("remark-breaks"),
     import("remark-rehype"),
     import("rehype-stringify"),
     import("@mrsf/rehype-mrsf"),
@@ -84,6 +193,8 @@ async function renderDemo() {
 
   const file = await unifiedMod.unified()
     .use(remarkParseMod.default)
+    .use(remarkGfmMod.default)
+    .use(remarkBreaksMod.default)
     .use(remarkRehypeMod.default)
     .use(rehypeMrsfMod.rehypeMrsf, {
       comments: sampleSidecar,
