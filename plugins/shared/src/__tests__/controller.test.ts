@@ -879,3 +879,323 @@ describe("style injection", () => {
     expect(countAfterSecond).toBe(countAfterFirst);
   });
 });
+
+// ── Inline Highlights ─────────────────────────────────────
+
+describe("Inline text highlights", () => {
+  /**
+   * Helper: build a container with text content and a thread that has selected_text.
+   */
+  function buildInlineContainer(
+    line: number,
+    textContent: string,
+    threads: CommentThread[],
+  ): HTMLDivElement {
+    const div = document.createElement("div");
+    const p = document.createElement("p");
+    p.dataset.mrsfLine = String(line);
+    p.textContent = textContent;
+    div.appendChild(p);
+    const script = document.createElement("script");
+    script.type = "application/mrsf+json";
+    script.textContent = JSON.stringify({ threads });
+    div.appendChild(script);
+    document.body.appendChild(div);
+    return div;
+  }
+
+  it("wraps selected_text in a <mark> element", () => {
+    const thread = makeThread({
+      id: "inline1",
+      line: 5,
+      selected_text: "Bearer token",
+    });
+    container = buildInlineContainer(5, "All endpoints require a valid Bearer token in the header.", [thread]);
+    ctrl = new MrsfController(container);
+
+    const mark = container.querySelector("mark.mrsf-inline-highlight");
+    expect(mark).not.toBeNull();
+    expect(mark!.textContent).toBe("Bearer token");
+  });
+
+  it("sets data-mrsf-comment-id on the mark", () => {
+    const thread = makeThread({
+      id: "c-inline",
+      line: 5,
+      selected_text: "Bearer token",
+    });
+    container = buildInlineContainer(5, "All endpoints require a valid Bearer token in the header.", [thread]);
+    ctrl = new MrsfController(container);
+
+    const mark = container.querySelector("mark.mrsf-inline-highlight") as HTMLElement;
+    expect(mark).not.toBeNull();
+    expect(mark.dataset.mrsfCommentId).toBe("c-inline");
+  });
+
+  it("sets data-mrsf-line on the mark", () => {
+    const thread = makeThread({
+      id: "c-inline",
+      line: 5,
+      selected_text: "Bearer token",
+    });
+    container = buildInlineContainer(5, "All endpoints require a valid Bearer token in the header.", [thread]);
+    ctrl = new MrsfController(container);
+
+    const mark = container.querySelector("mark.mrsf-inline-highlight") as HTMLElement;
+    expect(mark.dataset.mrsfLine).toBe("5");
+  });
+
+  it("does not create marks when inlineHighlights is false", () => {
+    const thread = makeThread({
+      id: "c-inline",
+      line: 5,
+      selected_text: "Bearer token",
+    });
+    container = buildInlineContainer(5, "All endpoints require a valid Bearer token in the header.", [thread]);
+    ctrl = new MrsfController(container, { inlineHighlights: false });
+
+    expect(container.querySelector("mark.mrsf-inline-highlight")).toBeNull();
+  });
+
+  it("does not create marks when comment has no selected_text", () => {
+    const thread = makeThread({ id: "no-sel", line: 5 });
+    container = buildInlineContainer(5, "Some text content.", [thread]);
+    ctrl = new MrsfController(container);
+
+    expect(container.querySelector("mark.mrsf-inline-highlight")).toBeNull();
+  });
+
+  it("does not create marks when selected_text is not found in content", () => {
+    const thread = makeThread({
+      id: "missing",
+      line: 5,
+      selected_text: "nonexistent text",
+    });
+    container = buildInlineContainer(5, "This is completely different content.", [thread]);
+    ctrl = new MrsfController(container);
+
+    expect(container.querySelector("mark.mrsf-inline-highlight")).toBeNull();
+  });
+
+  it("strips markdown backticks and matches rendered text", () => {
+    const thread = makeThread({
+      id: "backtick",
+      line: 5,
+      selected_text: "`Authorization`",
+    });
+    container = buildInlineContainer(5, "Use the Authorization header.", [thread]);
+    ctrl = new MrsfController(container);
+
+    const mark = container.querySelector("mark.mrsf-inline-highlight");
+    expect(mark).not.toBeNull();
+    expect(mark!.textContent).toBe("Authorization");
+  });
+
+  it("strips markdown bold and matches rendered text", () => {
+    const thread = makeThread({
+      id: "bold",
+      line: 5,
+      selected_text: "**important**",
+    });
+    container = buildInlineContainer(5, "This is important note.", [thread]);
+    ctrl = new MrsfController(container);
+
+    const mark = container.querySelector("mark.mrsf-inline-highlight");
+    expect(mark).not.toBeNull();
+    expect(mark!.textContent).toBe("important");
+  });
+
+  it("strips markdown italic and matches rendered text", () => {
+    const thread = makeThread({
+      id: "italic",
+      line: 5,
+      selected_text: "*emphasis*",
+    });
+    container = buildInlineContainer(5, "This has emphasis on it.", [thread]);
+    ctrl = new MrsfController(container);
+
+    const mark = container.querySelector("mark.mrsf-inline-highlight");
+    expect(mark).not.toBeNull();
+    expect(mark!.textContent).toBe("emphasis");
+  });
+
+  it("strips markdown strikethrough and matches rendered text", () => {
+    const thread = makeThread({
+      id: "strike",
+      line: 5,
+      selected_text: "~~deprecated~~",
+    });
+    container = buildInlineContainer(5, "The deprecated API is removed.", [thread]);
+    ctrl = new MrsfController(container);
+
+    const mark = container.querySelector("mark.mrsf-inline-highlight");
+    expect(mark).not.toBeNull();
+    expect(mark!.textContent).toBe("deprecated");
+  });
+
+  it("creates multiple marks for different comments on the same line", () => {
+    const threads = [
+      makeThread({ id: "a", line: 5, selected_text: "Bearer" }),
+      makeThread({ id: "b", line: 5, selected_text: "header" }),
+    ];
+    container = buildInlineContainer(5, "Use Bearer token in the header.", threads);
+    ctrl = new MrsfController(container);
+
+    const marks = container.querySelectorAll("mark.mrsf-inline-highlight");
+    expect(marks.length).toBe(2);
+    const ids = Array.from(marks).map((m) => (m as HTMLElement).dataset.mrsfCommentId);
+    expect(ids).toContain("a");
+    expect(ids).toContain("b");
+  });
+
+  it("handles selected_text with start_column and end_column", () => {
+    const thread = makeThread({
+      id: "col-span",
+      line: 5,
+      start_column: 28,
+      end_column: 46,
+      selected_text: "public API surface",
+    });
+    container = buildInlineContainer(5, "This document describes the public API surface.", [thread]);
+    ctrl = new MrsfController(container);
+
+    const mark = container.querySelector("mark.mrsf-inline-highlight");
+    expect(mark).not.toBeNull();
+    expect(mark!.textContent).toBe("public API surface");
+  });
+
+  it("shows tooltip on click of mark", () => {
+    const thread = makeThread({
+      id: "clickable",
+      line: 5,
+      selected_text: "target text",
+    });
+    container = buildInlineContainer(5, "Click on target text to see tooltip.", [thread]);
+    ctrl = new MrsfController(container);
+
+    const mark = container.querySelector("mark.mrsf-inline-highlight") as HTMLElement;
+    mark.click();
+
+    const tooltip = mark.querySelector(".mrsf-inline-tooltip");
+    expect(tooltip).not.toBeNull();
+    expect(tooltip!.textContent).toContain("A comment");
+  });
+
+  it("toggles tooltip on repeated click", () => {
+    const thread = makeThread({
+      id: "toggle",
+      line: 5,
+      selected_text: "toggle me",
+    });
+    container = buildInlineContainer(5, "Click toggle me to test.", [thread]);
+    ctrl = new MrsfController(container);
+
+    const mark = container.querySelector("mark.mrsf-inline-highlight") as HTMLElement;
+    mark.click();
+    expect(mark.querySelector(".mrsf-inline-tooltip")).not.toBeNull();
+
+    mark.click();
+    expect(mark.querySelector(".mrsf-inline-tooltip")).toBeNull();
+  });
+
+  it("shows author and comment text in inline tooltip", () => {
+    const thread = makeThread({
+      id: "detail",
+      line: 5,
+      selected_text: "specific text",
+    }, []);
+    thread.comment.author = "Bob";
+    thread.comment.text = "This needs clarification";
+    container = buildInlineContainer(5, "Here is specific text for review.", [thread]);
+    ctrl = new MrsfController(container);
+
+    const mark = container.querySelector("mark.mrsf-inline-highlight") as HTMLElement;
+    mark.click();
+    const tooltip = mark.querySelector(".mrsf-inline-tooltip")!;
+    expect(tooltip.textContent).toContain("Bob");
+    expect(tooltip.textContent).toContain("This needs clarification");
+  });
+
+  it("shows replies in inline tooltip", () => {
+    const reply = makeComment({
+      id: "r1",
+      reply_to: "parent",
+      text: "Good point",
+      author: "Charlie",
+    });
+    const thread = makeThread(
+      { id: "parent", line: 5, selected_text: "review this" },
+      [reply],
+    );
+    container = buildInlineContainer(5, "Please review this section.", [thread]);
+    ctrl = new MrsfController(container);
+
+    const mark = container.querySelector("mark.mrsf-inline-highlight") as HTMLElement;
+    mark.click();
+    const tooltip = mark.querySelector(".mrsf-inline-tooltip")!;
+    expect(tooltip.textContent).toContain("Good point");
+    expect(tooltip.textContent).toContain("Charlie");
+  });
+
+  it("removes marks on destroy", () => {
+    const thread = makeThread({
+      id: "destroy-me",
+      line: 5,
+      selected_text: "ephemeral",
+    });
+    container = buildInlineContainer(5, "This ephemeral mark will be removed.", [thread]);
+    ctrl = new MrsfController(container);
+
+    expect(container.querySelector("mark.mrsf-inline-highlight")).not.toBeNull();
+
+    ctrl.destroy();
+    ctrl = null;
+
+    expect(container.querySelector("mark.mrsf-inline-highlight")).toBeNull();
+    // Original text should be restored
+    expect(container.querySelector("p")!.textContent).toContain("ephemeral");
+  });
+
+  it("preserves surrounding text when mark is removed", () => {
+    const thread = makeThread({
+      id: "preserved",
+      line: 5,
+      selected_text: "middle",
+    });
+    container = buildInlineContainer(5, "before middle after", [thread]);
+    ctrl = new MrsfController(container);
+
+    ctrl.destroy();
+    ctrl = null;
+
+    expect(container.querySelector("p")!.textContent).toBe("before middle after");
+  });
+
+  it("handles text spanning across inline elements", () => {
+    // Build container with mixed inline elements
+    const div = document.createElement("div");
+    const p = document.createElement("p");
+    p.dataset.mrsfLine = "5";
+    p.innerHTML = "Use <strong>Bearer</strong> token in header.";
+    div.appendChild(p);
+
+    const thread = makeThread({
+      id: "cross-elem",
+      line: 5,
+      selected_text: "Bearer token",
+    });
+    const script = document.createElement("script");
+    script.type = "application/mrsf+json";
+    script.textContent = JSON.stringify({ threads: [thread] });
+    div.appendChild(script);
+    document.body.appendChild(div);
+    container = div;
+
+    ctrl = new MrsfController(container);
+
+    const mark = container.querySelector("mark.mrsf-inline-highlight");
+    expect(mark).not.toBeNull();
+    // Content may be "Bearer token" or just the portion that was wrappable
+    expect(mark!.textContent).toContain("Bearer");
+  });
+});

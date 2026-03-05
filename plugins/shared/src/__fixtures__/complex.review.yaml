@@ -18,6 +18,17 @@ comments:
     line: 3
     selected_text: public API surface
 
+  # --- Inline column-span on paragraph (line 3) ---
+  - id: p-intro-inline
+    author: Diana
+    timestamp: "2026-01-15T11:15:00Z"
+    text: Consider renaming to "public REST API surface"
+    line: 3
+    start_column: 28
+    end_column: 46
+    selected_text: public API surface
+    type: suggestion
+
   # --- H2 heading (line 5) ---
   - id: h2-auth
     author: Alice
@@ -34,6 +45,18 @@ comments:
     text: Should also mention API key authentication
     line: 7
     selected_text: Bearer token
+
+  # --- Inline column-span on inline code (line 7) ---
+  - id: p-auth-header
+    author: Bob
+    timestamp: "2026-01-15T13:15:00Z"
+    text: Use the standard header name X-API-Key for key auth
+    line: 7
+    start_column: 54
+    end_column: 68
+    selected_text: "`Authorization`"
+    type: issue
+    severity: medium
 
   # --- Blockquote (lines 9-10) ---
   - id: bq-note
@@ -102,12 +125,14 @@ comments:
     severity: low
     type: suggestion
 
-  # --- Paragraph after table (line 30) ---
+  # --- Paragraph after table (line 30) — inline with columns ---
   - id: p-429
     author: Alice
     timestamp: "2026-01-16T11:00:00Z"
     text: "Should mention Retry-After header"
     line: 30
+    start_column: 28
+    end_column: 51
     selected_text: "429 Too Many Requests"
 
   # --- Code fence json (lines 40-47) ---

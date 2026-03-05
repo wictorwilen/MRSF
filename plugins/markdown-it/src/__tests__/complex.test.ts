@@ -114,8 +114,8 @@ describe("complex document — full render", () => {
   });
 
   it("should embed all root-level threads (excluding replies)", () => {
-    // 27 comments in sidecar, 4 are replies → 23 root threads
-    expect(data.threads.length).toBe(23);
+    // 29 comments in sidecar, 4 are replies → 25 root threads
+    expect(data.threads.length).toBe(25);
   });
 
   it("should thread replies correctly under their parents", () => {
@@ -356,8 +356,8 @@ describe("complex document — thread data integrity", () => {
     const suggestions = data.threads.filter(
       (t: any) => t.comment.type === "suggestion",
     );
-    // h1-title, bq-note, h3-token, ol-admin, code-yaml, tbl-business, tbl-email
-    expect(suggestions.length).toBe(7);
+    // h1-title, bq-note, h3-token, ol-admin, code-yaml, tbl-business, tbl-email, p-intro-inline
+    expect(suggestions.length).toBe(8);
   });
 
   it("should preserve selected_text values", () => {
@@ -366,8 +366,8 @@ describe("complex document — thread data integrity", () => {
     const withSelectedText = data.threads.filter(
       (t: any) => t.comment.selected_text,
     );
-    // p-intro, p-bearer, p-jwt, p-429
-    expect(withSelectedText.length).toBe(4);
+    // p-intro, p-bearer, p-jwt, p-429, p-intro-inline, p-auth-header
+    expect(withSelectedText.length).toBe(6);
     expect(withSelectedText.map((t: any) => t.comment.selected_text)).toContain(
       "Bearer token",
     );
@@ -400,8 +400,8 @@ describe("complex document — thread data integrity", () => {
       (t: any) => t.comment.resolved === true,
     );
     expect(resolved.length).toBe(0);
-    // Total threads should be 22 (23 - 1 resolved)
-    expect(data.threads.length).toBe(22);
+    // Total threads should be 24 (25 - 1 resolved)
+    expect(data.threads.length).toBe(24);
   });
 });
 
@@ -634,8 +634,8 @@ describe("complex document — cross-plugin consistency", () => {
   it("should embed the same number of threads as root comments", () => {
     const html = renderComplex();
     const data = parseDataScript(html)!;
-    // Sidecar has 27 comments, 4 are replies → 23 root threads
-    expect(data.threads.length).toBe(23);
+    // Sidecar has 29 comments, 4 are replies → 25 root threads
+    expect(data.threads.length).toBe(25);
     // Each reply should be nested
     const totalReplies = data.threads.reduce(
       (sum: number, t: any) => sum + (t.replies?.length || 0),
@@ -654,11 +654,92 @@ describe("complex document — cross-plugin consistency", () => {
         allIds.add(r.id);
       }
     }
-    // All 27 comment IDs should be present
-    expect(allIds.size).toBe(27);
+    // All 29 comment IDs should be present
+    expect(allIds.size).toBe(29);
     expect(allIds).toContain("h1-title");
     expect(allIds).toContain("bq-note-reply");
     expect(allIds).toContain("p-migrate-reply2");
     expect(allIds).toContain("code-ts-reply");
+  });
+});
+
+// ── Inline comment data (start_column / end_column) ────────
+
+describe("complex document — inline comment data", () => {
+  it("should include start_column and end_column in thread data", () => {
+    const html = renderComplex();
+    const data = parseDataScript(html)!;
+    const inlineComment = data.threads.find(
+      (t: any) => t.comment.id === "p-intro-inline",
+    );
+    expect(inlineComment).toBeDefined();
+    expect(inlineComment.comment.start_column).toBe(28);
+    expect(inlineComment.comment.end_column).toBe(46);
+  });
+
+  it("should preserve selected_text on column-span comments", () => {
+    const html = renderComplex();
+    const data = parseDataScript(html)!;
+    const inlineComment = data.threads.find(
+      (t: any) => t.comment.id === "p-intro-inline",
+    );
+    expect(inlineComment.comment.selected_text).toBe("public API surface");
+  });
+
+  it("should include column data for p-auth-header comment", () => {
+    const html = renderComplex();
+    const data = parseDataScript(html)!;
+    const authHeader = data.threads.find(
+      (t: any) => t.comment.id === "p-auth-header",
+    );
+    expect(authHeader).toBeDefined();
+    expect(authHeader.comment.start_column).toBe(54);
+    expect(authHeader.comment.end_column).toBe(68);
+    expect(authHeader.comment.selected_text).toBe("`Authorization`");
+  });
+
+  it("should include column data for p-429 comment", () => {
+    const html = renderComplex();
+    const data = parseDataScript(html)!;
+    const p429 = data.threads.find(
+      (t: any) => t.comment.id === "p-429",
+    );
+    expect(p429).toBeDefined();
+    expect(p429.comment.start_column).toBe(28);
+    expect(p429.comment.end_column).toBe(51);
+  });
+
+  it("should have exactly 3 comments with start_column", () => {
+    const html = renderComplex();
+    const data = parseDataScript(html)!;
+    const withColumns = data.threads.filter(
+      (t: any) => t.comment.start_column != null,
+    );
+    expect(withColumns.length).toBe(3);
+  });
+
+  it("should coexist with line-level comments on the same line", () => {
+    const html = renderComplex();
+    const data = parseDataScript(html)!;
+    // Line 3 has both p-intro (line-level) and p-intro-inline (column-span)
+    const line3Threads = data.threads.filter(
+      (t: any) => t.comment.line === 3,
+    );
+    expect(line3Threads.length).toBe(2);
+    const ids = line3Threads.map((t: any) => t.comment.id);
+    expect(ids).toContain("p-intro");
+    expect(ids).toContain("p-intro-inline");
+  });
+
+  it("should support column-span comments with markdown syntax in selected_text", () => {
+    const html = renderComplex();
+    const data = parseDataScript(html)!;
+    // p-auth-header has selected_text with backticks: "`Authorization`"
+    const authHeader = data.threads.find(
+      (t: any) => t.comment.id === "p-auth-header",
+    );
+    expect(authHeader.comment.selected_text).toContain("`");
+    expect(authHeader.comment.type).toBe("issue");
+    expect(authHeader.comment.severity).toBe("medium");
   });
 });

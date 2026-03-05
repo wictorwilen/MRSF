@@ -317,6 +317,44 @@
   transition: background 0.15s ease;
 }
 
+/* ── Inline comment text highlight (<mark> by controller) ── */
+
+.mrsf-inline-highlight {
+  background: var(--mrsf-highlight-bg);
+  border-bottom: 2px solid var(--mrsf-highlight-border);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.mrsf-inline-highlight:hover {
+  background: rgba(255, 213, 79, 0.4);
+}
+
+/* Tooltip appended inside the mark by controller */
+.mrsf-inline-tooltip {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1100;
+  min-width: 300px;
+  max-width: 480px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 8px;
+  margin-top: 4px;
+  border-radius: 6px;
+  background: var(--mrsf-tooltip-bg);
+  border: 1px solid var(--mrsf-tooltip-border);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  font-family: var(--mrsf-font-family);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--mrsf-tooltip-fg);
+  white-space: normal;
+  animation: mrsf-fade-in 0.15s ease;
+}
+
 /* ── Interactive action buttons ─────────────────────────── */
 
 .mrsf-actions {

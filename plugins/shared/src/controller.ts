@@ -65,6 +65,12 @@ export interface MrsfControllerOptions {
   interactive?: boolean;
   /** Comment data passed directly (overrides embedded script). */
   comments?: CommentThread[];
+  /**
+   * Render inline text highlights for comments that have `selected_text`.
+   * Wraps matching text in `<mark>` elements with hover tooltips.
+   * Default: true.
+   */
+  inlineHighlights?: boolean;
 }
 
 // ── MrsfController ──────────────────────────────────────────
@@ -81,6 +87,8 @@ export class MrsfController {
   private lastSelectionText: string | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private styleInjected = false;
+  private inlineMarks: HTMLElement[] = [];
+  private inlineTooltipEl: HTMLElement | null = null;
 
   private handleResizeBound = this.positionGutterItems.bind(this);
   private handleClickBound = this.handleClick.bind(this);
@@ -92,12 +100,14 @@ export class MrsfController {
       gutterPosition: options.gutterPosition ?? "right",
       interactive: options.interactive ?? false,
       comments: options.comments ?? [],
+      inlineHighlights: options.inlineHighlights ?? true,
     };
 
     this.loadCommentData();
     this.setupOverlayStructure();
     this.renderGutterItems();
     this.positionGutterItems();
+    this.renderInlineHighlights();
 
     // Listeners
     this.resizeObserver = new ResizeObserver(this.handleResizeBound);
@@ -113,6 +123,7 @@ export class MrsfController {
     this.resizeObserver?.disconnect();
     document.removeEventListener("click", this.handleClickBound);
     document.removeEventListener("selectionchange", this.handleSelectionBound);
+    this.removeInlineHighlights();
     this.gutterLeft?.remove();
     this.gutterRight?.remove();
     this.floatingAddButton?.remove();
@@ -299,6 +310,199 @@ export class MrsfController {
         item.style.display = "";
       }
     }
+  }
+
+  // ── Inline text highlights ──────────────────────────────
+
+  /**
+   * For comments with `selected_text`, find the matching text in the DOM
+   * and wrap it in a `<mark class="mrsf-inline-highlight">` element with
+   * hover/click behaviour to show the comment tooltip.
+   */
+  private renderInlineHighlights(): void {
+    if (!this.opts.inlineHighlights) return;
+
+    for (const [line, threads] of this.threads) {
+      for (const thread of threads) {
+        const comment = thread.comment;
+        if (!comment.selected_text) continue;
+
+        const el = this.container.querySelector<HTMLElement>(
+          `[data-mrsf-line="${line}"]:not(script):not(.mrsf-gutter):not(.mrsf-gutter-item)`,
+        );
+        if (!el) continue;
+
+        this.wrapSelectedText(el, comment.selected_text, thread);
+      }
+    }
+  }
+
+  /**
+   * Strip common inline markdown syntax so `selected_text` from source
+   * can be matched against rendered text content.
+   */
+  private static stripInlineMarkdown(text: string): string {
+    let s = text;
+    // Backtick code spans: `code` → code
+    s = s.replace(/`([^`]+)`/g, "$1");
+    // Bold: **text** or __text__
+    s = s.replace(/\*\*(.+?)\*\*/g, "$1");
+    s = s.replace(/__(.+?)__/g, "$1");
+    // Italic: *text* or _text_
+    s = s.replace(/\*(.+?)\*/g, "$1");
+    s = s.replace(/_(.+?)_/g, "$1");
+    // Strikethrough: ~~text~~
+    s = s.replace(/~~(.+?)~~/g, "$1");
+    return s;
+  }
+
+  /**
+   * Walk text nodes inside `root` to find `text`, then wrap the matching
+   * range in a `<mark>` element. Falls back to markdown-stripped matching.
+   */
+  private wrapSelectedText(
+    root: HTMLElement,
+    selectedText: string,
+    thread: CommentThread,
+  ): void {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let accumulated = "";
+    const textNodes: { node: Text; start: number; end: number }[] = [];
+
+    let node: Text | null;
+    while ((node = walker.nextNode() as Text | null)) {
+      const start = accumulated.length;
+      accumulated += node.textContent || "";
+      textNodes.push({ node, start, end: accumulated.length });
+    }
+
+    // Try exact match first, then stripped markdown
+    let matchStart = accumulated.indexOf(selectedText);
+    let matchLen = selectedText.length;
+    if (matchStart === -1) {
+      const stripped = MrsfController.stripInlineMarkdown(selectedText);
+      if (stripped !== selectedText) {
+        matchStart = accumulated.indexOf(stripped);
+        matchLen = stripped.length;
+      }
+    }
+    if (matchStart === -1) return;
+
+    const matchEnd = matchStart + matchLen;
+
+    // Build a Range spanning the matched text nodes
+    const range = document.createRange();
+    let startSet = false;
+
+    for (const tn of textNodes) {
+      if (!startSet && tn.end > matchStart) {
+        range.setStart(tn.node, matchStart - tn.start);
+        startSet = true;
+      }
+      if (startSet && tn.end >= matchEnd) {
+        range.setEnd(tn.node, matchEnd - tn.start);
+        break;
+      }
+    }
+
+    if (!startSet) return;
+
+    const mark = document.createElement("mark");
+    mark.className = "mrsf-inline-highlight";
+    mark.dataset.mrsfCommentId = thread.comment.id;
+    mark.dataset.mrsfLine = String(thread.comment.line);
+
+    try {
+      range.surroundContents(mark);
+    } catch {
+      // Range crosses element boundaries — extract and re-insert
+      const fragment = range.extractContents();
+      mark.appendChild(fragment);
+      range.insertNode(mark);
+    }
+
+    this.inlineMarks.push(mark);
+
+    // Hover shows tooltip inline
+    mark.addEventListener("mouseenter", () => {
+      this.showInlineTooltip(mark, thread);
+    });
+    mark.addEventListener("mouseleave", (e) => {
+      // Don't hide if moving into the tooltip itself
+      const related = (e as MouseEvent).relatedTarget as HTMLElement | null;
+      if (related && this.inlineTooltipEl?.contains(related)) return;
+      this.scheduleHideInlineTooltip();
+    });
+
+    // Click toggles tooltip (for touch / accessibility)
+    mark.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (this.inlineTooltipEl && this.inlineTooltipEl.dataset.mrsfForMark === thread.comment.id) {
+        this.hideInlineTooltip();
+      } else {
+        this.showInlineTooltip(mark, thread);
+      }
+    });
+  }
+
+  private showInlineTooltip(mark: HTMLElement, thread: CommentThread): void {
+    this.hideInlineTooltip();
+
+    const tooltip = document.createElement("div");
+    tooltip.className = "mrsf-inline-tooltip mrsf-tooltip-visible";
+    tooltip.dataset.mrsfForMark = thread.comment.id;
+    tooltip.innerHTML = renderThreadHtml(thread, this.opts.interactive);
+
+    // Let user mouse into tooltip without it disappearing
+    tooltip.addEventListener("mouseenter", () => {
+      this.cancelHideInlineTooltip();
+    });
+    tooltip.addEventListener("mouseleave", () => {
+      this.hideInlineTooltip();
+    });
+
+    // Position below the mark
+    mark.style.position = "relative";
+    mark.appendChild(tooltip);
+    this.inlineTooltipEl = tooltip;
+  }
+
+  private hideInlineTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  private scheduleHideInlineTooltip(): void {
+    this.hideInlineTimeout = setTimeout(() => this.hideInlineTooltip(), 120);
+  }
+
+  private cancelHideInlineTooltip(): void {
+    if (this.hideInlineTimeout) {
+      clearTimeout(this.hideInlineTimeout);
+      this.hideInlineTimeout = null;
+    }
+  }
+
+  private hideInlineTooltip(): void {
+    this.cancelHideInlineTooltip();
+    if (this.inlineTooltipEl) {
+      // Restore mark positioning
+      const parent = this.inlineTooltipEl.parentElement;
+      if (parent) parent.style.position = "";
+      this.inlineTooltipEl.remove();
+      this.inlineTooltipEl = null;
+    }
+  }
+
+  /** Remove all inline marks, unwrapping their contents back to text. */
+  private removeInlineHighlights(): void {
+    this.hideInlineTooltip();
+    for (const mark of this.inlineMarks) {
+      const parent = mark.parentNode;
+      if (!parent) continue;
+      while (mark.firstChild) {
+        parent.insertBefore(mark.firstChild, mark);
+      }
+      parent.removeChild(mark);
+    }
+    this.inlineMarks = [];
   }
 
   // ── Tooltip ─────────────────────────────────────────────
