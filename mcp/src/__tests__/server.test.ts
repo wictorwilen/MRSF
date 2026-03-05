@@ -115,6 +115,7 @@ describe("tool registration", () => {
     "mrsf_reanchor",
     "mrsf_add",
     "mrsf_add_batch",
+    "mrsf_update",
     "mrsf_resolve",
     "mrsf_list",
     "mrsf_status",
@@ -234,6 +235,23 @@ describe("mrsf_list", () => {
     expect(parsed.total).toBe(3);
     expect(parsed.open).toBe(3);
   });
+
+  it("returns compact table format when format=compact", async () => {
+    const result = await client.callTool({
+      name: "mrsf_list",
+      arguments: { files: ["test.md.review.yaml"], format: "compact", cwd: tmpDir },
+    });
+    const text = (result.content as Array<{ text: string }>)[0].text;
+    // Should be plain text, not JSON
+    expect(() => JSON.parse(text)).toThrow();
+    // Should contain the sidecar filename header
+    expect(text).toContain("test.md.review.yaml");
+    // Should contain comment text snippets
+    expect(text).toContain("Parent comment");
+    expect(text).toContain("Standalone comment");
+    // Should have status markers
+    expect(text).toMatch(/[○✓]/);
+  });
 });
 
 describe("mrsf_add", () => {
@@ -253,7 +271,8 @@ describe("mrsf_add", () => {
     const text = (result.content as Array<{ text: string }>)[0].text;
     const parsed = JSON.parse(text);
     expect(parsed.id).toBeTruthy();
-    expect(parsed.comment.text).toBe("New test comment");
+    expect(parsed.status).toBe("added");
+    expect(parsed.sidecarPath).toContain("test.md.review.yaml");
   });
 });
 
@@ -331,6 +350,7 @@ describe("mrsf_resolve", () => {
     const text = (result.content as Array<{ text: string }>)[0].text;
     const parsed = JSON.parse(text);
     expect(parsed.resolved).toBe(true);
+    expect(parsed.changed).toContain("c-standalone");
   });
 
   it("unresolves a comment", async () => {
@@ -346,14 +366,126 @@ describe("mrsf_resolve", () => {
     const text = (result.content as Array<{ text: string }>)[0].text;
     const parsed = JSON.parse(text);
     expect(parsed.resolved).toBe(false);
+    expect(parsed.changed).toContain("c-standalone");
   });
 
-  it("returns error for non-existent comment", async () => {
+  it("bulk-resolves multiple IDs", async () => {
+    await resetFixture();
     const result = await client.callTool({
       name: "mrsf_resolve",
       arguments: {
         document: "test.md.review.yaml",
+        ids: ["c-parent", "c-standalone"],
+        cwd: tmpDir,
+      },
+    });
+    const text = (result.content as Array<{ text: string }>)[0].text;
+    const parsed = JSON.parse(text);
+    expect(parsed.resolved).toBe(true);
+    expect(parsed.changed).toHaveLength(2);
+    expect(parsed.changed).toContain("c-parent");
+    expect(parsed.changed).toContain("c-standalone");
+  });
+
+  it("bulk-resolves by author filter", async () => {
+    await resetFixture();
+    const result = await client.callTool({
+      name: "mrsf_resolve",
+      arguments: {
+        document: "test.md.review.yaml",
+        author: "Alice",
+        cwd: tmpDir,
+      },
+    });
+    const text = (result.content as Array<{ text: string }>)[0].text;
+    const parsed = JSON.parse(text);
+    expect(parsed.resolved).toBe(true);
+    expect(parsed.changed).toContain("c-parent");
+    // Carol and Bob should NOT be resolved
+    expect(parsed.changed).not.toContain("c-standalone");
+  });
+
+  it("reports notFound for missing IDs", async () => {
+    await resetFixture();
+    const result = await client.callTool({
+      name: "mrsf_resolve",
+      arguments: {
+        document: "test.md.review.yaml",
+        ids: ["c-parent", "nonexistent"],
+        cwd: tmpDir,
+      },
+    });
+    const text = (result.content as Array<{ text: string }>)[0].text;
+    const parsed = JSON.parse(text);
+    expect(parsed.changed).toContain("c-parent");
+    expect(parsed.notFound).toContain("nonexistent");
+  });
+
+  it("returns error when no id, ids, or filter provided", async () => {
+    const result = await client.callTool({
+      name: "mrsf_resolve",
+      arguments: {
+        document: "test.md.review.yaml",
+        cwd: tmpDir,
+      },
+    });
+    expect(result.isError).toBe(true);
+  });
+});
+
+describe("mrsf_update", () => {
+  beforeEach(resetFixture);
+
+  it("updates comment text", async () => {
+    const result = await client.callTool({
+      name: "mrsf_update",
+      arguments: {
+        document: "test.md.review.yaml",
+        id: "c-parent",
+        text: "Updated parent comment",
+        cwd: tmpDir,
+      },
+    });
+    const text = (result.content as Array<{ text: string }>)[0].text;
+    const parsed = JSON.parse(text);
+    expect(parsed.id).toBe("c-parent");
+    expect(parsed.updated).toContain("text");
+
+    // Verify via list
+    const listResult = await client.callTool({
+      name: "mrsf_list",
+      arguments: { files: ["test.md.review.yaml"], cwd: tmpDir },
+    });
+    const listText = (listResult.content as Array<{ text: string }>)[0].text;
+    const comments = JSON.parse(listText)[0].comments;
+    const updated = comments.find((c: { id: string }) => c.id === "c-parent");
+    expect(updated.text).toBe("Updated parent comment");
+  });
+
+  it("updates severity and type", async () => {
+    const result = await client.callTool({
+      name: "mrsf_update",
+      arguments: {
+        document: "test.md.review.yaml",
+        id: "c-standalone",
+        severity: "high",
+        type: "issue",
+        cwd: tmpDir,
+      },
+    });
+    const text = (result.content as Array<{ text: string }>)[0].text;
+    const parsed = JSON.parse(text);
+    expect(parsed.updated).toContain("severity");
+    expect(parsed.updated).toContain("type");
+  });
+
+  it("returns error for non-existent comment", async () => {
+    const result = await client.callTool({
+      name: "mrsf_update",
+      arguments: {
+        document: "test.md.review.yaml",
         id: "nonexistent",
+        text: "nope",
         cwd: tmpDir,
       },
     });
@@ -530,9 +662,10 @@ describe("mrsf_help", () => {
     expect(result.isError).toBeFalsy();
     const data = JSON.parse((result.content as Array<{ text: string }>)[0].text);
     expect(Array.isArray(data)).toBe(true);
-    expect(data.length).toBeGreaterThanOrEqual(11);
+    expect(data.length).toBeGreaterThanOrEqual(13);
     const names = data.map((t: { tool: string }) => t.tool);
     expect(names).toContain("mrsf_add");
+    expect(names).toContain("mrsf_update");
     expect(names).toContain("mrsf_repair");
     expect(names).toContain("mrsf_help");
   });

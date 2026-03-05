@@ -54,12 +54,18 @@ The `@mrsf/cli` package exports a full programmatic API:
 The MCP server exposes these tools for AI agents:
 
 - `mrsf_discover` — Find sidecar files
-- `mrsf_read` — Read comments from a sidecar
-- `mrsf_add_comment` — Add a review comment
-- `mrsf_validate` — Validate a sidecar
-- `mrsf_reanchor` — Re-anchor comments
-- `mrsf_resolve` — Resolve a comment
-- `mrsf_status` — Check comment health
+- `mrsf_validate` — Validate sidecars
+- `mrsf_reanchor` — Re-anchor comments after edits
+- `mrsf_add` — Add a review comment
+- `mrsf_add_batch` — Add multiple comments atomically
+- `mrsf_update` — Update fields of an existing comment
+- `mrsf_resolve` — Resolve/unresolve comments by ID(s) or filters
+- `mrsf_list` — List/filter comments (full JSON or compact table)
+- `mrsf_status` — Check anchor health
+- `mrsf_rename` — Update a sidecar after its document is renamed
+- `mrsf_delete` — Delete a comment (with optional cascade)
+- `mrsf_repair` — Repair/reset a corrupted sidecar
+- `mrsf_help` — Describe all tools and parameters
 
 ## Sidecar File Format
 

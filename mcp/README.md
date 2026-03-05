@@ -80,8 +80,10 @@ The server exposes the following MCP tools:
 | `mrsf_validate` | Validate sidecars against the MRSF schema |
 | `mrsf_reanchor` | Re-anchor comments after a document has been edited |
 | `mrsf_add` | Add a new review comment to a sidecar |
-| `mrsf_resolve` | Resolve or unresolve a comment by ID |
-| `mrsf_list` | List and filter comments (by status, author, type, severity) |
+| `mrsf_add_batch` | Add multiple review comments in one atomic call |
+| `mrsf_update` | Update fields of an existing comment by ID |
+| `mrsf_resolve` | Resolve or unresolve comments by ID(s) or filters |
+| `mrsf_list` | List and filter comments (status, author, type, severity) with full or compact output |
 | `mrsf_status` | Check anchor health (fresh / stale / orphaned) |
 | `mrsf_rename` | Update a sidecar after its document has been renamed |
 | `mrsf_delete` | Delete a comment by ID (with optional cascade) |
@@ -140,14 +142,45 @@ Add a review comment to a Sidemark (MRSF) sidecar.
 | `reply_to` | string | | Parent comment ID for threading |
 | `cwd` | string | | Working directory |
 
-#### `mrsf_resolve`
+#### `mrsf_add_batch`
 
-Resolve or unresolve a comment.
+Add multiple review comments to a Sidemark (MRSF) sidecar in one atomic write.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `document` | string | ✔ | Path to the Markdown document |
+| `comments` | object[] | ✔ | Array of comments: each needs `text` and `author`, optional `line`, `end_line`, `start_column`, `end_column`, `type`, `severity`, `reply_to` |
+| `cwd` | string | | Working directory |
+
+#### `mrsf_update`
+
+Update fields of an existing comment by ID (only provided fields are changed).
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `document` | string | ✔ | Path to the Markdown document or its sidecar |
-| `id` | string | ✔ | Comment ID to resolve/unresolve |
+| `id` | string | ✔ | Comment ID to update |
+| `text` | string | | New comment text |
+| `type` | string | | New type: suggestion, issue, question, accuracy, style, clarity |
+| `severity` | `"low"` \| `"medium"` \| `"high"` | | New severity level |
+| `line` | number | | New starting line number (1-based) |
+| `end_line` | number | | New ending line number (inclusive) |
+| `start_column` | number | | New starting column (0-based) |
+| `end_column` | number | | New ending column |
+| `cwd` | string | | Working directory |
+
+#### `mrsf_resolve`
+
+Resolve or unresolve comments. Provide a single `id`, an array of `ids`, or filters.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `document` | string | ✔ | Path to the Markdown document or its sidecar |
+| `id` | string | | Single comment ID to resolve/unresolve |
+| `ids` | string[] | | Array of comment IDs to resolve/unresolve |
+| `author` | string | | Resolve all comments by this author |
+| `type` | string | | Resolve all comments of this type |
+| `severity` | `"low"` \| `"medium"` \| `"high"` | | Resolve all comments of this severity |
 | `unresolve` | boolean | | Set to true to unresolve instead |
 | `cwd` | string | | Working directory |
 
@@ -163,6 +196,7 @@ List and filter comments across Sidemark (MRSF) sidecars.
 | `author` | string | | Filter by author |
 | `type` | string | | Filter by type |
 | `severity` | `"low"` \| `"medium"` \| `"high"` | | Filter by severity |
+| `format` | `"full"` \| `"compact"` | | Output format: `full` (JSON) or `compact` (text table) |
 | `summary` | boolean | | Return summary statistics instead of full comments |
 | `cwd` | string | | Working directory |
 

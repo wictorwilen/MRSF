@@ -58,4 +58,4 @@ import "@mrsf/markdown-it-mrsf/style.css";
 | `theme` | `'light' \| 'dark' \| 'auto'` | `'auto'` | Color scheme hint |
 | `cwd` | `string` | `process.cwd()` | Working directory for file resolution |
 
-See the full documentation in the [package README](https://github.com/wictorwilen/MRSF/tree/main/markdown-it#readme).
+See the full documentation in the [package README](https://github.com/wictorwilen/MRSF/tree/main/plugins/markdown-it#readme).

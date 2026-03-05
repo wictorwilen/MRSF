@@ -348,8 +348,10 @@ function registerTools(server: McpServer): void {
             type: "text",
             text: JSON.stringify({
               id: comment.id,
+              line: comment.line ?? null,
+              end_line: comment.end_line ?? null,
+              status: "added",
               sidecarPath,
-              comment,
             }, null, 2),
           }],
         };
@@ -461,37 +463,61 @@ function registerTools(server: McpServer): void {
     },
   );
 
-  // ── mrsf_resolve ──────────────────────────────────────────────────
+  // ── mrsf_update ───────────────────────────────────────────────────
   server.registerTool(
-    "mrsf_resolve",
+    "mrsf_update",
     {
-      title: "Resolve/Unresolve Comment",
+      title: "Update Comment",
       description:
-        "Resolve or unresolve a comment by ID in a Sidemark (MRSF) sidecar.",
+        "Update fields of an existing comment by ID. Only the supplied fields " +
+        "are changed; omitted fields are left as-is.",
       inputSchema: {
         document: z.string().describe("Path to the Markdown document or its sidecar"),
-        id: z.string().describe("Comment ID to resolve/unresolve"),
-        unresolve: z.boolean().optional().describe("Set to true to unresolve instead"),
+        id: z.string().describe("Comment ID to update"),
+        text: z.string().optional().describe("New comment text"),
+        type: z.string().optional().describe("New type: suggestion, issue, question, accuracy, style, clarity"),
+        severity: z.enum(["low", "medium", "high"]).optional().describe("New severity level"),
+        line: z.number().int().min(1).optional().describe("New starting line number (1-based)"),
+        end_line: z.number().int().min(1).optional().describe("New ending line number (inclusive)"),
+        start_column: z.number().int().min(0).optional().describe("New starting column (0-based)"),
+        end_column: z.number().int().min(0).optional().describe("New ending column"),
         cwd: z.string().optional().describe("Working directory"),
       },
     },
-    async ({ document, id, unresolve, cwd }) => {
+    async ({ document, id, text, type: commentType, severity, line, end_line, start_column, end_column, cwd }) => {
       try {
         const workDir = cwd ?? process.cwd();
         const [sp] = await resolveSidecarPaths([document], workDir);
 
         return await withFileLock(sp, async () => {
         const doc = await parseSidecar(sp);
+        const comment = doc.comments.find((c) => c.id === id);
 
-        const ok = unresolve
-          ? unresolveComment(doc, id)
-          : resolveComment(doc, id);
-
-        if (!ok) {
+        if (!comment) {
           return {
             content: [{ type: "text", text: `Comment '${id}' not found.` }],
             isError: true,
           };
+        }
+
+        const updated: string[] = [];
+        if (text !== undefined) { comment.text = text; updated.push("text"); }
+        if (commentType !== undefined) { comment.type = commentType; updated.push("type"); }
+        if (severity !== undefined) { comment.severity = severity; updated.push("severity"); }
+        if (line !== undefined) { comment.line = line; updated.push("line"); }
+        if (end_line !== undefined) { comment.end_line = end_line; updated.push("end_line"); }
+        if (start_column !== undefined) { comment.start_column = start_column; updated.push("start_column"); }
+        if (end_column !== undefined) { comment.end_column = end_column; updated.push("end_column"); }
+
+        // Re-populate selected_text if anchor changed
+        if (comment.line != null && (updated.includes("line") || updated.includes("end_line"))) {
+          try {
+            const docPath = path.resolve(workDir, sidecarToDocument(sp));
+            const lines = (await fs.readFile(docPath, "utf-8")).split("\n");
+            populateSelectedText(comment, lines);
+          } catch {
+            // skip
+          }
         }
 
         await writeSidecar(sp, doc);
@@ -501,7 +527,87 @@ function registerTools(server: McpServer): void {
             type: "text",
             text: JSON.stringify({
               id,
+              updated,
+              sidecarPath: sp,
+            }, null, 2),
+          }],
+        };
+        }); // withFileLock
+      } catch (err) {
+        return {
+          content: [{ type: "text", text: `Update failed: ${errorMessage(err)}` }],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  // ── mrsf_resolve ──────────────────────────────────────────────────
+  server.registerTool(
+    "mrsf_resolve",
+    {
+      title: "Resolve/Unresolve Comments",
+      description:
+        "Resolve or unresolve one or more comments in a Sidemark (MRSF) sidecar. " +
+        "Supply a single id, an array of ids, or use filter fields (author, type, severity) " +
+        "to bulk-resolve matching comments.",
+      inputSchema: {
+        document: z.string().describe("Path to the Markdown document or its sidecar"),
+        id: z.string().optional().describe("Single comment ID to resolve/unresolve"),
+        ids: z.array(z.string()).optional().describe("Array of comment IDs to resolve/unresolve"),
+        author: z.string().optional().describe("Resolve all comments by this author"),
+        type: z.string().optional().describe("Resolve all comments of this type"),
+        severity: z.enum(["low", "medium", "high"]).optional().describe("Resolve all comments of this severity"),
+        unresolve: z.boolean().optional().describe("Set to true to unresolve instead"),
+        cwd: z.string().optional().describe("Working directory"),
+      },
+    },
+    async ({ document, id, ids, author, type: commentType, severity, unresolve, cwd }) => {
+      try {
+        const workDir = cwd ?? process.cwd();
+        const [sp] = await resolveSidecarPaths([document], workDir);
+
+        return await withFileLock(sp, async () => {
+        const doc = await parseSidecar(sp);
+
+        // Build the set of target IDs
+        let targetIds: string[];
+        if (id) {
+          targetIds = [id];
+        } else if (ids && ids.length > 0) {
+          targetIds = ids;
+        } else if (author || commentType || severity) {
+          // Filter-based bulk resolve
+          const matching = filterComments(doc.comments, { author, type: commentType, severity });
+          targetIds = matching.map((c) => c.id);
+        } else {
+          return {
+            content: [{ type: "text", text: "Provide id, ids, or a filter (author/type/severity)." }],
+            isError: true,
+          };
+        }
+
+        const resolved: string[] = [];
+        const notFound: string[] = [];
+        for (const tid of targetIds) {
+          const ok = unresolve
+            ? unresolveComment(doc, tid)
+            : resolveComment(doc, tid);
+          if (ok) resolved.push(tid);
+          else notFound.push(tid);
+        }
+
+        if (resolved.length > 0) {
+          await writeSidecar(sp, doc);
+        }
+
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
               resolved: !unresolve,
+              changed: resolved,
+              notFound: notFound.length > 0 ? notFound : undefined,
               sidecarPath: sp,
             }, null, 2),
           }],
@@ -533,11 +639,14 @@ function registerTools(server: McpServer): void {
         author: z.string().optional().describe("Filter by author"),
         type: z.string().optional().describe("Filter by type"),
         severity: z.enum(["low", "medium", "high"]).optional().describe("Filter by severity"),
+        format: z.enum(["full", "compact"]).optional().describe(
+          "Output format: 'full' (default) returns complete JSON; 'compact' returns a scannable text table",
+        ),
         summary: z.boolean().optional().describe("Return summary statistics instead of full comments"),
         cwd: z.string().optional().describe("Working directory"),
       },
     },
-    async ({ files, open, resolved, author, type: commentType, severity, summary: wantSummary, cwd }) => {
+    async ({ files, open, resolved, author, type: commentType, severity, format, summary: wantSummary, cwd }) => {
       try {
         const workDir = cwd ?? process.cwd();
         const sidecarPaths = await resolveSidecarPaths(files ?? [], workDir);
@@ -569,6 +678,24 @@ function registerTools(server: McpServer): void {
               type: "text",
               text: JSON.stringify(summarize(flat), null, 2),
             }],
+          };
+        }
+
+        if (format === "compact") {
+          const lines: string[] = [];
+          for (const { file, comments } of allComments) {
+            lines.push(`── ${path.basename(file)} (${comments.length}) ──`);
+            for (const c of comments) {
+              const ln = c.line != null ? `L${c.line}` : "  –";
+              const sev = (c.severity ?? "–").padEnd(6);
+              const tp = (c.type ?? "–").padEnd(10);
+              const status = c.resolved ? "✓" : "○";
+              const txt = c.text.length > 80 ? c.text.slice(0, 77) + "…" : c.text;
+              lines.push(`  ${status} ${ln.padEnd(5)} ${sev} ${tp} ${txt}`);
+            }
+          }
+          return {
+            content: [{ type: "text", text: lines.join("\n") }],
           };
         }
 
@@ -942,11 +1069,30 @@ function registerTools(server: McpServer): void {
             cwd: { type: "string", required: false, description: "Working directory" },
           },
         },
-        mrsf_resolve: {
-          description: "Resolve or unresolve a Sidemark (MRSF) comment by ID.",
+        mrsf_update: {
+          description: "Update fields of an existing comment by ID. Only supplied fields are changed.",
           parameters: {
             document: { type: "string", required: true, description: "Path to the Markdown document or its sidecar" },
-            id: { type: "string", required: true, description: "Comment ID to resolve/unresolve" },
+            id: { type: "string", required: true, description: "Comment ID to update" },
+            text: { type: "string", required: false, description: "New comment text" },
+            type: { type: "string", required: false, description: "New type: suggestion, issue, question, accuracy, style, clarity" },
+            severity: { type: "enum: low | medium | high", required: false, description: "New severity level" },
+            line: { type: "integer (≥ 1)", required: false, description: "New starting line number (1-based)" },
+            end_line: { type: "integer (≥ 1)", required: false, description: "New ending line number (inclusive)" },
+            start_column: { type: "integer (≥ 0)", required: false, description: "New starting column (0-based)" },
+            end_column: { type: "integer (≥ 0)", required: false, description: "New ending column" },
+            cwd: { type: "string", required: false, description: "Working directory" },
+          },
+        },
+        mrsf_resolve: {
+          description: "Resolve or unresolve one or more comments. Supply a single id, an array of ids, or use filters to bulk-resolve.",
+          parameters: {
+            document: { type: "string", required: true, description: "Path to the Markdown document or its sidecar" },
+            id: { type: "string", required: false, description: "Single comment ID to resolve/unresolve" },
+            ids: { type: "string[]", required: false, description: "Array of comment IDs to resolve/unresolve" },
+            author: { type: "string", required: false, description: "Resolve all comments by this author" },
+            type: { type: "string", required: false, description: "Resolve all comments of this type" },
+            severity: { type: "enum: low | medium | high", required: false, description: "Resolve all comments of this severity" },
             unresolve: { type: "boolean", required: false, description: "Set to true to unresolve instead" },
             cwd: { type: "string", required: false, description: "Working directory" },
           },
@@ -960,6 +1106,7 @@ function registerTools(server: McpServer): void {
             author: { type: "string", required: false, description: "Filter by author" },
             type: { type: "string", required: false, description: "Filter by type" },
             severity: { type: "enum: low | medium | high", required: false, description: "Filter by severity" },
+            format: { type: "enum: full | compact", required: false, description: "Output format: 'full' (default) returns JSON; 'compact' returns a scannable text table" },
             summary: { type: "boolean", required: false, description: "Return summary statistics instead of full comments" },
             cwd: { type: "string", required: false, description: "Working directory" },
           },
