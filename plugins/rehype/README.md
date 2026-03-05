@@ -48,6 +48,7 @@ import "@mrsf/rehype-mrsf/style.css";
 | `gutterPosition` | `'left' \| 'tight' \| 'right'` | `'right'` | Badge placement |
 | `gutterForInline` | `boolean` | `true` | Show badge for inline-highlighted comments |
 | `inlineHighlights` | `boolean` | `true` | Highlight `selected_text` with `<mark>` |
+| `lineHighlight` | `boolean` | `false` | Add background tint on commented lines |
 | `theme` | `'light' \| 'dark' \| 'auto'` | `'auto'` | Color scheme hint |
 | `cwd` | `string` | `process.cwd()` | Working directory for file discovery |
 

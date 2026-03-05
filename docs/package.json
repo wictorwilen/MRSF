@@ -8,15 +8,19 @@
     "docs:preview": "vitepress preview"
   },
   "devDependencies": {
-    "@mrsf/rehype-mrsf": "file:../plugins/rehype",
     "@mrsf/markdown-it-mrsf": "file:../plugins/markdown-it",
+    "@mrsf/rehype-mrsf": "file:../plugins/rehype",
     "markdown-it": "^14.1.1",
     "mermaid": "^11.12.3",
     "rehype-stringify": "^10.0.0",
+    "remark-breaks": "^4.0.0",
     "remark-parse": "^11.0.0",
     "remark-rehype": "^11.1.0",
     "unified": "^11.0.4",
     "vitepress": "^1.6.3",
     "vitepress-plugin-mermaid": "^2.0.17"
+  },
+  "dependencies": {
+    "remark-gfm": "^4.0.1"
   }
 }

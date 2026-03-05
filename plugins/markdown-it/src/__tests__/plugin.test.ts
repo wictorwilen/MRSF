@@ -1,5 +1,13 @@
 /**
- * Tests for @mrsf/markdown-it-mrsf plugin.
+ * Tests for @mrsf/markdown-it-mrsf plugin (overlay gutter architecture).
+ *
+ * In the new architecture, the plugin ONLY:
+ *   1. Adds data-mrsf-line / data-mrsf-start-line / data-mrsf-end-line attributes
+ *   2. Optionally adds mrsf-line-highlight class (when lineHighlight is true)
+ *   3. Appends a <script type="application/mrsf+json"> with thread data
+ *
+ * All visual rendering (badges, tooltips, highlights) happens at runtime
+ * via the MrsfController — not tested here.
  */
 
 import { describe, it, expect } from "vitest";
@@ -40,39 +48,48 @@ function render(
   return md.render(markdown);
 }
 
-// ── Badge injection ────────────────────────────────────────
+/** Helper: parse the embedded JSON data from the script tag. */
+function parseDataScript(html: string): { threads: any[] } | null {
+  const match = html.match(
+    /<script type="application\/mrsf\+json">([\s\S]*?)<\/script>/,
+  );
+  if (!match) return null;
+  return JSON.parse(match[1]);
+}
 
-describe("badge injection", () => {
-  it("should inject a badge for a line-anchored comment", () => {
+// ── Line annotation ────────────────────────────────────────
+
+describe("line annotation", () => {
+  it("should annotate a block element for a line-anchored comment", () => {
     const html = render("# Hello\n\nWorld\n", [
       { id: "c1", text: "A comment", line: 1 },
-    ]);
-    expect(html).toContain("mrsf-badge");
-    expect(html).toContain("mrsf-tooltip");
-    expect(html).toContain("💬 1");
+    ], { lineHighlight: true });
+    expect(html).toContain('data-mrsf-line="1"');
+    expect(html).toContain("mrsf-line-highlight");
   });
 
-  it("should inject badge at the correct line", () => {
+  it("should annotate the correct line", () => {
     const html = render("Line one\n\nLine three\n", [
       { id: "c1", text: "Comment on line 3", line: 3 },
-    ]);
-    // The badge should be near the line-3 content
+    ], { lineHighlight: true });
     expect(html).toContain('data-mrsf-line="3"');
-    expect(html).toContain("Comment on line 3");
+    expect(html).toContain("mrsf-line-highlight");
   });
 
   it("should not inject anything when no comments", () => {
     const md = new MarkdownIt();
     md.use(mrsfPlugin, { comments: makeSidecar([]) });
     const html = md.render("# Hello\n");
-    expect(html).not.toContain("mrsf-badge");
+    expect(html).not.toContain("mrsf-line-highlight");
+    expect(html).not.toContain("application/mrsf+json");
   });
 
   it("should not inject anything without sidecar data", () => {
     const md = new MarkdownIt();
     md.use(mrsfPlugin, {});
     const html = md.render("# Hello\n");
-    expect(html).not.toContain("mrsf-badge");
+    expect(html).not.toContain("mrsf-line-highlight");
+    expect(html).not.toContain("application/mrsf+json");
   });
 
   it("should load comments from a custom loader function", () => {
@@ -81,17 +98,20 @@ describe("badge injection", () => {
       loader: () => makeSidecar([
         { id: "ldr1", text: "From loader", line: 1 },
       ]),
+      lineHighlight: true,
     });
     const html = md.render("# Hello\n");
-    expect(html).toContain("mrsf-badge");
-    expect(html).toContain("From loader");
+    expect(html).toContain("mrsf-line-highlight");
+    const data = parseDataScript(html);
+    expect(data).not.toBeNull();
+    expect(data!.threads[0].comment.text).toBe("From loader");
   });
 
   it("should handle loader returning null", () => {
     const md = new MarkdownIt();
     md.use(mrsfPlugin, { loader: () => null });
     const html = md.render("# Hello\n");
-    expect(html).not.toContain("mrsf-badge");
+    expect(html).not.toContain("application/mrsf+json");
   });
 
   it("should prefer comments over loader", () => {
@@ -101,189 +121,193 @@ describe("badge injection", () => {
       loader: () => makeSidecar([{ id: "ldr1", text: "Loader", line: 1 }]),
     });
     const html = md.render("# Hello\n");
-    expect(html).toContain("Inline");
-    expect(html).not.toContain("Loader");
+    const data = parseDataScript(html);
+    expect(data!.threads[0].comment.text).toBe("Inline");
+  });
+
+  it("should add data-mrsf-start-line and data-mrsf-end-line", () => {
+    const html = render("# Title\n", [
+      { id: "c1", text: "Comment", line: 1 },
+    ]);
+    expect(html).toContain('data-mrsf-start-line="1"');
+    expect(html).toContain('data-mrsf-end-line="1"');
   });
 });
 
-// ── Multiple comments on same line ─────────────────────────
+// ── Embedded data script ───────────────────────────────────
 
-describe("comment grouping", () => {
-  it("should show total count for multiple comments on same line", () => {
+describe("embedded data script", () => {
+  it("should embed a script tag with comment data", () => {
+    const html = render("# Title\n", [
+      { id: "c1", text: "A comment", line: 1 },
+    ]);
+    expect(html).toContain('<script type="application/mrsf+json">');
+    const data = parseDataScript(html);
+    expect(data).not.toBeNull();
+    expect(data!.threads).toHaveLength(1);
+    expect(data!.threads[0].comment.id).toBe("c1");
+    expect(data!.threads[0].comment.text).toBe("A comment");
+  });
+
+  it("should include multiple threads for multiple comments on same line", () => {
     const html = render("# Title\n", [
       { id: "c1", text: "First", line: 1 },
       { id: "c2", text: "Second", line: 1 },
     ]);
-    expect(html).toContain("💬 2");
+    const data = parseDataScript(html);
+    expect(data!.threads).toHaveLength(2);
+    expect(data!.threads[0].comment.text).toBe("First");
+    expect(data!.threads[1].comment.text).toBe("Second");
   });
 
-  it("should include replies in the count", () => {
+  it("should thread replies under their parent comment", () => {
     const html = render("# Title\n", [
       { id: "c1", text: "Root", line: 1 },
       { id: "r1", text: "Reply", reply_to: "c1" },
     ]);
-    expect(html).toContain("💬 2");
+    const data = parseDataScript(html);
+    expect(data!.threads).toHaveLength(1);
+    expect(data!.threads[0].comment.text).toBe("Root");
+    expect(data!.threads[0].replies).toHaveLength(1);
+    expect(data!.threads[0].replies[0].text).toBe("Reply");
   });
-});
 
-// ── Reply threading ────────────────────────────────────────
-
-describe("reply threading", () => {
-  it("should render replies inside the tooltip", () => {
+  it("should include author information", () => {
     const html = render("# Title\n", [
       { id: "c1", text: "Root comment", line: 1, author: "Alice" },
       { id: "r1", text: "A reply", reply_to: "c1", author: "Bob" },
     ]);
-    expect(html).toContain("mrsf-replies");
-    expect(html).toContain("mrsf-reply");
-    expect(html).toContain("A reply");
-    expect(html).toContain("Bob");
+    const data = parseDataScript(html);
+    expect(data!.threads[0].comment.author).toBe("Alice");
+    expect(data!.threads[0].replies[0].author).toBe("Bob");
   });
-});
 
-// ── Resolved comments ──────────────────────────────────────
+  it("should include severity in thread data", () => {
+    const html = render("# Title\n", [
+      { id: "c1", text: "Critical", line: 1, severity: "high" },
+    ]);
+    const data = parseDataScript(html);
+    expect(data!.threads[0].comment.severity).toBe("high");
+  });
 
-describe("resolved comments", () => {
-  it("should show resolved badge when all resolved", () => {
+  it("should include comment type in thread data", () => {
+    const html = render("# Title\n", [
+      { id: "c1", text: "Fix this", line: 1, type: "suggestion" },
+    ]);
+    const data = parseDataScript(html);
+    expect(data!.threads[0].comment.type).toBe("suggestion");
+  });
+
+  it("should include selected_text in thread data", () => {
+    const html = render("Hello world\n", [
+      { id: "c1", text: "Note", line: 1, selected_text: "Hello" },
+    ]);
+    const data = parseDataScript(html);
+    expect(data!.threads[0].comment.selected_text).toBe("Hello");
+  });
+
+  it("should include resolved status in thread data", () => {
     const html = render("# Title\n", [
       { id: "c1", text: "Done", line: 1, resolved: true },
     ]);
-    expect(html).toContain("✓ 1");
-    expect(html).toContain("mrsf-badge-resolved");
-    expect(html).toContain("mrsf-resolved");
+    const data = parseDataScript(html);
+    expect(data!.threads[0].comment.resolved).toBe(true);
+  });
+
+  it("should include threads from multiple lines", () => {
+    const html = render("# One\n\n## Two\n\nThree\n", [
+      { id: "c1", text: "On heading 1", line: 1 },
+      { id: "c2", text: "On heading 2", line: 3 },
+    ]);
+    const data = parseDataScript(html);
+    expect(data!.threads).toHaveLength(2);
+    const lines = data!.threads.map((t: any) => t.comment.line);
+    expect(lines).toContain(1);
+    expect(lines).toContain(3);
+  });
+});
+
+// ── Resolved comments filtering ────────────────────────────
+
+describe("resolved comments", () => {
+  it("should include resolved comments by default", () => {
+    const html = render("# Title\n", [
+      { id: "c1", text: "Done", line: 1, resolved: true },
+    ], { lineHighlight: true });
+    expect(html).toContain("mrsf-line-highlight");
+    const data = parseDataScript(html);
+    expect(data!.threads).toHaveLength(1);
+    expect(data!.threads[0].comment.resolved).toBe(true);
   });
 
   it("should hide resolved comments when showResolved is false", () => {
     const html = render("# Title\n", [
       { id: "c1", text: "Done", line: 1, resolved: true },
     ], { showResolved: false });
-    expect(html).not.toContain("mrsf-badge");
+    expect(html).not.toContain("mrsf-line-highlight");
+    expect(parseDataScript(html)).toBeNull();
   });
 
   it("should still show unresolved when showResolved is false", () => {
     const html = render("# Title\n", [
       { id: "c1", text: "Open", line: 1, resolved: false },
       { id: "c2", text: "Done", line: 1, resolved: true },
-    ], { showResolved: false });
-    expect(html).toContain("mrsf-badge");
-    expect(html).toContain("Open");
-    expect(html).not.toContain("Done");
+    ], { showResolved: false, lineHighlight: true });
+    expect(html).toContain("mrsf-line-highlight");
+    const data = parseDataScript(html);
+    expect(data!.threads).toHaveLength(1);
+    expect(data!.threads[0].comment.text).toBe("Open");
   });
 });
 
-// ── Severity styling ───────────────────────────────────────
+// ── No visual DOM injection ────────────────────────────────
 
-describe("severity", () => {
-  it("should add severity class for high severity", () => {
-    const html = render("# Title\n", [
-      { id: "c1", text: "Critical", line: 1, severity: "high" },
-    ]);
-    expect(html).toContain("mrsf-badge-severity-high");
-    expect(html).toContain("mrsf-severity-high");
-  });
-
-  it("should add severity class for medium severity", () => {
-    const html = render("# Title\n", [
-      { id: "c1", text: "Warning", line: 1, severity: "medium" },
-    ]);
-    expect(html).toContain("mrsf-badge-severity-medium");
-    expect(html).toContain("mrsf-severity-medium");
-  });
-
-  it("should render severity label in tooltip", () => {
-    const html = render("# Title\n", [
-      { id: "c1", text: "Issue", line: 1, severity: "low" },
-    ]);
-    expect(html).toContain("mrsf-severity-low");
-  });
-});
-
-// ── Comment type ───────────────────────────────────────────
-
-describe("comment type", () => {
-  it("should render type label in tooltip", () => {
-    const html = render("# Title\n", [
-      { id: "c1", text: "Fix this", line: 1, type: "suggestion" },
-    ]);
-    expect(html).toContain("mrsf-type");
-    expect(html).toContain("suggestion");
-  });
-});
-
-// ── Inline selected_text highlighting ──────────────────────
-
-describe("inline highlighting", () => {
-  it("should wrap selected_text in a mark element", () => {
-    const html = render("This is important text here\n", [
-      { id: "c1", text: "Highlight this", line: 1, selected_text: "important" },
-    ]);
-    expect(html).toContain("<mark");
-    expect(html).toContain("mrsf-highlight");
-    expect(html).toContain('data-mrsf-comment-id="c1"');
-  });
-
-  it("should show selected_text quote in tooltip", () => {
-    const html = render("Some important text\n", [
-      { id: "c1", text: "Note", line: 1, selected_text: "important" },
-    ]);
-    expect(html).toContain("mrsf-selected-text");
-    expect(html).toContain("important");
-  });
-});
-
-// ── Interactive mode ───────────────────────────────────────
-
-describe("interactive mode", () => {
-  it("should render action buttons when interactive is true", () => {
+describe("no visual DOM injection", () => {
+  it("should not contain any badge elements", () => {
     const html = render("# Title\n", [
       { id: "c1", text: "A comment", line: 1 },
-    ], { interactive: true });
-    expect(html).toContain("mrsf-actions");
-    expect(html).toContain("mrsf-action-btn");
-    expect(html).toContain('data-mrsf-action="resolve"');
-    expect(html).toContain('data-mrsf-action="reply"');
-    expect(html).toContain('data-mrsf-action="edit"');
+    ]);
+    expect(html).not.toContain("mrsf-badge");
+    expect(html).not.toContain("💬");
+    expect(html).not.toContain("✓ 1");
   });
 
-  it("should render unresolve button for resolved comments", () => {
+  it("should not contain any tooltip elements", () => {
     const html = render("# Title\n", [
-      { id: "c1", text: "Done", line: 1, resolved: true },
-    ], { interactive: true });
-    expect(html).toContain('data-mrsf-action="unresolve"');
-    expect(html).not.toContain('data-mrsf-action="resolve"');
+      { id: "c1", text: "A comment", line: 1, author: "Alice" },
+    ]);
+    expect(html).not.toContain("mrsf-tooltip");
+    expect(html).not.toContain("mrsf-thread");
+    expect(html).not.toContain("mrsf-comment");
+    expect(html).not.toContain("mrsf-replies");
   });
 
-  it("should NOT render action buttons when interactive is false", () => {
-    const html = render("# Title\n", [
-      { id: "c1", text: "A comment", line: 1 },
-    ], { interactive: false });
-    expect(html).not.toContain("mrsf-action-btn");
-    expect(html).not.toContain('data-mrsf-action="resolve"');
+  it("should not contain inline highlight marks", () => {
+    const html = render("Hello world\n", [
+      { id: "c1", text: "Note", line: 1, selected_text: "Hello" },
+    ]);
+    expect(html).not.toContain("<mark");
+    expect(html).not.toContain("mrsf-highlight");
+    expect(html).not.toContain("mrsf-inline-anchor");
   });
 
-  it("should include comment id in action button data attributes", () => {
-    const html = render("# Title\n", [
-      { id: "abc123", text: "A comment", line: 1 },
-    ], { interactive: true });
-    expect(html).toContain('data-mrsf-comment-id="abc123"');
-  });
-});
-
-// ── Data attributes ────────────────────────────────────────
-
-describe("data attributes", () => {
-  it("should add data-mrsf-line to highlighted elements", () => {
+  it("should not contain gutter containers", () => {
     const html = render("# Title\n", [
       { id: "c1", text: "Comment", line: 1 },
     ]);
-    expect(html).toContain('data-mrsf-line="1"');
+    expect(html).not.toContain("mrsf-gutter-container");
+    expect(html).not.toContain("mrsf-gutter-right");
+    expect(html).not.toContain("mrsf-gutter-left");
+    expect(html).not.toContain("mrsf-gutter-tight");
   });
 
-  it("should add data-mrsf-comment-id to badge", () => {
+  it("should not contain action buttons", () => {
     const html = render("# Title\n", [
-      { id: "xyz", text: "Comment", line: 1 },
+      { id: "c1", text: "A comment", line: 1 },
     ]);
-    expect(html).toContain('data-mrsf-comment-id="xyz"');
+    expect(html).not.toContain("mrsf-action-btn");
+    expect(html).not.toContain("mrsf-actions");
+    expect(html).not.toContain('data-mrsf-action=');
   });
 });
 
@@ -294,15 +318,14 @@ describe("edge cases", () => {
     const html = render("# Title\n", [
       { id: "c1", text: "Unanchored" },
     ]);
-    // Unanchored comments should not produce badges
-    expect(html).not.toContain("mrsf-badge");
+    expect(html).not.toContain("mrsf-line-highlight");
+    expect(parseDataScript(html)).toBeNull();
   });
 
   it("should handle line numbers beyond document length", () => {
     const html = render("# Short\n", [
       { id: "c1", text: "Beyond", line: 999 },
     ]);
-    // Should not crash; heading should render and may carry data attributes
     expect(html).toMatch(/<h1\b/);
   });
 
@@ -316,206 +339,29 @@ describe("edge cases", () => {
   });
 });
 
-// ── HTML escaping ──────────────────────────────────────────
+// ── JSON data safety ───────────────────────────────────────
 
-describe("html escaping", () => {
-  it("should escape HTML in comment text", () => {
+describe("JSON data safety", () => {
+  it("should safely encode HTML in comment text within JSON", () => {
     const html = render("# Title\n", [
       { id: "c1", text: '<script>alert("xss")</script>', line: 1 },
     ]);
-    expect(html).not.toContain("<script>");
-    expect(html).toContain("&lt;script&gt;");
+    // The script content must not contain raw < chars — they are \u003c-escaped
+    const scriptMatch = html.match(
+      /<script type="application\/mrsf\+json">([\s\S]*?)<\/script>/,
+    );
+    expect(scriptMatch).not.toBeNull();
+    expect(scriptMatch![1]).not.toContain("<");
+    // But when parsed, the original text is recovered
+    const data = JSON.parse(scriptMatch![1]);
+    expect(data.threads[0].comment.text).toBe('<script>alert("xss")</script>');
   });
 
-  it("should escape HTML in author name", () => {
+  it("should safely encode HTML in author name within JSON", () => {
     const html = render("# Title\n", [
       { id: "c1", text: "Comment", line: 1, author: '<b>Evil</b>' },
     ]);
-    expect(html).not.toContain("<b>Evil</b>");
-    expect(html).toContain("&lt;b&gt;Evil&lt;/b&gt;");
-  });
-
-  it("should use <span> (not <div>) for tooltip elements inside paragraphs", () => {
-    const html = render("Some text\n", [
-      { id: "c1", text: "Comment", line: 1 },
-    ]);
-    // All tooltip inner elements must be <span> for valid HTML inside <p>
-    expect(html).toContain('<span class="mrsf-tooltip"');
-    expect(html).toContain('<span class="mrsf-thread"');
-    expect(html).toContain('<span class="mrsf-comment"');
-    expect(html).not.toContain('<div class="mrsf-tooltip"');
-    expect(html).not.toContain('<div class="mrsf-thread"');
-    expect(html).not.toContain('<div class="mrsf-comment"');
-  });
-});
-
-// ── Resolved comment details (A) ──────────────────────────
-
-describe("resolved comment details", () => {
-  it("should show full comment details for resolved comments on hover", () => {
-    const html = render("# Title\n", [
-      { id: "c1", text: "Old issue", line: 1, resolved: true, severity: "low" },
-    ]);
-    // Tooltip should contain the author, text, and severity — NOT hidden by opacity
-    expect(html).toContain("mrsf-tooltip");
-    expect(html).toContain("Old issue");
-    expect(html).toContain("mrsf-severity-low");
-    expect(html).toContain("✓ resolved");
-  });
-
-  it("should render resolved badge with resolved class for styling", () => {
-    const html = render("# Title\n", [
-      { id: "c1", text: "Done", line: 1, resolved: true },
-    ]);
-    expect(html).toContain("mrsf-resolved-badge");
-    expect(html).toContain("mrsf-badge-resolved");
-  });
-});
-
-// ── Gutter position (B) ───────────────────────────────────
-
-describe("gutter position", () => {
-  it("should default to right gutter position", () => {
-    const html = render("# Title\n", [
-      { id: "c1", text: "Comment", line: 1 },
-    ]);
-    expect(html).toContain("mrsf-gutter-right");
-  });
-
-  it("should support tight gutter position", () => {
-    const html = render("# Title\n", [
-      { id: "c1", text: "Comment", line: 1 },
-    ], { gutterPosition: "tight" });
-    expect(html).toContain("mrsf-gutter-tight");
-    expect(html).not.toContain("mrsf-gutter-right");
-    expect(html).not.toContain("mrsf-gutter-left");
-  });
-
-  it("should support left gutter position", () => {
-    const html = render("# Title\n", [
-      { id: "c1", text: "Comment", line: 1 },
-    ], { gutterPosition: "left" });
-    expect(html).toContain("mrsf-gutter-left");
-    expect(html).not.toContain("mrsf-gutter-right");
-  });
-
-  it("should support right gutter position explicitly", () => {
-    const html = render("# Title\n", [
-      { id: "c1", text: "Comment", line: 1 },
-    ], { gutterPosition: "right" });
-    expect(html).toContain("mrsf-gutter-right");
-    expect(html).not.toContain("mrsf-gutter-left");
-  });
-});
-
-// ── Gutter for inline (C) ─────────────────────────────────
-
-describe("gutterForInline", () => {
-  it("should show gutter badge for inline comments by default", () => {
-    const html = render("Hello world\n", [
-      { id: "c1", text: "Comment", line: 1, selected_text: "Hello" },
-    ]);
-    expect(html).toContain("mrsf-badge");
-    expect(html).toContain("mrsf-highlight");
-  });
-
-  it("should hide gutter badge when gutterForInline is false and all comments have selected_text", () => {
-    const html = render("Hello world\n", [
-      { id: "c1", text: "Comment", line: 1, selected_text: "Hello" },
-    ], { gutterForInline: false });
-    expect(html).not.toContain("mrsf-badge");
-    expect(html).toContain("mrsf-highlight");
-  });
-
-  it("should still show gutter badge when gutterForInline is false but some comments lack selected_text", () => {
-    const html = render("Hello world\n", [
-      { id: "c1", text: "Inline", line: 1, selected_text: "Hello" },
-      { id: "c2", text: "Line-only", line: 1 },
-    ], { gutterForInline: false });
-    expect(html).toContain("mrsf-badge");
-    expect(html).toContain("mrsf-highlight");
-  });
-
-  it("should ignore gutterForInline when inlineHighlights is false", () => {
-    const html = render("Hello world\n", [
-      { id: "c1", text: "Comment", line: 1, selected_text: "Hello" },
-    ], { gutterForInline: false, inlineHighlights: false });
-    // Badge should show since there are no inline highlights
-    expect(html).toContain("mrsf-badge");
-    expect(html).not.toContain("mrsf-highlight");
-  });
-});
-
-// ── Inline highlight tooltips (D) ─────────────────────────
-
-describe("inline highlight tooltips", () => {
-  it("should show tooltip when hovering inline highlight", () => {
-    const html = render("Hello world\n", [
-      { id: "c1", text: "Check this text", line: 1, selected_text: "Hello", author: "Jane" },
-    ]);
-    // The highlight should be wrapped in a tooltip anchor
-    expect(html).toContain("mrsf-inline-anchor");
-    expect(html).toContain("mrsf-inline-tooltip");
-    // Tooltip should contain the comment details
-    expect(html).toContain("Check this text");
-    expect(html).toContain("Jane");
-  });
-
-  it("should include thread replies in inline tooltip", () => {
-    const html = render("Hello world\n", [
-      { id: "c1", text: "Question", line: 1, selected_text: "Hello" },
-      { id: "r1", text: "Reply here", reply_to: "c1" },
-    ]);
-    expect(html).toContain("mrsf-inline-tooltip");
-    expect(html).toContain("Reply here");
-  });
-
-  it("should render interactive buttons in inline tooltip when interactive is true", () => {
-    const html = render("Hello world\n", [
-      { id: "c1", text: "Check", line: 1, selected_text: "Hello" },
-    ], { interactive: true });
-    expect(html).toContain("mrsf-inline-tooltip");
-    expect(html).toContain("mrsf-action-btn");
-  });
-
-  it("should add tabindex to highlighted text for keyboard accessibility", () => {
-    const html = render("Hello world\n", [
-      { id: "c1", text: "Check", line: 1, selected_text: "Hello" },
-    ]);
-    expect(html).toContain('<mark class="mrsf-highlight"');
-    expect(html).toContain('tabindex="0"');
-  });
-});
-
-// ── Inline highlights toggle (E) ──────────────────────────
-
-describe("inlineHighlights option", () => {
-  it("should show inline highlights by default", () => {
-    const html = render("Hello world\n", [
-      { id: "c1", text: "Comment", line: 1, selected_text: "Hello" },
-    ]);
-    expect(html).toContain("mrsf-highlight");
-    expect(html).toContain("mrsf-badge");
-  });
-
-  it("should hide inline highlights when inlineHighlights is false", () => {
-    const html = render("Hello world\n", [
-      { id: "c1", text: "Comment", line: 1, selected_text: "Hello" },
-    ], { inlineHighlights: false });
-    expect(html).not.toContain("mrsf-highlight");
-    expect(html).not.toContain("mrsf-inline-anchor");
-    // Badge should still be present
-    expect(html).toContain("mrsf-badge");
-  });
-
-  it("should still show gutter badges for all comments when inlineHighlights is false", () => {
-    const html = render("Hello world\n\nSecond line\n", [
-      { id: "c1", text: "Inline", line: 1, selected_text: "Hello" },
-      { id: "c2", text: "Line-only", line: 3 },
-    ], { inlineHighlights: false });
-    expect(html).not.toContain("mrsf-highlight");
-    // Both lines should have badges
-    expect(html).toContain('data-mrsf-line="1"');
-    expect(html).toContain('data-mrsf-line="3"');
+    const data = parseDataScript(html);
+    expect(data!.threads[0].comment.author).toBe("<b>Evil</b>");
   });
 });

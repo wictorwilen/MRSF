@@ -18,20 +18,10 @@ import { installRendererRules } from "./rules/renderer.js";
  */
 export function createMrsfPlugin(loader: CommentLoader) {
   return function mrsfPlugin(md: MarkdownIt, options: MrsfPluginOptions = {}): void {
-    const interactive = options.interactive ?? false;
-    const gutterPosition = options.gutterPosition ?? "right";
-    const gutterForInline = options.gutterForInline ?? true;
-    const inlineHighlights = options.inlineHighlights ?? true;
-
     const result = resolveComments(loader, options);
     if (!result) return;
 
-    installCoreRule(md, result.lineMap, {
-      interactive,
-      gutterPosition,
-      gutterForInline,
-      inlineHighlights,
-    });
+    installCoreRule(md, result.lineMap, { lineHighlight: options.lineHighlight ?? false });
     installRendererRules(md);
   };
 }

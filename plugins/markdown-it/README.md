@@ -163,6 +163,7 @@ Each event's `detail` contains `{ commentId: string | null, line: number | null,
 | `gutterPosition` | `'left' \| 'tight' \| 'right'` | `'right'` | Badge position: left margin gutter, tight (before text), or floated right |
 | `gutterForInline` | `boolean` | `true` | Show gutter badge for comments that also have inline highlights |
 | `inlineHighlights` | `boolean` | `true` | Render inline text highlights for `selected_text` |
+| `lineHighlight` | `boolean` | `false` | Add background tint on commented lines |
 | `theme` | `'light' \| 'dark' \| 'auto'` | `'auto'` | Color scheme hint |
 | `cwd` | `string` | `process.cwd()` | Working directory for file resolution |
 

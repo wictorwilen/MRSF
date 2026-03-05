@@ -66,6 +66,13 @@ export interface MrsfPluginOptions {
    */
   inlineHighlights?: boolean;
 
+  /**
+   * Whether to add a `mrsf-line-highlight` CSS class on block elements
+   * that have comments. Provides a subtle visual tint on commented lines.
+   * Default: false.
+   */
+  lineHighlight?: boolean;
+
   /** Color scheme hint (default: 'auto'). */
   theme?: "light" | "dark" | "auto";
 

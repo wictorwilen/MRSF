@@ -1,3 +1,10 @@
+/* ---------------------------------------------------------------
+ * AUTO-GENERATED — DO NOT EDIT
+ *
+ * Source: plugins/shared/src/html.ts
+ * Run `node plugins/sync-types.mjs` to regenerate.
+ * --------------------------------------------------------------- */
+
 /**
  * Shared HTML rendering helpers for MRSF rendering plugins.
  *
