@@ -95,6 +95,33 @@ export function createMrsfServer(): McpServer {
 }
 
 // ---------------------------------------------------------------------------
+// Per-file mutex — serialises concurrent writes to the same sidecar
+// ---------------------------------------------------------------------------
+
+const _fileLocks = new Map<string, Promise<void>>();
+
+/**
+ * Run `fn` while holding an exclusive lock for `filePath`.
+ * Concurrent callers targeting the same path are queued in order.
+ */
+async function withFileLock<T>(filePath: string, fn: () => Promise<T>): Promise<T> {
+  const key = path.resolve(filePath);
+  // Wait for any pending operation on this file
+  const prev = _fileLocks.get(key) ?? Promise.resolve();
+  let release!: () => void;
+  const gate = new Promise<void>((r) => { release = r; });
+  _fileLocks.set(key, gate);
+  await prev;
+  try {
+    return await fn();
+  } finally {
+    release();
+    // Clean up if no new waiter replaced us
+    if (_fileLocks.get(key) === gate) _fileLocks.delete(key);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Tools
 // ---------------------------------------------------------------------------
 
@@ -211,13 +238,13 @@ function registerTools(server: McpServer): void {
         const allResults: Array<{ file: string; results: ReanchorResult[]; changed: number }> = [];
 
         for (const sp of sidecarPaths) {
-          const { results, changed } = await reanchorFile(sp, {
+          const { results, changed } = await withFileLock(sp, () => reanchorFile(sp, {
             dryRun,
             threshold,
             updateText,
             force,
             cwd: workDir,
-          });
+          }));
           allResults.push({ file: sp, results, changed });
         }
 
@@ -276,6 +303,7 @@ function registerTools(server: McpServer): void {
         const root = await findWorkspaceRoot(workDir);
         const sidecarPath = await discoverSidecar(docPath, { cwd: root ?? workDir });
 
+        return await withFileLock(sidecarPath, async () => {
         // Parse existing or create new sidecar
         let doc: MrsfDocument;
         try {
@@ -325,9 +353,108 @@ function registerTools(server: McpServer): void {
             }, null, 2),
           }],
         };
+        }); // withFileLock
       } catch (err) {
         return {
           content: [{ type: "text", text: `Failed to add comment: ${errorMessage(err)}` }],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  // ── mrsf_add_batch ────────────────────────────────────────────────
+  server.registerTool(
+    "mrsf_add_batch",
+    {
+      title: "Add Multiple Comments",
+      description:
+        "Add multiple review comments to a Sidemark (MRSF) sidecar in a single " +
+        "atomic operation. Prefer this over calling mrsf_add multiple times to " +
+        "avoid race conditions when adding comments in parallel.",
+      inputSchema: {
+        document: z.string().describe("Path to the Markdown document"),
+        comments: z.array(z.object({
+          text: z.string().describe("Comment text"),
+          author: z.string().describe("Author identifier (e.g. 'Name (handle)')"),
+          line: z.number().int().min(1).optional().describe("Starting line number (1-based)"),
+          end_line: z.number().int().min(1).optional().describe("Ending line number (inclusive)"),
+          start_column: z.number().int().min(0).optional().describe("Starting column (0-based)"),
+          end_column: z.number().int().min(0).optional().describe("Ending column"),
+          type: z.string().optional().describe("Comment type: suggestion, issue, question, accuracy, style, clarity"),
+          severity: z.enum(["low", "medium", "high"]).optional().describe("Severity level"),
+          reply_to: z.string().optional().describe("Parent comment ID for threading"),
+        })).describe("Array of comments to add"),
+        cwd: z.string().optional().describe("Working directory"),
+      },
+    },
+    async ({ document, comments, cwd }) => {
+      try {
+        const workDir = cwd ?? process.cwd();
+        const docPath = path.resolve(workDir, document);
+        const root = await findWorkspaceRoot(workDir);
+        const sidecarPath = await discoverSidecar(docPath, { cwd: root ?? workDir });
+
+        return await withFileLock(sidecarPath, async () => {
+        // Parse existing or create new sidecar
+        let doc: MrsfDocument;
+        try {
+          doc = await parseSidecar(sidecarPath);
+        } catch {
+          const relDoc = path.relative(root ?? workDir, docPath);
+          doc = {
+            mrsf_version: "1.0",
+            document: relDoc,
+            comments: [],
+          };
+        }
+
+        const repoRoot = await findRepoRoot(workDir);
+
+        // Read document lines once for populating selected_text
+        let docLines: string[] | null = null;
+        try {
+          docLines = (await fs.readFile(docPath, "utf-8")).split("\n");
+        } catch {
+          // Document not readable — skip text population
+        }
+
+        const added: Comment[] = [];
+        for (const c of comments) {
+          const comment = await addComment(doc, {
+            text: c.text,
+            author: c.author,
+            line: c.line,
+            end_line: c.end_line,
+            start_column: c.start_column,
+            end_column: c.end_column,
+            type: c.type,
+            severity: c.severity,
+            reply_to: c.reply_to,
+          }, repoRoot ?? undefined);
+
+          if (comment.line != null && docLines) {
+            populateSelectedText(comment, docLines);
+          }
+          added.push(comment);
+        }
+
+        await writeSidecar(sidecarPath, doc);
+
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              sidecarPath,
+              added: added.map((c) => ({ id: c.id, line: c.line, end_line: c.end_line })),
+              total: added.length,
+            }, null, 2),
+          }],
+        };
+        }); // withFileLock
+      } catch (err) {
+        return {
+          content: [{ type: "text", text: `Failed to add comments: ${errorMessage(err)}` }],
           isError: true,
         };
       }
@@ -352,6 +479,8 @@ function registerTools(server: McpServer): void {
       try {
         const workDir = cwd ?? process.cwd();
         const [sp] = await resolveSidecarPaths([document], workDir);
+
+        return await withFileLock(sp, async () => {
         const doc = await parseSidecar(sp);
 
         const ok = unresolve
@@ -377,6 +506,7 @@ function registerTools(server: McpServer): void {
             }, null, 2),
           }],
         };
+        }); // withFileLock
       } catch (err) {
         return {
           content: [{ type: "text", text: `Resolve failed: ${errorMessage(err)}` }],
@@ -549,6 +679,8 @@ function registerTools(server: McpServer): void {
         const effectiveRoot = root ?? workDir;
 
         const oldSidecarPath = await discoverSidecar(oldDocPath, { cwd: effectiveRoot });
+
+        return await withFileLock(oldSidecarPath, async () => {
         const doc = await parseSidecar(oldSidecarPath);
 
         doc.document = path.basename(newDocPath);
@@ -571,6 +703,7 @@ function registerTools(server: McpServer): void {
             }, null, 2),
           }],
         };
+        }); // withFileLock
       } catch (err) {
         return {
           content: [{ type: "text", text: `Rename failed: ${errorMessage(err)}` }],
@@ -603,6 +736,8 @@ function registerTools(server: McpServer): void {
       try {
         const workDir = cwd ?? process.cwd();
         const [sp] = await resolveSidecarPaths([document], workDir);
+
+        return await withFileLock(sp, async () => {
         const doc = await parseSidecar(sp);
 
         const ok = removeComment(doc, id, cascade ? { cascade: true } : undefined);
@@ -627,6 +762,7 @@ function registerTools(server: McpServer): void {
             }, null, 2),
           }],
         };
+        }); // withFileLock
       } catch (err) {
         return {
           content: [{ type: "text", text: `Delete failed: ${errorMessage(err)}` }],
@@ -658,6 +794,8 @@ function registerTools(server: McpServer): void {
       try {
         const workDir = cwd ?? process.cwd();
         const [sp] = await resolveSidecarPaths([document], workDir);
+
+        return await withFileLock(sp, async () => {
         const effectiveStrategy = strategy ?? "salvage";
 
         if (effectiveStrategy === "reset") {
@@ -723,6 +861,7 @@ function registerTools(server: McpServer): void {
             }, null, 2),
           }],
         };
+        }); // withFileLock
       } catch (err) {
         return {
           content: [{ type: "text", text: `Repair failed: ${errorMessage(err)}` }],
@@ -792,6 +931,14 @@ function registerTools(server: McpServer): void {
             type: { type: "string", required: false, description: "Comment type: suggestion, issue, question, accuracy, style, clarity" },
             severity: { type: "enum: low | medium | high", required: false, description: "Severity level" },
             reply_to: { type: "string", required: false, description: "Parent comment ID for threading" },
+            cwd: { type: "string", required: false, description: "Working directory" },
+          },
+        },
+        mrsf_add_batch: {
+          description: "Add multiple review comments to a Sidemark (MRSF) sidecar in a single atomic operation.",
+          parameters: {
+            document: { type: "string", required: true, description: "Path to the Markdown document" },
+            comments: { type: "object[]", required: true, description: "Array of comment objects, each with: text (required), author (required), line, end_line, start_column, end_column, type, severity, reply_to" },
             cwd: { type: "string", required: false, description: "Working directory" },
           },
         },

@@ -114,6 +114,7 @@ describe("tool registration", () => {
     "mrsf_validate",
     "mrsf_reanchor",
     "mrsf_add",
+    "mrsf_add_batch",
     "mrsf_resolve",
     "mrsf_list",
     "mrsf_status",
@@ -253,6 +254,65 @@ describe("mrsf_add", () => {
     const parsed = JSON.parse(text);
     expect(parsed.id).toBeTruthy();
     expect(parsed.comment.text).toBe("New test comment");
+  });
+});
+
+describe("mrsf_add_batch", () => {
+  beforeAll(resetFixture);
+
+  it("adds multiple comments in a single call", async () => {
+    const result = await client.callTool({
+      name: "mrsf_add_batch",
+      arguments: {
+        document: "test.md",
+        comments: [
+          { text: "Batch comment 1", author: "Alice", line: 1 },
+          { text: "Batch comment 2", author: "Bob", line: 3 },
+          { text: "Batch comment 3", author: "Carol", line: 5 },
+        ],
+        cwd: tmpDir,
+      },
+    });
+    const text = (result.content as Array<{ text: string }>)[0].text;
+    const parsed = JSON.parse(text);
+    expect(parsed.total).toBe(3);
+    expect(parsed.added).toHaveLength(3);
+
+    // Verify all comments are actually in the sidecar
+    const listResult = await client.callTool({
+      name: "mrsf_list",
+      arguments: { files: ["test.md.review.yaml"], cwd: tmpDir },
+    });
+    const listText = (listResult.content as Array<{ text: string }>)[0].text;
+    const listParsed = JSON.parse(listText);
+    // Original 3 + 3 batch = 6
+    expect(listParsed[0].comments).toHaveLength(6);
+  });
+
+  it("parallel mrsf_add calls are serialised (no lost writes)", async () => {
+    await resetFixture();
+    // Fire 5 mrsf_add calls concurrently for the same document
+    const promises = Array.from({ length: 5 }, (_, i) =>
+      client.callTool({
+        name: "mrsf_add",
+        arguments: {
+          document: "test.md",
+          text: `Parallel comment ${i}`,
+          author: "Racer",
+          cwd: tmpDir,
+        },
+      }),
+    );
+    await Promise.all(promises);
+
+    const listResult = await client.callTool({
+      name: "mrsf_list",
+      arguments: { files: ["test.md.review.yaml"], cwd: tmpDir },
+    });
+    const listText = (listResult.content as Array<{ text: string }>)[0].text;
+    const listParsed = JSON.parse(listText);
+    // Original 3 + 5 parallel = 8 (none lost)
+    expect(listParsed[0].comments).toHaveLength(8);
   });
 });
 
