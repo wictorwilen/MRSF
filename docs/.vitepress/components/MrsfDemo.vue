@@ -1,12 +1,14 @@
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from "vue";
+import { ref, nextTick, onMounted, onUnmounted, watch } from "vue";
 
 const rendered = ref("");
 const showResolved = ref(true);
 const gutterPosition = ref("right");
-const gutterForInline = ref(true);
-const inlineHighlights = ref(true);
 const interactive = ref(true);
+const outputRef = ref(null);
+
+let currentController = null;
+let MrsfControllerClass = null;
 
 const sampleMarkdown = `# Architecture Overview
 
@@ -176,30 +178,43 @@ const sampleSidecar = {
 };
 
 async function renderDemo() {
+  // Tear down previous controller
+  if (currentController) {
+    currentController.destroy();
+    currentController = null;
+  }
+
   const [{ default: MarkdownIt }, { mrsfPlugin }] = await Promise.all([
     import("markdown-it"),
     import("@mrsf/markdown-it-mrsf"),
   ]);
 
-  if (interactive.value && !window.__mrsfControllerLoaded) {
-    await import("@mrsf/markdown-it-mrsf/controller");
-    window.__mrsfControllerLoaded = true;
+  // Lazy-load the controller class once
+  if (!MrsfControllerClass) {
+    const mod = await import("@mrsf/markdown-it-mrsf/controller");
+    MrsfControllerClass = mod.MrsfController;
   }
 
   const md = new MarkdownIt({ html: true, breaks: true });
   md.use(mrsfPlugin, {
     comments: sampleSidecar,
     showResolved: showResolved.value,
-    gutterPosition: gutterPosition.value,
-    gutterForInline: gutterForInline.value,
-    inlineHighlights: inlineHighlights.value,
-    interactive: interactive.value,
   });
   rendered.value = md.render(sampleMarkdown);
+
+  // Wait for DOM update, then initialise the controller
+  await nextTick();
+  const el = outputRef.value;
+  if (el) {
+    currentController = new MrsfControllerClass(el, {
+      gutterPosition: gutterPosition.value,
+      interactive: interactive.value,
+    });
+  }
 }
 
 onMounted(renderDemo);
-watch([showResolved, gutterPosition, gutterForInline, inlineHighlights, interactive], renderDemo);
+watch([showResolved, gutterPosition, interactive], renderDemo);
 
 const handler = (e) => {
   try {
@@ -226,6 +241,10 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  if (currentController) {
+    currentController.destroy();
+    currentController = null;
+  }
   for (const evt of events) {
     document.removeEventListener(evt, handler);
   }
@@ -240,19 +259,11 @@ onUnmounted(() => {
         Show resolved comments
       </label>
       <label>
-        <input type="checkbox" v-model="inlineHighlights" />
-        Inline highlights
-      </label>
-      <label>
-        <input type="checkbox" v-model="gutterForInline" />
-        Gutter for inline comments
-      </label>
-      <label>
         Gutter position:
         <select v-model="gutterPosition">
           <option value="right">Right</option>
-          <option value="tight">Tight (before text)</option>
           <option value="left">Left (margin gutter)</option>
+          <option value="both">Both</option>
         </select>
       </label>
       <label>
@@ -260,7 +271,7 @@ onUnmounted(() => {
         Interactive (alerts event payloads)
       </label>
     </div>
-    <div class="mrsf-demo-output" v-html="rendered" />
+    <div ref="outputRef" class="mrsf-demo-output" v-html="rendered" />
   </div>
 </template>
 

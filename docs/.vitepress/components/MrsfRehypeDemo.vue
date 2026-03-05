@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from "vue";
+import { ref, nextTick, onMounted, onUnmounted, watch } from "vue";
 
 const rendered = ref("");
 const showResolved = ref(true);
 const gutterPosition = ref("right");
-const gutterForInline = ref(true);
-const inlineHighlights = ref(true);
 const interactive = ref(true);
+const outputRef = ref<HTMLDivElement | null>(null);
+
+let currentController: any = null;
+let MrsfControllerClass: any = null;
 
 const sampleMarkdown = `# Architecture Overview
 
@@ -176,6 +178,12 @@ const sampleSidecar = {
 };
 
 async function renderDemo() {
+  // Tear down previous controller
+  if (currentController) {
+    currentController.destroy();
+    currentController = null;
+  }
+
   const [unifiedMod, remarkParseMod, remarkGfmMod, remarkBreaksMod, remarkRehypeMod, rehypeStringifyMod, rehypeMrsfMod] = await Promise.all([
     import("unified"),
     import("remark-parse"),
@@ -186,9 +194,10 @@ async function renderDemo() {
     import("@mrsf/rehype-mrsf"),
   ]);
 
-  if (interactive.value && !(window as any).__mrsfRehypeControllerLoaded) {
-    await import("@mrsf/rehype-mrsf/controller");
-    (window as any).__mrsfRehypeControllerLoaded = true;
+  // Lazy-load the controller class once
+  if (!MrsfControllerClass) {
+    const mod = await import("@mrsf/rehype-mrsf/controller");
+    MrsfControllerClass = (mod as any).MrsfController;
   }
 
   const file = await unifiedMod.unified()
@@ -199,22 +208,28 @@ async function renderDemo() {
     .use(rehypeMrsfMod.rehypeMrsf, {
       comments: sampleSidecar,
       showResolved: showResolved.value,
-      gutterPosition: gutterPosition.value,
-      gutterForInline: gutterForInline.value,
-      inlineHighlights: inlineHighlights.value,
-      interactive: interactive.value,
     })
     .use(rehypeStringifyMod.default, { allowDangerousHtml: true })
     .process(sampleMarkdown);
 
   rendered.value = String(file);
+
+  // Wait for DOM update, then initialise the controller
+  await nextTick();
+  const el = outputRef.value;
+  if (el) {
+    currentController = new MrsfControllerClass(el, {
+      gutterPosition: gutterPosition.value,
+      interactive: interactive.value,
+    });
+  }
 }
 
-watch([showResolved, gutterPosition, gutterForInline, inlineHighlights, interactive], renderDemo);
+watch([showResolved, gutterPosition, interactive], renderDemo);
 
-const handler = (e) => {
+const handler = (e: Event) => {
   try {
-    alert(JSON.stringify(e.detail, null, 2));
+    alert(JSON.stringify((e as CustomEvent).detail, null, 2));
   } catch {
     // ignore
   }
@@ -238,6 +253,10 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  if (currentController) {
+    currentController.destroy();
+    currentController = null;
+  }
   for (const evt of events) {
     document.removeEventListener(evt, handler);
   }
@@ -252,19 +271,11 @@ onUnmounted(() => {
         Show resolved comments
       </label>
       <label>
-        <input type="checkbox" v-model="inlineHighlights" />
-        Inline highlights
-      </label>
-      <label>
-        <input type="checkbox" v-model="gutterForInline" />
-        Gutter for inline comments
-      </label>
-      <label>
         Gutter position:
         <select v-model="gutterPosition">
           <option value="right">Right</option>
-          <option value="tight">Tight (before text)</option>
           <option value="left">Left (margin gutter)</option>
+          <option value="both">Both</option>
         </select>
       </label>
       <label>
@@ -272,7 +283,7 @@ onUnmounted(() => {
         Interactive (alerts event payloads)
       </label>
     </div>
-    <div class="mrsf-demo-output" v-html="rendered" />
+    <div ref="outputRef" class="mrsf-demo-output" v-html="rendered" />
   </div>
 </template>
 
