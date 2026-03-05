@@ -49,7 +49,7 @@ export async function loadConfig(
   if (!existsSync(cfgPath)) return null;
 
   const raw = await readFile(cfgPath, "utf-8");
-  const parsed = yaml.load(raw) as Record<string, unknown> | null;
+  const parsed = yaml.load(raw, { schema: yaml.JSON_SCHEMA }) as Record<string, unknown> | null;
 
   if (!parsed || typeof parsed !== "object") return null;
 

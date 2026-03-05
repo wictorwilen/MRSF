@@ -1030,3 +1030,52 @@ describe("writeSidecar — concurrent writes", () => {
     expect(parsed.mrsf_version).toBe("1.0");
   });
 });
+
+/* ------------------------------------------------------------------ */
+/*  Timestamp format preservation                                      */
+/* ------------------------------------------------------------------ */
+
+describe("timestamp format preservation", () => {
+  it("toYaml preserves ISO 8601 timestamps as strings", () => {
+    const doc = makeDoc([
+      makeComment({ id: "ts-1", timestamp: "2026-03-05T21:33:56.197Z" }),
+    ]);
+    const yaml = toYaml(doc);
+    expect(yaml).toContain("2026-03-05T21:33:56.197Z");
+    // Must NOT contain Date-serialized formats like "2026-03-05 21:33:56"
+    expect(yaml).not.toMatch(/2026-03-05 21:33:56/);
+  });
+
+  it("round-trips unquoted timestamps through write + parse", async () => {
+    const fp = path.join(tmpDir, "ts-roundtrip.review.yaml");
+    // Write a sidecar with a YAML-unquoted timestamp (the format agents produce)
+    const initialYaml = `mrsf_version: "1.0"
+document: test.md
+comments:
+  - id: c-ts
+    author: Agent
+    timestamp: 2026-03-05T21:33:56.197Z
+    text: Review this section
+    resolved: false
+`;
+    await writeFile(fp, initialYaml);
+
+    // Round-trip: read + write with an update
+    const doc = makeDoc([
+      makeComment({
+        id: "c-ts",
+        author: "Agent",
+        timestamp: "2026-03-05T21:33:56.197Z",
+        text: "Review this section",
+        resolved: true,
+      }),
+    ]);
+    await writeSidecar(fp, doc);
+
+    const result = await readFile(fp, "utf-8");
+    // Timestamp must still be valid ISO 8601
+    expect(result).toMatch(/2026-03-05T21:33:56\.197Z/);
+    // Must NOT be converted to locale/space-separated format
+    expect(result).not.toMatch(/2026-03-05 21:33:56/);
+  });
+});

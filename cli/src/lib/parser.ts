@@ -55,7 +55,7 @@ export function parseSidecarContent(
     }
   } else {
     try {
-      parsed = yaml.load(trimmed);
+      parsed = yaml.load(trimmed, { schema: yaml.JSON_SCHEMA });
     } catch (e) {
       throw new Error(`Failed to parse YAML: ${(e as Error).message}`);
     }
@@ -108,7 +108,7 @@ export function parseSidecarContentLenient(
   // First, try a normal parse
   let parsed: unknown;
   try {
-    parsed = isJson ? JSON.parse(trimmed) : yaml.load(trimmed);
+    parsed = isJson ? JSON.parse(trimmed) : yaml.load(trimmed, { schema: yaml.JSON_SCHEMA });
   } catch (e) {
     // Total parse failure — try to salvage what we can from YAML
     if (!isJson) {
@@ -186,7 +186,7 @@ function salvageYaml(content: string): LenientParseResult {
 
     // Wrap in a minimal YAML array context and try to parse
     try {
-      const parsed = yaml.load(trimmed);
+      const parsed = yaml.load(trimmed, { schema: yaml.JSON_SCHEMA });
       if (Array.isArray(parsed) && parsed.length > 0) {
         const c = parsed[0];
         if (c && typeof c === "object" && typeof (c as Record<string, unknown>).id === "string") {

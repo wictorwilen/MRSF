@@ -40,6 +40,12 @@ jobs:
           npm ci
           npm run build
 
+      - name: Build rehype plugin
+        run: |
+          cd plugins/rehype
+          npm ci
+          npm run build
+
       - name: Build docs
         run: |
           cd docs

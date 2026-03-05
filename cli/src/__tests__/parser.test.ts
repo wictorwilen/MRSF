@@ -50,6 +50,38 @@ comments:
     expect(doc.comments).toHaveLength(1);
   });
 
+  it("preserves unquoted ISO timestamps as strings (not Date objects)", () => {
+    const yaml = `
+mrsf_version: "1.0"
+document: test.md
+comments:
+  - id: c-1
+    author: Alice
+    timestamp: 2025-06-15T14:30:00Z
+    text: Fix this
+    resolved: false
+`;
+    const doc = parseSidecarContent(yaml);
+    expect(typeof doc.comments[0].timestamp).toBe("string");
+    expect(doc.comments[0].timestamp).toBe("2025-06-15T14:30:00Z");
+  });
+
+  it("preserves unquoted timestamps with milliseconds as strings", () => {
+    const yaml = `
+mrsf_version: "1.0"
+document: test.md
+comments:
+  - id: c-1
+    author: Alice
+    timestamp: 2026-03-05T21:33:56.197Z
+    text: Fix this
+    resolved: false
+`;
+    const doc = parseSidecarContent(yaml);
+    expect(typeof doc.comments[0].timestamp).toBe("string");
+    expect(doc.comments[0].timestamp).toBe("2026-03-05T21:33:56.197Z");
+  });
+
   it("detects JSON by filename hint (.review.json)", () => {
     const json = JSON.stringify({
       mrsf_version: "1.0",

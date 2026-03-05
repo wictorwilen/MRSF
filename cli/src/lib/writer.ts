@@ -124,6 +124,7 @@ const COMMENT_KEY_ORDER = [
  * double-quoted via JSON.stringify, which is always valid YAML.
  */
 function valueToSource(v: unknown): string {
+  if (v instanceof Date) return JSON.stringify(v.toISOString());
   if (typeof v === "number" || typeof v === "boolean") return String(v);
   if (typeof v === "string") {
     // Empty string must be quoted
