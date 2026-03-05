@@ -66,8 +66,8 @@ export interface MrsfSubmitDetail {
 }
 
 export interface MrsfControllerOptions {
-  /** Show gutter on left, right, or both sides. Default: "right". */
-  gutterPosition?: "left" | "right" | "both";
+  /** Show gutter on left or right side. Default: "right". */
+  gutterPosition?: "left" | "right";
   /** Enable interactive actions (add, resolve, reply, etc.). Default: false. */
   interactive?: boolean;
   /** Comment data passed directly (overrides embedded script). */
@@ -96,6 +96,7 @@ export class MrsfController {
   private styleInjected = false;
   private inlineMarks: HTMLElement[] = [];
   private inlineTooltipEl: HTMLElement | null = null;
+  private orphanedSection: HTMLDivElement | null = null;
 
   private handleResizeBound = this.positionGutterItems.bind(this);
   private handleClickBound = this.handleClick.bind(this);
@@ -115,6 +116,7 @@ export class MrsfController {
     this.renderGutterItems();
     this.positionGutterItems();
     this.renderInlineHighlights();
+    this.renderOrphanedSection();
 
     // Listeners
     this.resizeObserver = new ResizeObserver(this.handleResizeBound);
@@ -131,6 +133,7 @@ export class MrsfController {
     document.removeEventListener("click", this.handleClickBound);
     document.removeEventListener("selectionchange", this.handleSelectionBound);
     this.removeInlineHighlights();
+    this.orphanedSection?.remove();
     this.gutterLeft?.remove();
     this.gutterRight?.remove();
     this.floatingAddButton?.remove();
@@ -177,10 +180,9 @@ export class MrsfController {
     this.container.classList.add("mrsf-overlay-root");
 
     const pos = this.opts.gutterPosition;
-    if (pos === "left" || pos === "both") {
+    if (pos === "left") {
       this.gutterLeft = this.createGutter("mrsf-gutter-left");
-    }
-    if (pos === "right" || pos === "both") {
+    } else {
       this.gutterRight = this.createGutter("mrsf-gutter-right");
     }
   }
@@ -216,14 +218,21 @@ export class MrsfController {
     return this.gutterLeft ?? this.gutterRight;
   }
 
-  /** Collect all unique line numbers from data-mrsf-line elements. */
+  /** Collect all unique line numbers from data-mrsf-line elements, expanding multi-line ranges. */
   private collectLines(): number[] {
     const els = this.container.querySelectorAll<HTMLElement>("[data-mrsf-line]");
     const seen = new Set<number>();
     for (const el of els) {
       if (el.tagName === "SCRIPT") continue;
       const line = parseInt(el.dataset.mrsfLine!, 10);
-      if (!isNaN(line)) seen.add(line);
+      if (isNaN(line)) continue;
+      const startLine = parseInt(el.dataset.mrsfStartLine ?? "", 10);
+      const endLine = parseInt(el.dataset.mrsfEndLine ?? "", 10);
+      if (!isNaN(startLine) && !isNaN(endLine) && endLine > startLine) {
+        for (let l = startLine; l <= endLine; l++) seen.add(l);
+      } else {
+        seen.add(line);
+      }
     }
     return [...seen].sort((a, b) => a - b);
   }
@@ -304,9 +313,13 @@ export class MrsfController {
       const items = gutter.querySelectorAll<HTMLDivElement>(".mrsf-gutter-item");
       for (const item of items) {
         const line = parseInt(item.dataset.mrsfGutterLine!, 10);
-        const target = this.container.querySelector<HTMLElement>(
+        // For expanded multi-line elements, find the element whose range contains this line
+        let target = this.container.querySelector<HTMLElement>(
           `[data-mrsf-line="${line}"]:not(script):not(.mrsf-gutter-item)`,
         );
+        if (!target) {
+          target = this.findElementForLine(line);
+        }
         if (!target) {
           item.style.display = "none";
           continue;
@@ -317,6 +330,64 @@ export class MrsfController {
         item.style.display = "";
       }
     }
+  }
+
+  /**
+   * Find the element whose start-line/end-line range contains the given line.
+   * Used for positioning gutter items on expanded multi-line elements.
+   */
+  private findElementForLine(line: number): HTMLElement | null {
+    const els = this.container.querySelectorAll<HTMLElement>("[data-mrsf-start-line][data-mrsf-end-line]");
+    for (const el of els) {
+      if (el.tagName === "SCRIPT") continue;
+      const start = parseInt(el.dataset.mrsfStartLine!, 10);
+      const end = parseInt(el.dataset.mrsfEndLine!, 10);
+      if (!isNaN(start) && !isNaN(end) && line >= start && line <= end) {
+        return el;
+      }
+    }
+    return null;
+  }
+
+  // ── Orphaned comments section ────────────────────────────
+
+  /**
+   * Render orphaned comments (whose line doesn't match any DOM element)
+   * in a dedicated section at the bottom of the container.
+   */
+  private renderOrphanedSection(): void {
+    const lines = this.collectLines();
+    const lineSet = new Set(lines);
+    const orphanedThreads: CommentThread[] = [];
+
+    for (const [line, threads] of this.threads) {
+      if (!lineSet.has(line)) {
+        orphanedThreads.push(...threads);
+      }
+    }
+
+    if (orphanedThreads.length === 0) return;
+
+    const section = document.createElement("div");
+    section.className = "mrsf-orphaned-section";
+
+    const heading = document.createElement("div");
+    heading.className = "mrsf-orphaned-heading";
+    heading.textContent = `Orphaned Comments (${orphanedThreads.length})`;
+    section.appendChild(heading);
+
+    const interactive = this.opts.interactive;
+    for (const thread of orphanedThreads) {
+      const wrapper = document.createElement("div");
+      wrapper.className = interactive
+        ? "mrsf-orphaned-thread mrsf-interactive"
+        : "mrsf-orphaned-thread";
+      wrapper.innerHTML = renderThreadHtml(thread, interactive);
+      section.appendChild(wrapper);
+    }
+
+    this.container.appendChild(section);
+    this.orphanedSection = section;
   }
 
   // ── Inline text highlights ──────────────────────────────
@@ -456,7 +527,9 @@ export class MrsfController {
     this.hideInlineTooltip();
 
     const tooltip = document.createElement("div");
-    tooltip.className = "mrsf-inline-tooltip mrsf-tooltip-visible";
+    tooltip.className = this.opts.interactive
+      ? "mrsf-inline-tooltip mrsf-interactive mrsf-tooltip-visible"
+      : "mrsf-inline-tooltip mrsf-tooltip-visible";
     tooltip.dataset.mrsfForMark = thread.comment.id;
     tooltip.innerHTML = renderThreadHtml(thread, this.opts.interactive);
 
@@ -468,10 +541,22 @@ export class MrsfController {
       this.hideInlineTooltip();
     });
 
-    // Position below the mark
-    mark.style.position = "relative";
-    mark.appendChild(tooltip);
+    // Append to body with fixed positioning to avoid clipping
+    document.body.appendChild(tooltip);
     this.inlineTooltipEl = tooltip;
+
+    // Position relative to the mark element
+    const rect = mark.getBoundingClientRect();
+    const margin = 4;
+    const tooltipH = tooltip.offsetHeight;
+
+    // Prefer below; flip above if not enough space at bottom
+    if (rect.bottom + margin + tooltipH > window.innerHeight) {
+      tooltip.style.top = `${rect.top - tooltipH - margin}px`;
+    } else {
+      tooltip.style.top = `${rect.bottom + margin}px`;
+    }
+    tooltip.style.left = `${Math.max(0, rect.left)}px`;
   }
 
   private hideInlineTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -490,9 +575,6 @@ export class MrsfController {
   private hideInlineTooltip(): void {
     this.cancelHideInlineTooltip();
     if (this.inlineTooltipEl) {
-      // Restore mark positioning
-      const parent = this.inlineTooltipEl.parentElement;
-      if (parent) parent.style.position = "";
       this.inlineTooltipEl.remove();
       this.inlineTooltipEl = null;
     }

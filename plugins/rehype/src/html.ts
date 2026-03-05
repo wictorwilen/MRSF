@@ -63,9 +63,9 @@ export function renderCommentHtml(
   }
   html += `</span>`;
 
-  // Selected text quote
+  // Selected text quote (collapsible)
   if (comment.selected_text) {
-    html += `<span class="mrsf-selected-text">${escapeHtml(comment.selected_text)}</span>`;
+    html += `<details class="mrsf-selected-text"><summary class="mrsf-selected-text-summary">${escapeHtml(comment.selected_text)}</summary><span class="mrsf-selected-text-full">${escapeHtml(comment.selected_text)}</span></details>`;
   }
 
   // Body

@@ -21,7 +21,7 @@ export function createMrsfPlugin(loader: CommentLoader) {
     const result = resolveComments(loader, options);
     if (!result) return;
 
-    installCoreRule(md, result.lineMap);
+    installCoreRule(md, result.lineMap, { lineHighlight: options.lineHighlight ?? false });
     installRendererRules(md);
   };
 }

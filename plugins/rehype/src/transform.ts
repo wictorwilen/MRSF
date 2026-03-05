@@ -75,6 +75,11 @@ function addClass(node: Element, cls: string): void {
   }
 }
 
+export interface TransformOptions {
+  /** Whether to add mrsf-line-highlight class on commented elements. Default: false. */
+  lineHighlight?: boolean;
+}
+
 /**
  * Transform a hast tree: annotate elements with data-mrsf-line and
  * append embedded comment data for the MrsfController.
@@ -82,6 +87,7 @@ function addClass(node: Element, cls: string): void {
 export function transformTree(
   tree: Root,
   lineMap: LineMap,
+  options: TransformOptions = {},
 ): void {
   const processed = new Set<number>();
 
@@ -107,7 +113,7 @@ export function transformTree(
       if (line !== startLine && lineOwnedByDescendant(node, line)) continue;
 
       const threads = lineMap.get(line);
-      if (threads && threads.length > 0) {
+      if (threads && threads.length > 0 && options.lineHighlight) {
         addClass(node, "mrsf-line-highlight");
       }
       processed.add(line);

@@ -3,7 +3,7 @@
  *
  * In the new architecture, the plugin ONLY:
  *   1. Adds data-mrsf-line / data-mrsf-start-line / data-mrsf-end-line attributes
- *   2. Adds mrsf-line-highlight class on block elements that have comments
+ *   2. Optionally adds mrsf-line-highlight class (when lineHighlight is true)
  *   3. Appends a <script type="application/mrsf+json"> with thread data
  *
  * All visual rendering (badges, tooltips, highlights) happens at runtime
@@ -70,7 +70,7 @@ describe("line annotation", () => {
   it("should annotate a block element for a line-anchored comment", async () => {
     const html = await render("# Hello\n\nWorld\n", [
       { id: "c1", text: "A comment", line: 1 },
-    ]);
+    ], { lineHighlight: true });
     expect(html).toContain('data-mrsf-line="1"');
     expect(html).toContain("mrsf-line-highlight");
   });
@@ -78,7 +78,7 @@ describe("line annotation", () => {
   it("should annotate the correct line", async () => {
     const html = await render("Line one\n\nLine three\n", [
       { id: "c1", text: "Comment on line 3", line: 3 },
-    ]);
+    ], { lineHighlight: true });
     expect(html).toContain('data-mrsf-line="3"');
     expect(html).toContain("mrsf-line-highlight");
   });
@@ -115,6 +115,7 @@ describe("line annotation", () => {
         loader: () => makeSidecar([
           { id: "ldr1", text: "From loader", line: 1 },
         ]),
+        lineHighlight: true,
       } as MrsfPluginOptions)
       .use(rehypeStringify, { allowDangerousHtml: true })
       .process("# Hello\n");
@@ -258,7 +259,7 @@ describe("resolved comments", () => {
   it("should include resolved comments by default", async () => {
     const html = await render("# Title\n", [
       { id: "c1", text: "Done", line: 1, resolved: true },
-    ]);
+    ], { lineHighlight: true });
     expect(html).toContain("mrsf-line-highlight");
     const data = parseDataScript(html);
     expect(data!.threads).toHaveLength(1);
@@ -277,7 +278,7 @@ describe("resolved comments", () => {
     const html = await render("# Title\n", [
       { id: "c1", text: "Open", line: 1, resolved: false },
       { id: "c2", text: "Done", line: 1, resolved: true },
-    ], { showResolved: false });
+    ], { showResolved: false, lineHighlight: true });
     expect(html).toContain("mrsf-line-highlight");
     const data = parseDataScript(html);
     expect(data!.threads).toHaveLength(1);

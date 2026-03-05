@@ -116,3 +116,10 @@ The v1 API will be sunset on ~~2025-12-31~~ 2026-06-30.
 ![API Architecture](./diagrams/api-arch.png)
 
 Please migrate to v2 before the deadline.
+
+## Migration Notes
+
+> **Step 1**: Update your client SDK to the latest version.
+> **Step 2**: Replace all v1 endpoint URLs with their v2 equivalents.
+> **Step 3**: Test your integration against the v2 sandbox environment.
+> **Step 4**: Switch production traffic to v2 once tests pass.

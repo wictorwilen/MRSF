@@ -242,3 +242,28 @@ comments:
     timestamp: "2026-01-18T13:00:00Z"
     text: Don't forget to cover breaking changes
     reply_to: p-migrate
+
+  # --- Blockquote migration steps (lines 122-125) ---
+  - id: bq-step2
+    author: Diana
+    timestamp: "2026-01-19T09:00:00Z"
+    text: Provide a URL mapping table for the v1-to-v2 migration
+    line: 123
+    type: suggestion
+
+  - id: bq-step4
+    author: Alice
+    timestamp: "2026-01-19T09:30:00Z"
+    text: Add a rollback procedure in case v2 tests fail
+    line: 125
+    severity: high
+    type: issue
+
+  # --- Orphaned comment (line 999 does not exist in the document) ---
+  - id: orphan-deleted-section
+    author: Charlie
+    timestamp: "2026-01-20T08:00:00Z"
+    text: This section about WebSocket support needs more examples
+    line: 999
+    severity: medium
+    type: issue

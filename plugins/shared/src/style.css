@@ -299,9 +299,40 @@
   font-size: 0.85em;
   background: rgba(127, 127, 127, 0.1);
   border-left: 3px solid rgba(127, 127, 127, 0.3);
-  padding: 4px 8px;
   margin: 4px 0;
   border-radius: 2px;
+}
+
+.mrsf-selected-text-summary {
+  padding: 4px 8px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+  list-style: none;
+  color: var(--mrsf-fg, inherit);
+  opacity: 0.7;
+}
+
+.mrsf-selected-text-summary::-webkit-details-marker {
+  display: none;
+}
+
+.mrsf-selected-text-summary::before {
+  content: "▶ ";
+  font-size: 0.7em;
+  vertical-align: middle;
+  margin-right: 2px;
+}
+
+.mrsf-selected-text[open] > .mrsf-selected-text-summary {
+  display: none;
+}
+
+.mrsf-selected-text-full {
+  display: block;
+  padding: 4px 8px;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -331,18 +362,15 @@
   background: rgba(255, 213, 79, 0.4);
 }
 
-/* Tooltip appended inside the mark by controller */
+/* Inline tooltip (appended to document.body, positioned by JS) */
 .mrsf-inline-tooltip {
-  position: absolute;
-  top: 100%;
-  left: 0;
+  position: fixed;
   z-index: 1100;
   min-width: 300px;
   max-width: 480px;
   max-height: 400px;
   overflow-y: auto;
   padding: 8px;
-  margin-top: 4px;
   border-radius: 6px;
   background: var(--mrsf-tooltip-bg);
   border: 1px solid var(--mrsf-tooltip-border);
@@ -400,6 +428,37 @@
 }
 
 /* ── Floating "Add comment" button (selection-based) ────── */
+
+/* ── Orphaned comments section (bottom of container) ────── */
+
+.mrsf-orphaned-section {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 2px dashed var(--mrsf-tooltip-border);
+}
+
+.mrsf-orphaned-heading {
+  font-family: var(--mrsf-font-family);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #999;
+  margin-bottom: 8px;
+}
+
+.mrsf-orphaned-thread {
+  padding: 8px;
+  margin-bottom: 6px;
+  border-radius: 6px;
+  border: 1px solid var(--mrsf-tooltip-border);
+  background: rgba(127, 127, 127, 0.06);
+  opacity: 0.7;
+  font-family: var(--mrsf-font-family);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--mrsf-tooltip-fg);
+}
 
 .mrsf-add-inline-button {
   position: absolute;

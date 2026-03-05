@@ -7,7 +7,7 @@
  *
  * Each test verifies that the overlay gutter architecture correctly:
  *   - Annotates the right elements with data-mrsf-line attributes
- *   - Applies mrsf-line-highlight only where comments exist
+ *   - Optionally applies mrsf-line-highlight when lineHighlight is enabled
  *   - Embeds accurate thread data in the <script> tag
  *   - Preserves native HTML structure (no injected wrappers/badges)
  */
@@ -29,14 +29,14 @@ const fixturesDir = path.resolve(__dirname, "../../../shared/src/__fixtures__");
 
 const complexMd = readFileSync(path.join(fixturesDir, "complex.md"), "utf-8");
 const complexYaml = readFileSync(
-  path.join(fixturesDir, "complex.review.yaml"),
+  path.join(fixturesDir, "complex.md.review.yaml"),
   "utf-8",
 );
 
 let sidecar: MrsfDocument;
 
 beforeAll(() => {
-  sidecar = parseSidecarContent(complexYaml, "complex.review.yaml");
+  sidecar = parseSidecarContent(complexYaml, "complex.md.review.yaml");
 });
 
 /** Render the complex markdown with all comments. */
@@ -114,8 +114,8 @@ describe("complex document — full render", () => {
   });
 
   it("should embed all root-level threads (excluding replies)", () => {
-    // 29 comments in sidecar, 4 are replies → 25 root threads
-    expect(data.threads.length).toBe(25);
+    // 32 comments in sidecar, 4 are replies → 28 root threads
+    expect(data.threads.length).toBe(28);
   });
 
   it("should thread replies correctly under their parents", () => {
@@ -142,8 +142,9 @@ describe("complex document — full render", () => {
     expect(lines.length).toBeGreaterThan(10);
   });
 
-  it("should have highlight class on lines with comments", () => {
-    expect(countHighlights(html)).toBeGreaterThan(0);
+  it("should have highlight class on lines with comments when lineHighlight is enabled", () => {
+    const hlHtml = renderComplex({ lineHighlight: true });
+    expect(countHighlights(hlHtml)).toBeGreaterThan(0);
   });
 });
 
@@ -151,13 +152,13 @@ describe("complex document — full render", () => {
 
 describe("complex document — headings", () => {
   it("should annotate h1 with data-mrsf-line for line 1", () => {
-    const html = renderComplex();
+    const html = renderComplex({ lineHighlight: true });
     expect(html).toMatch(/<h1[^>]*data-mrsf-line="1"[^>]*>/);
     expect(html).toMatch(/<h1[^>]*mrsf-line-highlight[^>]*>/);
   });
 
   it("should annotate h2 heading (line 5)", () => {
-    const html = renderComplex();
+    const html = renderComplex({ lineHighlight: true });
     expect(html).toMatch(/<h2[^>]*data-mrsf-line="5"[^>]*>/);
     expect(html).toMatch(/<h2[^>]*mrsf-line-highlight[^>]*>/);
   });
@@ -178,7 +179,7 @@ describe("complex document — headings", () => {
 
 describe("complex document — paragraphs", () => {
   it("should annotate paragraph with selected_text comment (line 3)", () => {
-    const html = renderComplex();
+    const html = renderComplex({ lineHighlight: true });
     expect(html).toMatch(/<p[^>]*data-mrsf-line="3"[^>]*>/);
     expect(html).toMatch(/<p[^>]*mrsf-line-highlight[^>]*>/);
   });
@@ -213,7 +214,7 @@ describe("complex document — blockquotes", () => {
   });
 
   it("should have highlight class on the blockquote comment", () => {
-    const html = renderComplex();
+    const html = renderComplex({ lineHighlight: true });
     expect(html).toContain("mrsf-line-highlight");
   });
 
@@ -346,8 +347,8 @@ describe("complex document — thread data integrity", () => {
     const highSeverity = data.threads.filter(
       (t: any) => t.comment.severity === "high",
     );
-    // h2-auth, ul-nested, code-ts, p-migrate
-    expect(highSeverity.length).toBe(4);
+    // h2-auth, ul-nested, code-ts, p-migrate, bq-step4
+    expect(highSeverity.length).toBe(5);
   });
 
   it("should preserve comment types", () => {
@@ -356,8 +357,8 @@ describe("complex document — thread data integrity", () => {
     const suggestions = data.threads.filter(
       (t: any) => t.comment.type === "suggestion",
     );
-    // h1-title, bq-note, h3-token, ol-admin, code-yaml, tbl-business, tbl-email, p-intro-inline
-    expect(suggestions.length).toBe(8);
+    // h1-title, bq-note, h3-token, ol-admin, code-yaml, tbl-business, tbl-email, p-intro-inline, bq-step2
+    expect(suggestions.length).toBe(9);
   });
 
   it("should preserve selected_text values", () => {
@@ -400,8 +401,8 @@ describe("complex document — thread data integrity", () => {
       (t: any) => t.comment.resolved === true,
     );
     expect(resolved.length).toBe(0);
-    // Total threads should be 24 (25 - 1 resolved)
-    expect(data.threads.length).toBe(24);
+    // Total threads should be 27 (28 - 1 resolved)
+    expect(data.threads.length).toBe(27);
   });
 });
 
@@ -634,8 +635,8 @@ describe("complex document — cross-plugin consistency", () => {
   it("should embed the same number of threads as root comments", () => {
     const html = renderComplex();
     const data = parseDataScript(html)!;
-    // Sidecar has 29 comments, 4 are replies → 25 root threads
-    expect(data.threads.length).toBe(25);
+    // Sidecar has 32 comments, 4 are replies → 28 root threads
+    expect(data.threads.length).toBe(28);
     // Each reply should be nested
     const totalReplies = data.threads.reduce(
       (sum: number, t: any) => sum + (t.replies?.length || 0),
@@ -654,8 +655,8 @@ describe("complex document — cross-plugin consistency", () => {
         allIds.add(r.id);
       }
     }
-    // All 29 comment IDs should be present
-    expect(allIds.size).toBe(29);
+    // All 32 comment IDs should be present
+    expect(allIds.size).toBe(32);
     expect(allIds).toContain("h1-title");
     expect(allIds).toContain("bq-note-reply");
     expect(allIds).toContain("p-migrate-reply2");

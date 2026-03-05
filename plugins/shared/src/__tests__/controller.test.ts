@@ -101,13 +101,6 @@ describe("MrsfController constructor", () => {
     expect(container.querySelector(".mrsf-gutter-right")).toBeNull();
   });
 
-  it("creates both gutters when gutterPosition is 'both'", () => {
-    container = buildContainer([1, 2, 3]);
-    ctrl = new MrsfController(container, { gutterPosition: "both" });
-    expect(container.querySelector(".mrsf-gutter-left")).not.toBeNull();
-    expect(container.querySelector(".mrsf-gutter-right")).not.toBeNull();
-  });
-
   it("defaults interactive to false", () => {
     container = buildContainer([1, 2, 3]);
     ctrl = new MrsfController(container);
@@ -738,7 +731,7 @@ describe("destroy", () => {
 
   it("removes gutters from DOM", () => {
     container = buildContainer([1, 2]);
-    ctrl = new MrsfController(container, { gutterPosition: "both" });
+    ctrl = new MrsfController(container);
     ctrl.destroy();
     ctrl = null;
     expect(container.querySelector(".mrsf-gutter")).toBeNull();
@@ -1076,7 +1069,7 @@ describe("Inline text highlights", () => {
     const mark = container.querySelector("mark.mrsf-inline-highlight") as HTMLElement;
     mark.click();
 
-    const tooltip = mark.querySelector(".mrsf-inline-tooltip");
+    const tooltip = document.querySelector(".mrsf-inline-tooltip");
     expect(tooltip).not.toBeNull();
     expect(tooltip!.textContent).toContain("A comment");
   });
@@ -1092,10 +1085,10 @@ describe("Inline text highlights", () => {
 
     const mark = container.querySelector("mark.mrsf-inline-highlight") as HTMLElement;
     mark.click();
-    expect(mark.querySelector(".mrsf-inline-tooltip")).not.toBeNull();
+    expect(document.querySelector(".mrsf-inline-tooltip")).not.toBeNull();
 
     mark.click();
-    expect(mark.querySelector(".mrsf-inline-tooltip")).toBeNull();
+    expect(document.querySelector(".mrsf-inline-tooltip")).toBeNull();
   });
 
   it("shows author and comment text in inline tooltip", () => {
@@ -1111,7 +1104,7 @@ describe("Inline text highlights", () => {
 
     const mark = container.querySelector("mark.mrsf-inline-highlight") as HTMLElement;
     mark.click();
-    const tooltip = mark.querySelector(".mrsf-inline-tooltip")!;
+    const tooltip = document.querySelector(".mrsf-inline-tooltip")!;
     expect(tooltip.textContent).toContain("Bob");
     expect(tooltip.textContent).toContain("This needs clarification");
   });
@@ -1132,7 +1125,7 @@ describe("Inline text highlights", () => {
 
     const mark = container.querySelector("mark.mrsf-inline-highlight") as HTMLElement;
     mark.click();
-    const tooltip = mark.querySelector(".mrsf-inline-tooltip")!;
+    const tooltip = document.querySelector(".mrsf-inline-tooltip")!;
     expect(tooltip.textContent).toContain("Good point");
     expect(tooltip.textContent).toContain("Charlie");
   });
@@ -1197,5 +1190,280 @@ describe("Inline text highlights", () => {
     expect(mark).not.toBeNull();
     // Content may be "Bearer token" or just the portion that was wrappable
     expect(mark!.textContent).toContain("Bearer");
+  });
+});
+
+// ── Multi-line element gutter expansion ──────────────────
+
+describe("Multi-line element gutter expansion", () => {
+  /**
+   * Helper: build a container with a single block element spanning multiple lines.
+   */
+  function buildMultiLineContainer(
+    startLine: number,
+    endLine: number,
+    threads?: CommentThread[],
+  ): HTMLDivElement {
+    const div = document.createElement("div");
+    const blockquote = document.createElement("blockquote");
+    blockquote.dataset.mrsfLine = String(startLine);
+    blockquote.dataset.mrsfStartLine = String(startLine);
+    blockquote.dataset.mrsfEndLine = String(endLine);
+    blockquote.textContent = "A multi-line block";
+    div.appendChild(blockquote);
+    if (threads) {
+      const script = document.createElement("script");
+      script.type = "application/mrsf+json";
+      script.textContent = JSON.stringify({ threads });
+      div.appendChild(script);
+    }
+    document.body.appendChild(div);
+    return div;
+  }
+
+  it("creates gutter items for every line in a multi-line blockquote", () => {
+    container = buildMultiLineContainer(10, 13);
+    ctrl = new MrsfController(container, { interactive: true });
+    const items = container.querySelectorAll(".mrsf-gutter-item");
+    expect(items.length).toBe(4); // lines 10, 11, 12, 13
+    const lines = Array.from(items).map((el) => el.getAttribute("data-mrsf-gutter-line"));
+    expect(lines).toEqual(["10", "11", "12", "13"]);
+  });
+
+  it("creates badge on a specific line within a multi-line range", () => {
+    const thread = makeThread({ id: "mid", line: 12 });
+    container = buildMultiLineContainer(10, 13, [thread]);
+    ctrl = new MrsfController(container);
+    const badge = container.querySelector("[data-mrsf-gutter-line='12'] .mrsf-badge");
+    expect(badge).not.toBeNull();
+    expect(badge!.textContent).toContain("1");
+  });
+
+  it("creates add buttons on lines without comments in multi-line range", () => {
+    const thread = makeThread({ id: "c-on-11", line: 11 });
+    container = buildMultiLineContainer(10, 12, [thread]);
+    ctrl = new MrsfController(container, { interactive: true });
+    // Line 11 has badge (with add button in interactive mode), lines 10 and 12 have standalone add buttons
+    const addBtns = container.querySelectorAll(".mrsf-gutter-add");
+    expect(addBtns.length).toBe(3);
+    const addLines = Array.from(addBtns).map((el) => (el as HTMLElement).dataset.mrsfLine);
+    expect(addLines).toContain("10");
+    expect(addLines).toContain("12");
+  });
+
+  it("expands code fence multi-line elements the same as blockquotes", () => {
+    const div = document.createElement("div");
+    const pre = document.createElement("pre");
+    pre.dataset.mrsfLine = "40";
+    pre.dataset.mrsfStartLine = "40";
+    pre.dataset.mrsfEndLine = "47";
+    pre.textContent = "code block";
+    div.appendChild(pre);
+    document.body.appendChild(div);
+    container = div;
+
+    ctrl = new MrsfController(container, { interactive: true });
+    const items = container.querySelectorAll(".mrsf-gutter-item");
+    expect(items.length).toBe(8); // lines 40-47
+  });
+
+  it("does not expand single-line elements", () => {
+    // data-mrsf-start-line = data-mrsf-end-line = data-mrsf-line (no expansion)
+    const div = document.createElement("div");
+    const p = document.createElement("p");
+    p.dataset.mrsfLine = "5";
+    p.dataset.mrsfStartLine = "5";
+    p.dataset.mrsfEndLine = "5";
+    p.textContent = "Single line";
+    div.appendChild(p);
+    document.body.appendChild(div);
+    container = div;
+
+    ctrl = new MrsfController(container, { interactive: true });
+    const items = container.querySelectorAll(".mrsf-gutter-item");
+    expect(items.length).toBe(1);
+  });
+
+  it("mixes single-line and multi-line elements in the same container", () => {
+    const div = document.createElement("div");
+    const p = document.createElement("p");
+    p.dataset.mrsfLine = "1";
+    p.textContent = "A paragraph";
+    div.appendChild(p);
+
+    const bq = document.createElement("blockquote");
+    bq.dataset.mrsfLine = "3";
+    bq.dataset.mrsfStartLine = "3";
+    bq.dataset.mrsfEndLine = "6";
+    bq.textContent = "A 4-line blockquote";
+    div.appendChild(bq);
+
+    const p2 = document.createElement("p");
+    p2.dataset.mrsfLine = "8";
+    p2.textContent = "After blockquote";
+    div.appendChild(p2);
+
+    document.body.appendChild(div);
+    container = div;
+
+    ctrl = new MrsfController(container, { interactive: true });
+    const items = container.querySelectorAll(".mrsf-gutter-item");
+    // line 1 + lines 3,4,5,6 + line 8 = 6
+    expect(items.length).toBe(6);
+  });
+});
+
+// ── Interactive inline tooltips ──────────────────────────
+
+describe("Interactive inline tooltips", () => {
+  function buildInlineContainer(
+    line: number,
+    textContent: string,
+    threads: CommentThread[],
+  ): HTMLDivElement {
+    const div = document.createElement("div");
+    const p = document.createElement("p");
+    p.dataset.mrsfLine = String(line);
+    p.textContent = textContent;
+    div.appendChild(p);
+    const script = document.createElement("script");
+    script.type = "application/mrsf+json";
+    script.textContent = JSON.stringify({ threads });
+    div.appendChild(script);
+    document.body.appendChild(div);
+    return div;
+  }
+
+  it("adds mrsf-interactive class to inline tooltip when interactive is true", () => {
+    const thread = makeThread({
+      id: "interactive-inline",
+      line: 5,
+      selected_text: "target",
+    });
+    container = buildInlineContainer(5, "Click on target text.", [thread]);
+    ctrl = new MrsfController(container, { interactive: true });
+
+    const mark = container.querySelector("mark.mrsf-inline-highlight") as HTMLElement;
+    mark.click();
+
+    const tooltip = document.querySelector(".mrsf-inline-tooltip");
+    expect(tooltip).not.toBeNull();
+    expect(tooltip!.classList.contains("mrsf-interactive")).toBe(true);
+  });
+
+  it("does not add mrsf-interactive class when interactive is false", () => {
+    const thread = makeThread({
+      id: "non-interactive-inline",
+      line: 5,
+      selected_text: "target",
+    });
+    container = buildInlineContainer(5, "Click on target text.", [thread]);
+    ctrl = new MrsfController(container, { interactive: false });
+
+    const mark = container.querySelector("mark.mrsf-inline-highlight") as HTMLElement;
+    mark.click();
+
+    const tooltip = document.querySelector(".mrsf-inline-tooltip");
+    expect(tooltip).not.toBeNull();
+    expect(tooltip!.classList.contains("mrsf-interactive")).toBe(false);
+  });
+
+  it("shows action buttons in interactive inline tooltip", () => {
+    const thread = makeThread({
+      id: "action-inline",
+      line: 5,
+      selected_text: "actionable",
+    });
+    container = buildInlineContainer(5, "This is actionable text.", [thread]);
+    ctrl = new MrsfController(container, { interactive: true });
+
+    const mark = container.querySelector("mark.mrsf-inline-highlight") as HTMLElement;
+    mark.click();
+
+    const tooltip = document.querySelector(".mrsf-inline-tooltip");
+    expect(tooltip).not.toBeNull();
+    const actions = tooltip!.querySelectorAll("[data-mrsf-action]");
+    expect(actions.length).toBeGreaterThan(0);
+  });
+});
+
+// ── Orphaned comments section ────────────────────────────
+
+describe("Orphaned comments section", () => {
+  it("renders orphaned threads at the bottom of the container", () => {
+    const t1 = makeThread({ id: "in-doc", line: 5 });
+    const orphan = makeThread({ id: "orphaned", line: 999 });
+    container = buildContainer([5], [t1, orphan]);
+    ctrl = new MrsfController(container);
+
+    const section = container.querySelector(".mrsf-orphaned-section");
+    expect(section).not.toBeNull();
+    const threads = section!.querySelectorAll(".mrsf-orphaned-thread");
+    expect(threads.length).toBe(1);
+    expect(threads[0].querySelector("[data-mrsf-comment-id='orphaned']")).not.toBeNull();
+  });
+
+  it("does not render orphaned section when all threads have matching lines", () => {
+    const t1 = makeThread({ id: "c1", line: 5 });
+    container = buildContainer([5], [t1]);
+    ctrl = new MrsfController(container);
+
+    expect(container.querySelector(".mrsf-orphaned-section")).toBeNull();
+  });
+
+  it("shows the correct count in the heading", () => {
+    const orphan1 = makeThread({ id: "o1", line: 900 });
+    const orphan2 = makeThread({ id: "o2", line: 901 });
+    container = buildContainer([5], [orphan1, orphan2]);
+    ctrl = new MrsfController(container);
+
+    const heading = container.querySelector(".mrsf-orphaned-heading");
+    expect(heading).not.toBeNull();
+    expect(heading!.textContent).toBe("Orphaned Comments (2)");
+  });
+
+  it("adds mrsf-interactive class on orphaned threads when interactive", () => {
+    const orphan = makeThread({ id: "oi", line: 999 });
+    container = buildContainer([5], [orphan]);
+    ctrl = new MrsfController(container, { interactive: true });
+
+    const thread = container.querySelector(".mrsf-orphaned-thread");
+    expect(thread).not.toBeNull();
+    expect(thread!.classList.contains("mrsf-interactive")).toBe(true);
+  });
+
+  it("does not add mrsf-interactive class when not interactive", () => {
+    const orphan = makeThread({ id: "oni", line: 999 });
+    container = buildContainer([5], [orphan]);
+    ctrl = new MrsfController(container, { interactive: false });
+
+    const thread = container.querySelector(".mrsf-orphaned-thread");
+    expect(thread).not.toBeNull();
+    expect(thread!.classList.contains("mrsf-interactive")).toBe(false);
+  });
+
+  it("removes orphaned section on destroy", () => {
+    const orphan = makeThread({ id: "od", line: 999 });
+    container = buildContainer([5], [orphan]);
+    ctrl = new MrsfController(container);
+
+    expect(container.querySelector(".mrsf-orphaned-section")).not.toBeNull();
+    ctrl.destroy();
+    ctrl = null;
+    expect(container.querySelector(".mrsf-orphaned-section")).toBeNull();
+  });
+
+  it("renders multiple orphaned threads from different lines", () => {
+    const t1 = makeThread({ id: "in-doc", line: 5 });
+    const orphan1 = makeThread({ id: "o1", line: 500 });
+    const orphan2 = makeThread({ id: "o2", line: 600 });
+    const orphan3 = makeThread({ id: "o3", line: 700 });
+    container = buildContainer([5], [t1, orphan1, orphan2, orphan3]);
+    ctrl = new MrsfController(container);
+
+    const threads = container.querySelectorAll(".mrsf-orphaned-thread");
+    expect(threads.length).toBe(3);
+    const heading = container.querySelector(".mrsf-orphaned-heading");
+    expect(heading!.textContent).toBe("Orphaned Comments (3)");
   });
 });

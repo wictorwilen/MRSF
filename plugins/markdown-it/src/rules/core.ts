@@ -15,12 +15,18 @@ import type { Nesting } from "markdown-it/lib/token.mjs";
 import type StateCore from "markdown-it/lib/rules_core/state_core.mjs";
 import type { LineMap, CommentThread } from "../types.js";
 
+export interface CoreRuleOptions {
+  /** Whether to add mrsf-line-highlight class on commented tokens. Default: false. */
+  lineHighlight?: boolean;
+}
+
 /**
  * Install the MRSF core rule on a markdown-it instance.
  */
 export function installCoreRule(
   md: { core: { ruler: { push: (name: string, fn: (state: StateCore) => void) => void } } },
   lineMap: LineMap,
+  options: CoreRuleOptions = {},
 ): void {
   md.core.ruler.push("mrsf_inject", (state: StateCore) => {
     const tokens = state.tokens;
@@ -50,14 +56,16 @@ export function installCoreRule(
 
         const threads = lineMap.get(line);
         if (threads && threads.length > 0) {
-          const existingClass = token.attrGet("class") || "";
-          if (!existingClass.includes("mrsf-line-highlight")) {
-            token.attrSet(
-              "class",
-              existingClass
-                ? `${existingClass} mrsf-line-highlight`
-                : "mrsf-line-highlight",
-            );
+          if (options.lineHighlight) {
+            const existingClass = token.attrGet("class") || "";
+            if (!existingClass.includes("mrsf-line-highlight")) {
+              token.attrSet(
+                "class",
+                existingClass
+                  ? `${existingClass} mrsf-line-highlight`
+                  : "mrsf-line-highlight",
+              );
+            }
           }
           token.attrSet("data-mrsf-line", String(line));
         }
