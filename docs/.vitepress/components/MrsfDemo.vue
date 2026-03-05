@@ -5,6 +5,7 @@ const rendered = ref("");
 const showResolved = ref(true);
 const gutterPosition = ref("right");
 const interactive = ref(true);
+const lineHighlight = ref(false);
 const outputRef = ref(null);
 
 let currentController = null;
@@ -199,6 +200,7 @@ async function renderDemo() {
   md.use(mrsfPlugin, {
     comments: sampleSidecar,
     showResolved: showResolved.value,
+    lineHighlight: lineHighlight.value,
   });
   rendered.value = md.render(sampleMarkdown);
 
@@ -214,7 +216,7 @@ async function renderDemo() {
 }
 
 onMounted(renderDemo);
-watch([showResolved, gutterPosition, interactive], renderDemo);
+watch([showResolved, gutterPosition, interactive, lineHighlight], renderDemo);
 
 const handler = (e) => {
   try {
@@ -263,12 +265,16 @@ onUnmounted(() => {
         <select v-model="gutterPosition">
           <option value="right">Right</option>
           <option value="left">Left (margin gutter)</option>
-          <option value="both">Both</option>
+          <option value="tight">Tight (before text)</option>
         </select>
       </label>
       <label>
         <input type="checkbox" v-model="interactive" />
         Interactive (alerts event payloads)
+      </label>
+      <label>
+        <input type="checkbox" v-model="lineHighlight" />
+        Line highlight
       </label>
     </div>
     <div ref="outputRef" class="mrsf-demo-output" v-html="rendered" />

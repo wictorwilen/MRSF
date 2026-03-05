@@ -55,6 +55,7 @@ import "@mrsf/markdown-it-mrsf/style.css";
 | `sidecarPath` | `string` | — | Explicit path to sidecar file |
 | `showResolved` | `boolean` | `true` | Whether to show resolved comments |
 | `interactive` | `boolean` | `false` | Add action buttons for host JS integration |
+| `lineHighlight` | `boolean` | `false` | Add background tint on commented lines |
 | `theme` | `'light' \| 'dark' \| 'auto'` | `'auto'` | Color scheme hint |
 | `cwd` | `string` | `process.cwd()` | Working directory for file resolution |
 
