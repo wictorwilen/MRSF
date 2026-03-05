@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mrsf"
-version = "0.3.1"
+version = "0.3.2"
 description = "CLI and library for the Markdown Review Sidecar Format (MRSF / Sidemark)"
 readme = "README.md"
 license = "MIT"

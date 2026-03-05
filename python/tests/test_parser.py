@@ -63,6 +63,36 @@ class TestParseSidecarContentYaml:
         with pytest.raises(ValueError, match="must be a YAML/JSON object"):
             parse_sidecar_content("just a string\n")
 
+    def test_preserves_unquoted_timestamps_as_strings(self):
+        yaml_str = (
+            "mrsf_version: '1.0'\n"
+            "document: test.md\n"
+            "comments:\n"
+            "  - id: c-1\n"
+            "    author: Alice\n"
+            "    timestamp: 2025-06-15T14:30:00Z\n"
+            "    text: Fix this\n"
+            "    resolved: false\n"
+        )
+        doc = parse_sidecar_content(yaml_str)
+        assert isinstance(doc.comments[0].timestamp, str)
+        assert doc.comments[0].timestamp == "2025-06-15T14:30:00Z"
+
+    def test_preserves_unquoted_timestamps_with_milliseconds(self):
+        yaml_str = (
+            "mrsf_version: '1.0'\n"
+            "document: test.md\n"
+            "comments:\n"
+            "  - id: c-1\n"
+            "    author: Alice\n"
+            "    timestamp: 2026-03-05T21:33:56.197Z\n"
+            "    text: Fix this\n"
+            "    resolved: false\n"
+        )
+        doc = parse_sidecar_content(yaml_str)
+        assert isinstance(doc.comments[0].timestamp, str)
+        assert doc.comments[0].timestamp == "2026-03-05T21:33:56.197Z"
+
 
 # ---------------------------------------------------------------------------
 # parse_sidecar_content — JSON

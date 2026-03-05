@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import date, datetime
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -13,6 +14,53 @@ from .types import Comment, MrsfDocument
 
 _yaml = YAML()
 _yaml.preserve_quotes = True
+
+
+def _datetime_to_iso(dt: datetime) -> str:
+    """Convert a datetime to an RFC 3339 string, trimming unnecessary microsecond zeros."""
+    s = dt.isoformat()
+    # Trim trailing zeros from fractional seconds: .197000 → .197
+    if "." in s:
+        head, frac_and_tz = s.split(".", 1)
+        # frac_and_tz is like "197000+00:00" or "197000"
+        frac = ""
+        tz = ""
+        for i, ch in enumerate(frac_and_tz):
+            if ch in ("+", "-") or frac_and_tz[i:] == "Z":
+                frac = frac_and_tz[:i]
+                tz = frac_and_tz[i:]
+                break
+        else:
+            frac = frac_and_tz
+        frac = frac.rstrip("0") or "0"
+        s = f"{head}.{frac}{tz}"
+    return s.replace("+00:00", "Z")
+
+
+def _normalize_timestamps(obj: object) -> None:
+    """Convert any datetime/date values in a parsed YAML structure to ISO strings.
+
+    ruamel.yaml auto-converts unquoted ISO timestamps to datetime objects;
+    this walks the tree and converts them back so downstream code always
+    sees plain strings.
+    """
+    if isinstance(obj, dict):
+        for k in obj:
+            v = obj[k]
+            if isinstance(v, datetime):
+                obj[k] = _datetime_to_iso(v)
+            elif isinstance(v, date):
+                obj[k] = v.isoformat()
+            elif isinstance(v, (dict, list)):
+                _normalize_timestamps(v)
+    elif isinstance(obj, list):
+        for i, v in enumerate(obj):
+            if isinstance(v, datetime):
+                obj[i] = _datetime_to_iso(v)
+            elif isinstance(v, date):
+                obj[i] = v.isoformat()
+            elif isinstance(v, (dict, list)):
+                _normalize_timestamps(v)
 
 
 # ---------------------------------------------------------------------------
@@ -63,6 +111,7 @@ def parse_sidecar_content(content: str, filename_hint: str | None = None) -> Mrs
     if not isinstance(parsed, dict):
         raise ValueError("MRSF sidecar must be a YAML/JSON object")
 
+    _normalize_timestamps(parsed)
     return MrsfDocument.from_dict(parsed)
 
 
@@ -103,6 +152,8 @@ def parse_sidecar_content_lenient(
 
     if not isinstance(parsed, dict):
         return LenientParseResult(doc=None, error="MRSF sidecar must be a YAML/JSON object")
+
+    _normalize_timestamps(parsed)
 
     doc = MrsfDocument(
         mrsf_version=str(parsed.get("mrsf_version", "1.0")),
@@ -176,6 +227,7 @@ def _salvage_yaml(content: str) -> LenientParseResult:
 
         try:
             parsed = _yaml.load(trimmed)
+            _normalize_timestamps(parsed)
             if isinstance(parsed, list) and len(parsed) > 0:
                 c = parsed[0]
                 if isinstance(c, dict) and isinstance(c.get("id"), str):
