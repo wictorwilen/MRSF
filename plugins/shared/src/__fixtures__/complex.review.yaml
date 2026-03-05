@@ -1,0 +1,219 @@
+mrsf_version: "1.0"
+document: complex.md
+comments:
+  # --- H1 heading (line 1) ---
+  - id: h1-title
+    author: Alice
+    timestamp: "2026-01-15T10:00:00Z"
+    text: Consider a more descriptive title than "API Reference"
+    line: 1
+    severity: low
+    type: suggestion
+
+  # --- Paragraph (line 3) ---
+  - id: p-intro
+    author: Bob
+    timestamp: "2026-01-15T11:00:00Z"
+    text: This intro paragraph should mention the API version
+    line: 3
+    selected_text: public API surface
+
+  # --- H2 heading (line 5) ---
+  - id: h2-auth
+    author: Alice
+    timestamp: "2026-01-15T12:00:00Z"
+    text: Authentication section needs OAuth2 details
+    line: 5
+    severity: high
+    type: issue
+
+  # --- Paragraph with inline formatting (line 7) ---
+  - id: p-bearer
+    author: Charlie
+    timestamp: "2026-01-15T13:00:00Z"
+    text: Should also mention API key authentication
+    line: 7
+    selected_text: Bearer token
+
+  # --- Blockquote (lines 9-10) ---
+  - id: bq-note
+    author: Bob
+    timestamp: "2026-01-15T14:00:00Z"
+    text: The expiration period should be configurable
+    line: 9
+    severity: medium
+    type: suggestion
+
+  # Reply to the blockquote comment
+  - id: bq-note-reply
+    author: Alice
+    timestamp: "2026-01-15T14:30:00Z"
+    text: Agreed, let's make it a config option
+    reply_to: bq-note
+
+  # --- H3 heading (line 12) ---
+  - id: h3-token
+    author: Diana
+    timestamp: "2026-01-15T15:00:00Z"
+    text: Link to the actual JWT spec RFC 7519
+    line: 12
+    type: suggestion
+
+  # --- Paragraph with link (line 14) ---
+  - id: p-jwt
+    author: Bob
+    timestamp: "2026-01-15T15:30:00Z"
+    text: The JWT link should point to the RFC, not jwt.io
+    line: 14
+    selected_text: JWT standard
+    severity: medium
+
+  # --- Unordered list item (line 16) ---
+  - id: ul-sub
+    author: Alice
+    timestamp: "2026-01-16T09:00:00Z"
+    text: Clarify that `sub` uses UUID format
+    line: 16
+
+  # --- Nested list item (line 19) ---
+  - id: ul-nested
+    author: Charlie
+    timestamp: "2026-01-16T09:30:00Z"
+    text: 24h seems too short for enterprise users
+    line: 19
+    severity: high
+    type: issue
+
+  # --- Table row — Free tier (line 26) ---
+  - id: tbl-free
+    author: Bob
+    timestamp: "2026-01-16T10:00:00Z"
+    text: 60 req/min is too low for free tier
+    line: 26
+    severity: medium
+    type: issue
+
+  # --- Table row — Business tier (line 28) ---
+  - id: tbl-business
+    author: Diana
+    timestamp: "2026-01-16T10:30:00Z"
+    text: Business tier should support 10000 req/min
+    line: 28
+    severity: low
+    type: suggestion
+
+  # --- Paragraph after table (line 30) ---
+  - id: p-429
+    author: Alice
+    timestamp: "2026-01-16T11:00:00Z"
+    text: "Should mention Retry-After header"
+    line: 30
+    selected_text: "429 Too Many Requests"
+
+  # --- Code fence json (lines 40-47) ---
+  - id: code-json
+    author: Bob
+    timestamp: "2026-01-17T09:00:00Z"
+    text: Add pagination fields to the response example
+    line: 40
+    severity: medium
+
+  # --- Ordered list item (line 53) ---
+  - id: ol-name
+    author: Charlie
+    timestamp: "2026-01-17T10:00:00Z"
+    text: Name should allow unicode characters
+    line: 53
+
+  # --- Nested ordered list item (line 56) ---
+  - id: ol-admin
+    author: Alice
+    timestamp: "2026-01-17T10:30:00Z"
+    text: Add a "super-admin" role
+    line: 56
+    type: suggestion
+
+  # --- Code fence typescript (lines 62-72) ---
+  - id: code-ts
+    author: Diana
+    timestamp: "2026-01-17T11:00:00Z"
+    text: Add error handling to the fetch example
+    line: 62
+    severity: high
+    type: issue
+
+  # Reply to the typescript code comment
+  - id: code-ts-reply
+    author: Bob
+    timestamp: "2026-01-17T11:30:00Z"
+    text: At minimum wrap in try/catch
+    reply_to: code-ts
+
+  # --- Code fence yaml (lines 78-85) ---
+  - id: code-yaml
+    author: Alice
+    timestamp: "2026-01-17T12:00:00Z"
+    text: Error schema should include a request_id field
+    line: 78
+    severity: medium
+    type: suggestion
+
+  # --- Paragraph with bold (line 87) ---
+  - id: p-errors
+    author: Charlie
+    timestamp: "2026-01-17T13:00:00Z"
+    text: Document the 5xx error codes separately
+    line: 87
+
+  # --- Data model table row (line 97) ---
+  - id: tbl-email
+    author: Bob
+    timestamp: "2026-01-18T09:00:00Z"
+    text: Email should support multiple addresses
+    line: 97
+    type: suggestion
+
+  # --- Nested list — deeply nested (line 110) ---
+  - id: ul-depth
+    author: Diana
+    timestamp: "2026-01-18T10:00:00Z"
+    text: Consider removing the nesting depth limit
+    line: 110
+    severity: low
+
+  # --- Paragraph with strikethrough and image (line 114) ---
+  - id: p-sunset
+    author: Alice
+    timestamp: "2026-01-18T11:00:00Z"
+    text: Update the sunset date announcement in the blog too
+    line: 114
+
+  # --- Resolved comment on line 104 ---
+  - id: p-resolved
+    author: Bob
+    timestamp: "2026-01-10T08:00:00Z"
+    text: This paragraph needs an example
+    line: 104
+    resolved: true
+
+  # --- Last paragraph (line 118) ---
+  - id: p-migrate
+    author: Charlie
+    timestamp: "2026-01-18T12:00:00Z"
+    text: Add a migration guide link here
+    line: 118
+    severity: high
+    type: issue
+
+  # Reply chain on line 118
+  - id: p-migrate-reply1
+    author: Alice
+    timestamp: "2026-01-18T12:30:00Z"
+    text: I'll draft the migration guide this week
+    reply_to: p-migrate
+
+  - id: p-migrate-reply2
+    author: Bob
+    timestamp: "2026-01-18T13:00:00Z"
+    text: Don't forget to cover breaking changes
+    reply_to: p-migrate
