@@ -8,7 +8,7 @@
 
 import type { Root, Element, ElementContent, Text } from "hast";
 import { visit } from "unist-util-visit";
-import type { LineMap, CommentThread } from "@mrsf/plugin-shared";
+import type { LineMap, CommentThread } from "./types.js";
 import { createBadge, createHighlight, createGutterContainer } from "./hast-utils.js";
 
 /** Options forwarded from the plugin to the transform. */

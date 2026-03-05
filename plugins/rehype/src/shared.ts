@@ -5,12 +5,9 @@
  */
 
 import type { Root } from "hast";
-import type { MrsfPluginOptions } from "./types.js";
-import type { CommentLoader } from "@mrsf/plugin-shared";
+import type { MrsfPluginOptions, CommentLoader } from "./types.js";
 import { resolveComments } from "@mrsf/plugin-shared";
 import { transformTree } from "./transform.js";
-
-export type { CommentLoader };
 
 /**
  * Create a rehype plugin function with the given comment loader.

@@ -1,6 +1,6 @@
 {
   "name": "@mrsf/rehype-mrsf",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "rehype plugin for rendering Sidemark/MRSF (Markdown Review Sidecar Format) review comments",
   "type": "module",
   "main": "./dist/index.js",
@@ -28,7 +28,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "build": "tsc && cp ../shared/src/style.css dist/style.css && cp ../shared/dist/controller.js dist/controller.js && cp ../shared/dist/controller.d.ts dist/controller.d.ts",
+    "build": "node ../sync-types.mjs && node esbuild.config.mjs",
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -65,14 +65,14 @@
   },
   "files": [
     "dist/**/*.js",
+    "dist/**/*.js.map",
     "dist/**/*.d.ts",
     "dist/style.css",
     "README.md",
     "LICENSE"
   ],
   "dependencies": {
-    "@mrsf/cli": "file:../../cli",
-    "@mrsf/plugin-shared": "file:../shared",
+    "@mrsf/cli": "^0.3.0",
     "unist-util-visit": "^5.0.0"
   },
   "peerDependencies": {
@@ -84,8 +84,10 @@
     }
   },
   "devDependencies": {
+    "@mrsf/plugin-shared": "file:../shared",
     "@types/hast": "^3.0.4",
     "@types/node": "^22.13.10",
+    "esbuild": "^0.27.3",
     "rehype-stringify": "^10.0.1",
     "remark-parse": "^11.0.0",
     "remark-rehype": "^11.1.1",

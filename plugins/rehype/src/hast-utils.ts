@@ -6,7 +6,7 @@
  */
 
 import type { Element, ElementContent, Text } from "hast";
-import type { CommentThread } from "@mrsf/plugin-shared";
+import type { CommentThread } from "./types.js";
 import { escapeHtml, renderThreadHtml } from "@mrsf/plugin-shared";
 
 /**

@@ -98,3 +98,6 @@ export interface CommentThread {
 
 /** Comments grouped by their anchored source line. */
 export type LineMap = Map<number, CommentThread[]>;
+
+/** A function that loads sidecar data from plugin options. */
+export type CommentLoader = (options: MrsfPluginOptions) => MrsfDocument | null;

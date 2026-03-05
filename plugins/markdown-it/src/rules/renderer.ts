@@ -6,7 +6,7 @@
  *   - mrsf_highlight_open/close: renders <mark> wrappers with inline tooltips
  */
 
-import type { CommentThread } from "@mrsf/plugin-shared";
+import type { CommentThread } from "../types.js";
 import { escapeHtml, renderThreadHtml } from "@mrsf/plugin-shared";
 
 /**

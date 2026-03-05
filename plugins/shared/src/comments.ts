@@ -3,12 +3,9 @@
  */
 
 import type { MrsfDocument } from "@mrsf/cli";
-import type { MrsfPluginOptions, SlimComment, CommentThread, LineMap } from "./types.js";
+import type { MrsfPluginOptions, SlimComment, CommentThread, LineMap, CommentLoader } from "./types.js";
 
-/**
- * A function that loads sidecar data from plugin options.
- */
-export type CommentLoader = (options: MrsfPluginOptions) => MrsfDocument | null;
+export type { CommentLoader };
 
 /**
  * Convert an MrsfDocument into a slim comment array.

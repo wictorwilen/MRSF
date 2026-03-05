@@ -9,7 +9,7 @@
 import type Token from "markdown-it/lib/token.mjs";
 import type { Nesting } from "markdown-it/lib/token.mjs";
 import type StateCore from "markdown-it/lib/rules_core/state_core.mjs";
-import type { LineMap, CommentThread } from "@mrsf/plugin-shared";
+import type { LineMap, CommentThread } from "../types.js";
 
 /** Options forwarded from the plugin to the core rule. */
 export interface CoreOptions {

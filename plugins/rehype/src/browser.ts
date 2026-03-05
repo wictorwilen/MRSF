@@ -15,7 +15,7 @@
 import type { MrsfPluginOptions } from "./types.js";
 import { createRehypeMrsf } from "./shared.js";
 
-export type { MrsfPluginOptions, SlimComment, CommentThread, LineMap } from "./types.js";
+export type { MrsfPluginOptions, SlimComment, CommentThread, LineMap, CommentLoader } from "./types.js";
 
 /**
  * The rehype plugin function (browser-safe).

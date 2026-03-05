@@ -5,13 +5,10 @@
  */
 
 import type MarkdownIt from "markdown-it";
-import type { MrsfPluginOptions } from "./types.js";
-import type { CommentLoader } from "@mrsf/plugin-shared";
+import type { MrsfPluginOptions, CommentLoader } from "./types.js";
 import { resolveComments } from "@mrsf/plugin-shared";
 import { installCoreRule } from "./rules/core.js";
 import { installRendererRules } from "./rules/renderer.js";
-
-export type { CommentLoader };
 
 /**
  * Create a markdown-it plugin function with the given comment loader.

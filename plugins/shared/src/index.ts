@@ -7,9 +7,8 @@ export type {
   SlimComment,
   CommentThread,
   LineMap,
+  CommentLoader,
 } from "./types.js";
-
-export type { CommentLoader } from "./comments.js";
 
 export {
   toSlimComments,
