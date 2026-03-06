@@ -116,6 +116,13 @@ sequenceDiagram
 
 Each step is **machine-readable**. The agent never modifies the Markdown directly — it writes structured YAML that humans and tools can inspect, diff, and version-control.
 
+
+> **Disclaimer**
+> Sidemark/MRSF is a personal open‑source project.
+> It is **not affiliated with, endorsed by, or an official standard of Microsoft**.
+> Any internal experimentation does not imply product adoption.
+
+
 ## Next Steps
 
 - [Quick Start](./quick-start) — install and try it in 2 minutes
