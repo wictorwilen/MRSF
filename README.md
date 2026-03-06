@@ -243,5 +243,10 @@ We welcome:
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md)
 
+> **Disclaimer**
+> MRSF is a personal open‑source project.
+> It is **not affiliated with, endorsed by, or an official standard of Microsoft**.
+> Any internal experimentation does not imply product adoption.
+
 ## 📄 License
 [`MIT`](LICENSE)
