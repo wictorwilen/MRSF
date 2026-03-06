@@ -44,10 +44,10 @@ export function renderCommentHtml(
 ): string {
   const resolvedClass = comment.resolved ? " mrsf-resolved" : "";
   const replyClass = isReply ? " mrsf-reply" : "";
-  let html = `<span class="mrsf-comment${resolvedClass}${replyClass}" data-mrsf-comment-id="${escapeHtml(comment.id)}">`;
+  let html = `<div class="mrsf-comment${resolvedClass}${replyClass}" data-mrsf-comment-id="${escapeHtml(comment.id)}">`;
 
   // Header
-  html += `<span class="mrsf-comment-header">`;
+  html += `<div class="mrsf-comment-header">`;
   html += `<span class="mrsf-author">${escapeHtml(comment.author)}</span>`;
   if (comment.timestamp) {
     html += `<span class="mrsf-date">${escapeHtml(formatTime(comment.timestamp))}</span>`;
@@ -61,20 +61,20 @@ export function renderCommentHtml(
   if (comment.resolved) {
     html += `<span class="mrsf-resolved-badge">✓ resolved</span>`;
   }
-  html += `</span>`;
+  html += `</div>`;
 
   // Selected text quote (collapsible)
   if (comment.selected_text) {
-    html += `<details class="mrsf-selected-text"><summary class="mrsf-selected-text-summary">${escapeHtml(comment.selected_text)}</summary><span class="mrsf-selected-text-full">${escapeHtml(comment.selected_text)}</span></details>`;
+    html += `<details class="mrsf-selected-text"><summary class="mrsf-selected-text-summary">${escapeHtml(comment.selected_text)}</summary><div class="mrsf-selected-text-full">${escapeHtml(comment.selected_text)}</div></details>`;
   }
 
   // Body
-  html += `<span class="mrsf-comment-body">${escapeHtml(comment.text)}</span>`;
+  html += `<div class="mrsf-comment-body">${escapeHtml(comment.text)}</div>`;
 
   // Action buttons (interactive mode)
   if (interactive) {
     const line = comment.line != null ? String(comment.line) : "";
-    html += `<span class="mrsf-actions">`;
+    html += `<div class="mrsf-actions">`;
     if (comment.resolved) {
       html += `<button class="mrsf-action-btn" data-mrsf-action="unresolve" data-mrsf-comment-id="${escapeHtml(comment.id)}" data-mrsf-line="${line}">Unresolve</button>`;
     } else {
@@ -83,23 +83,23 @@ export function renderCommentHtml(
     html += `<button class="mrsf-action-btn" data-mrsf-action="reply" data-mrsf-comment-id="${escapeHtml(comment.id)}" data-mrsf-line="${line}">Reply</button>`;
     html += `<button class="mrsf-action-btn" data-mrsf-action="edit" data-mrsf-comment-id="${escapeHtml(comment.id)}" data-mrsf-line="${line}">Edit</button>`;
     html += `<button class="mrsf-action-btn mrsf-action-danger" data-mrsf-action="delete" data-mrsf-comment-id="${escapeHtml(comment.id)}" data-mrsf-line="${line}">Delete</button>`;
-    html += `</span>`;
+    html += `</div>`;
   }
 
-  html += `</span>`;
+  html += `</div>`;
   return html;
 }
 
 export function renderThreadHtml(thread: CommentThread, interactive: boolean): string {
-  let html = `<span class="mrsf-thread">`;
+  let html = `<div class="mrsf-thread">`;
   html += renderCommentHtml(thread.comment, false, interactive);
   if (thread.replies.length > 0) {
-    html += `<span class="mrsf-replies">`;
+    html += `<div class="mrsf-replies">`;
     for (const reply of thread.replies) {
       html += renderCommentHtml(reply, true, interactive);
     }
-    html += `</span>`;
+    html += `</div>`;
   }
-  html += `</span>`;
+  html += `</div>`;
   return html;
 }
