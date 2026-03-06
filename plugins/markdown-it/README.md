@@ -131,17 +131,22 @@ md.use(mrsfPlugin, {
 Include the optional controller to wire up the inline and gutter actions. By default it shows built-in dialogs for add, reply, edit, resolve, unresolve, and delete, then dispatches events you can persist through your own API:
 
 ```ts
-import "@mrsf/markdown-it-mrsf/controller";
+import { refreshAll } from "@mrsf/markdown-it-mrsf/controller";
 
 document.addEventListener("mrsf:submit", async (e) => {
   // { action, commentId, text?, line?, end_line?, start_column?, end_column?, selection_text? }
   await saveComment(e.detail);
 });
+
+await mermaid.run();
+refreshAll();
 ```
 
 Events fired after user confirmation: `mrsf:add`, `mrsf:reply`, `mrsf:edit`, `mrsf:resolve`, `mrsf:unresolve`, `mrsf:delete`, `mrsf:navigate`, plus `mrsf:submit` with the full payload.
 
 Set `window.mrsfDisableBuiltinUi = true` before loading the controller if you want to render your own UI and only consume the events.
+
+The controller also auto-refreshes gutter positions on DOM mutations inside the rendered container, which covers common async renderers such as Mermaid. Call `refreshAll()` after third-party rendering when you need a deterministic reposition step.
 
 ## Options
 

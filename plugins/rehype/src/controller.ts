@@ -93,12 +93,15 @@ export class MrsfController {
   private overlayEl: HTMLDivElement | null = null;
   private lastSelectionText: string | null = null;
   private resizeObserver: ResizeObserver | null = null;
+  private mutationObserver: MutationObserver | null = null;
   private styleInjected = false;
   private inlineMarks: HTMLElement[] = [];
   private inlineTooltipEl: HTMLElement | null = null;
   private orphanedSection: HTMLDivElement | null = null;
+  private refreshQueued = false;
 
   private handleResizeBound = this.positionGutterItems.bind(this);
+  private handleMutationBound = this.handleMutations.bind(this);
   private handleClickBound = this.handleClick.bind(this);
   private handleSelectionBound = this.handleSelectionChange.bind(this);
 
@@ -118,9 +121,19 @@ export class MrsfController {
     this.renderInlineHighlights();
     this.renderOrphanedSection();
 
+    controllerRegistry.add(this);
+
     // Listeners
     this.resizeObserver = new ResizeObserver(this.handleResizeBound);
     this.resizeObserver.observe(this.container);
+    if (typeof MutationObserver !== "undefined") {
+      this.mutationObserver = new MutationObserver(this.handleMutationBound);
+      this.mutationObserver.observe(this.container, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+    }
     document.addEventListener("click", this.handleClickBound);
     if (this.opts.interactive) {
       document.addEventListener("selectionchange", this.handleSelectionBound);
@@ -130,6 +143,8 @@ export class MrsfController {
   /** Remove all controller DOM and listeners. */
   destroy(): void {
     this.resizeObserver?.disconnect();
+    this.mutationObserver?.disconnect();
+    controllerRegistry.delete(this);
     document.removeEventListener("click", this.handleClickBound);
     document.removeEventListener("selectionchange", this.handleSelectionBound);
     this.removeInlineHighlights();
@@ -139,6 +154,11 @@ export class MrsfController {
     this.floatingAddButton?.remove();
     this.closeOverlay();
     this.container.classList.remove("mrsf-overlay-root");
+  }
+
+  /** Recalculate gutter positions after async layout changes such as Mermaid renders. */
+  refresh(): void {
+    this.positionGutterItems();
   }
 
   // ── Data loading ────────────────────────────────────────
@@ -374,6 +394,48 @@ export class MrsfController {
         entry.item.style.display = "none";
       }
     }
+  }
+
+  private handleMutations(records: MutationRecord[]): void {
+    if (!records.some((record) => this.isExternalContentMutation(record))) {
+      return;
+    }
+    this.queueRefresh();
+  }
+
+  private isExternalContentMutation(record: MutationRecord): boolean {
+    const target = record.target instanceof Node ? record.target : null;
+    if (target && this.isControllerOwnedNode(target)) {
+      return false;
+    }
+
+    for (const node of [...record.addedNodes, ...record.removedNodes]) {
+      if (!this.isControllerOwnedNode(node)) {
+        return true;
+      }
+    }
+
+    return record.type === "characterData";
+  }
+
+  private isControllerOwnedNode(node: Node): boolean {
+    if (!(node instanceof Element)) {
+      return false;
+    }
+    return Boolean(
+      node.closest(".mrsf-gutter") ||
+      node.closest(".mrsf-orphaned-section") ||
+      node.closest("script[type=\"application/mrsf+json\"]"),
+    );
+  }
+
+  private queueRefresh(): void {
+    if (this.refreshQueued) return;
+    this.refreshQueued = true;
+    queueMicrotask(() => {
+      this.refreshQueued = false;
+      this.refresh();
+    });
   }
 
   private findDirectElementForLine(line: number): HTMLElement | null {
@@ -1149,7 +1211,14 @@ export class MrsfController {
 // ── Auto-init convenience ─────────────────────────────────
 // Scan for containers with [data-mrsf-controller] and auto-init.
 
+const controllerRegistry = new Set<MrsfController>();
 let autoInitDone = false;
+
+export function refreshAll(): void {
+  for (const controller of controllerRegistry) {
+    controller.refresh();
+  }
+}
 
 export function autoInit(): void {
   if (autoInitDone) return;

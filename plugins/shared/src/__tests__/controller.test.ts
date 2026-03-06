@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { MrsfController, autoInit } from "../controller.js";
+import { MrsfController, autoInit, refreshAll } from "../controller.js";
 import type { CommentThread, SlimComment } from "../types.js";
 
 // jsdom lacks ResizeObserver — provide a minimal stub.
@@ -60,6 +60,11 @@ function buildContainer(
   }
   document.body.appendChild(div);
   return div;
+}
+
+async function flushMicrotasks(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
 }
 
 // ── Cleanup ──────────────────────────────────────────────
@@ -837,6 +842,39 @@ describe("autoInit", () => {
     // a fresh module state — just verify the function doesn't throw.
     // In a real browser, it would init controllers on page load.
     expect(() => autoInit()).not.toThrow();
+  });
+});
+
+describe("refresh", () => {
+  it("refreshes automatically after external content mutations", async () => {
+    container = buildContainer([1, 2], [makeThread({ id: "c1", line: 1 })]);
+    ctrl = new MrsfController(container, { interactive: true });
+
+    const refreshSpy = vi.spyOn(ctrl, "refresh");
+    const target = container.querySelector('[data-mrsf-line="2"]') as HTMLElement;
+    target.appendChild(document.createElement("svg"));
+
+    await flushMicrotasks();
+
+    expect(refreshSpy).toHaveBeenCalled();
+  });
+
+  it("refreshAll calls refresh on active controllers", () => {
+    const first = buildContainer([1], [makeThread({ id: "c1", line: 1 })]);
+    const second = buildContainer([2], [makeThread({ id: "c2", line: 2 })]);
+
+    const firstController = new MrsfController(first);
+    const secondController = new MrsfController(second);
+    const firstSpy = vi.spyOn(firstController, "refresh");
+    const secondSpy = vi.spyOn(secondController, "refresh");
+
+    refreshAll();
+
+    expect(firstSpy).toHaveBeenCalledTimes(1);
+    expect(secondSpy).toHaveBeenCalledTimes(1);
+
+    firstController.destroy();
+    secondController.destroy();
   });
 });
 

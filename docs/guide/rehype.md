@@ -131,7 +131,7 @@ export default withMDX(nextConfig);
 Hook into events with the controller (adds inline + gutter action buttons and built-in modals for add/reply/edit/resolve/unresolve/delete):
 
 ```ts
-import "@mrsf/rehype-mrsf/controller";
+import { refreshAll } from "@mrsf/rehype-mrsf/controller";
 
 document.addEventListener("mrsf:submit", async (e) => {
   // Persist to your API; payload is snake_case and matches the CLI types
@@ -141,6 +141,13 @@ document.addEventListener("mrsf:submit", async (e) => {
 ```
 
 Events fired after user confirmation: `mrsf:add`, `mrsf:reply`, `mrsf:edit`, `mrsf:resolve`, `mrsf:unresolve`, `mrsf:delete`, `mrsf:navigate`, plus `mrsf:submit` (always includes the full payload). Set `window.mrsfDisableBuiltinUi = true` before loading the controller to opt out of the built-in dialogs and render your own.
+
+For async renderers such as Mermaid, the controller auto-refreshes gutter positions when the rendered DOM changes. If you need an explicit refresh after a render pass, call `refreshAll()` once Mermaid has finished:
+
+```ts
+await mermaid.run();
+refreshAll();
+```
 
 ## CSS Customization
 
