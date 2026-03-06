@@ -187,6 +187,31 @@ export class MrsfController {
     }
   }
 
+  private findCommentById(commentId: string | null): SlimComment | null {
+    if (!commentId) return null;
+
+    for (const threadList of this.threads.values()) {
+      for (const thread of threadList) {
+        if (thread.comment.id === commentId) {
+          return thread.comment;
+        }
+        const reply = thread.replies.find((item) => item.id === commentId);
+        if (reply) {
+          return reply;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private orderThreadsForDisplay(threads: CommentThread[]): CommentThread[] {
+    return [...threads].sort((left, right) => {
+      if (left.comment.resolved === right.comment.resolved) return 0;
+      return left.comment.resolved ? 1 : -1;
+    });
+  }
+
   // ── Overlay structure ───────────────────────────────────
 
   private setupOverlayStructure(): void {
@@ -282,6 +307,8 @@ export class MrsfController {
     item.className = "mrsf-gutter-item";
     item.dataset.mrsfGutterLine = String(line);
 
+    const displayThreads = this.orderThreadsForDisplay(threads);
+
     const total = threads.reduce((n, t) => n + 1 + t.replies.length, 0);
     const allResolved = threads.every((t) => t.comment.resolved);
     const highestSeverity = threads.reduce<string | null>((sev, t) => {
@@ -302,12 +329,12 @@ export class MrsfController {
     badge.className = classes.join(" ");
     badge.dataset.mrsfLine = String(line);
     badge.dataset.mrsfAction = "navigate";
-    badge.dataset.mrsfCommentId = threads[0].comment.id;
+    badge.dataset.mrsfCommentId = displayThreads[0].comment.id;
     badge.tabIndex = 0;
     badge.textContent = `${icon} ${total}`;
     badge.addEventListener("click", (e) => {
       e.stopPropagation();
-      this.toggleTooltip(item, line, threads);
+      this.toggleTooltip(item, line, displayThreads);
     });
 
     item.appendChild(badge);
@@ -444,7 +471,7 @@ export class MrsfController {
 
   private calculateItemTop(target: HTMLElement, line: number, containerRect: DOMRect): number {
     const targetRect = target.getBoundingClientRect();
-    const rangeTop = targetRect.top - containerRect.top;
+    const rangeTop = targetRect.top - containerRect.top + this.container.scrollTop;
 
     if (target.tagName !== "PRE") {
       return rangeTop;
@@ -524,7 +551,7 @@ export class MrsfController {
     section.appendChild(heading);
 
     const interactive = this.opts.interactive;
-    for (const thread of orphanedThreads) {
+    for (const thread of this.orderThreadsForDisplay(orphanedThreads)) {
       const wrapper = document.createElement("div");
       wrapper.className = interactive
         ? "mrsf-orphaned-thread mrsf-interactive"
@@ -792,7 +819,7 @@ export class MrsfController {
     tooltip.dataset.mrsfLine = String(line);
 
     let html = "";
-    for (const thread of threads) {
+    for (const thread of this.orderThreadsForDisplay(threads)) {
       html += renderThreadHtml(thread, interactive);
     }
     if (interactive) {
@@ -985,18 +1012,22 @@ export class MrsfController {
   private injectStyles(): void {
     if (this.styleInjected) return;
     const css = `
-.mrsf-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 2000; display: flex; align-items: center; justify-content: center; }
-.mrsf-dialog { background: var(--mrsf-dialog-bg, var(--vp-c-bg, #1e1e1e)); color: var(--mrsf-dialog-fg, var(--vp-c-text-1, #f3f3f3)); border: 1px solid var(--mrsf-dialog-border, var(--vp-c-divider, #444)); border-radius: 8px; width: min(520px, 90vw); box-shadow: 0 10px 40px rgba(0,0,0,0.35); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-.mrsf-dialog header { padding: 12px 16px; font-weight: 600; border-bottom: 1px solid var(--mrsf-dialog-border, var(--vp-c-divider, #333)); }
-.mrsf-dialog form { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-.mrsf-field { display: flex; flex-direction: column; gap: 6px; }
-.mrsf-field label { font-size: 13px; color: var(--mrsf-dialog-muted, var(--vp-c-text-2, #ccc)); }
-.mrsf-field input, .mrsf-field select, .mrsf-field textarea { background: var(--mrsf-field-bg, var(--vp-c-bg-soft, #252526)); color: var(--mrsf-dialog-fg, var(--vp-c-text-1, #f3f3f3)); border: 1px solid var(--mrsf-dialog-border, var(--vp-c-divider, #3c3c3c)); border-radius: 4px; padding: 6px 8px; font-size: 13px; }
-.mrsf-field textarea { min-height: 100px; resize: vertical; }
-.mrsf-actions-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 0; padding: 12px 16px 16px; border-top: 1px solid var(--mrsf-dialog-border, var(--vp-c-divider, #333)); }
-.mrsf-btn { padding: 6px 12px; border-radius: 4px; border: 1px solid var(--mrsf-dialog-border, var(--vp-c-divider, #3c3c3c)); background: var(--mrsf-button-bg, var(--vp-c-bg-soft, #2d2d30)); color: var(--mrsf-dialog-fg, var(--vp-c-text-1, #f3f3f3)); cursor: pointer; }
-.mrsf-btn-primary { background: var(--mrsf-button-primary-bg, #0e639c); border-color: var(--mrsf-button-primary-bg, #0e639c); color: #fff; }
-.mrsf-helper { font-size: 12px; color: var(--mrsf-dialog-muted, var(--vp-c-text-2, #aaa)); }
+.mrsf-overlay { position: fixed; inset: 0; background: var(--mrsf-dialog-backdrop, rgba(15, 23, 42, 0.28)); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 12px; }
+.mrsf-dialog { background: var(--mrsf-dialog-bg, var(--mrsf-tooltip-bg, #0f172a)); color: var(--mrsf-dialog-fg, var(--mrsf-tooltip-fg, #e5eefb)); border: 1px solid var(--mrsf-dialog-border, var(--mrsf-tooltip-border, rgba(148, 163, 184, 0.35))); border-radius: 10px; width: min(420px, calc(100vw - 24px)); box-shadow: 0 18px 48px rgba(15, 23, 42, 0.24); font-family: var(--mrsf-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif); font-size: 13px; overflow: hidden; }
+.mrsf-dialog header { padding: 10px 12px; font-weight: 600; line-height: 1.35; border-bottom: 1px solid var(--mrsf-dialog-border, var(--mrsf-tooltip-border, rgba(148, 163, 184, 0.35))); }
+.mrsf-dialog form { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.mrsf-dialog-body { padding: 12px; line-height: 1.45; }
+.mrsf-field { display: flex; flex-direction: column; gap: 4px; }
+.mrsf-field label { font-size: 12px; color: var(--mrsf-dialog-muted, color-mix(in srgb, var(--mrsf-dialog-fg, var(--mrsf-tooltip-fg, #e5eefb)) 72%, transparent)); }
+.mrsf-field input, .mrsf-field select, .mrsf-field textarea, .mrsf-field pre { background: var(--mrsf-field-bg, color-mix(in srgb, var(--mrsf-dialog-bg, var(--mrsf-tooltip-bg, #0f172a)) 88%, white)); color: var(--mrsf-dialog-fg, var(--mrsf-tooltip-fg, #e5eefb)); border: 1px solid var(--mrsf-dialog-border, var(--mrsf-tooltip-border, rgba(148, 163, 184, 0.35))); border-radius: 6px; padding: 7px 9px; font-size: 12px; line-height: 1.45; }
+.mrsf-field textarea { min-height: 76px; resize: vertical; }
+.mrsf-field select { min-height: 34px; }
+.mrsf-field pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.mrsf-field input:focus, .mrsf-field select:focus, .mrsf-field textarea:focus { outline: 2px solid color-mix(in srgb, var(--mrsf-accent, #2563eb) 38%, transparent); outline-offset: 1px; }
+.mrsf-actions-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 0; padding: 10px 12px 12px; border-top: 1px solid var(--mrsf-dialog-border, var(--mrsf-tooltip-border, rgba(148, 163, 184, 0.35))); }
+.mrsf-btn { padding: 5px 10px; border-radius: 999px; border: 1px solid var(--mrsf-dialog-border, var(--mrsf-tooltip-border, rgba(148, 163, 184, 0.35))); background: var(--mrsf-button-bg, color-mix(in srgb, var(--mrsf-dialog-bg, var(--mrsf-tooltip-bg, #0f172a)) 82%, white)); color: var(--mrsf-dialog-fg, var(--mrsf-tooltip-fg, #e5eefb)); cursor: pointer; font: inherit; line-height: 1.2; }
+.mrsf-btn-primary { background: var(--mrsf-button-primary-bg, var(--mrsf-accent, #2563eb)); border-color: var(--mrsf-button-primary-bg, var(--mrsf-accent, #2563eb)); color: #fff; }
+.mrsf-helper { font-size: 11px; color: var(--mrsf-dialog-muted, color-mix(in srgb, var(--mrsf-dialog-fg, var(--mrsf-tooltip-fg, #e5eefb)) 72%, transparent)); }
 `;
     const style = document.createElement("style");
     style.textContent = css;
@@ -1016,14 +1047,16 @@ export class MrsfController {
     this.injectStyles();
     this.closeOverlay();
 
-    const selText = detail.selectionText ?? "";
-    const line = detail.line ?? detail.start_line ?? null;
-    const endLine = detail.end_line ?? detail.line ?? null;
-    const startCol = detail.start_column ?? null;
-    const endCol = detail.end_column ?? null;
+    const sourceComment = action === "edit" ? this.findCommentById(detail.commentId) : null;
+    const selText = detail.selectionText ?? sourceComment?.selected_text ?? "";
+    const line = detail.line ?? detail.start_line ?? sourceComment?.line ?? null;
+    const endLine = detail.end_line ?? detail.line ?? sourceComment?.end_line ?? sourceComment?.line ?? null;
+    const startCol = detail.start_column ?? sourceComment?.start_column ?? null;
+    const endCol = detail.end_column ?? sourceComment?.end_column ?? null;
 
     const overlay = document.createElement("div");
     overlay.className = "mrsf-overlay";
+    this.applyThemeVariables(overlay);
 
     const dialog = document.createElement("div");
     dialog.className = "mrsf-dialog";
@@ -1054,6 +1087,7 @@ export class MrsfController {
     const textArea = document.createElement("textarea");
     textArea.name = "text";
     textArea.required = true;
+    textArea.value = action === "edit" ? (sourceComment?.text ?? "") : "";
     field("Comment text", textArea);
 
     const typeSelect = document.createElement("select");
@@ -1064,6 +1098,7 @@ export class MrsfController {
       opt.textContent = t || "(none)";
       typeSelect.appendChild(opt);
     });
+    typeSelect.value = action === "edit" ? (sourceComment?.type ?? "") : "";
     field("Type", typeSelect, "Optional");
 
     const severitySelect = document.createElement("select");
@@ -1074,13 +1109,12 @@ export class MrsfController {
       opt.textContent = s || "(none)";
       severitySelect.appendChild(opt);
     });
+    severitySelect.value = action === "edit" ? (sourceComment?.severity ?? "") : "";
     field("Severity", severitySelect, "Optional");
 
     if (selText) {
       const pre = document.createElement("pre");
       pre.textContent = selText;
-      pre.style.margin = "0";
-      pre.style.whiteSpace = "pre-wrap";
       field("Selected text", pre as unknown as HTMLElement, "Captured automatically");
     }
 
@@ -1139,6 +1173,7 @@ export class MrsfController {
 
     const overlay = document.createElement("div");
     overlay.className = "mrsf-overlay";
+    this.applyThemeVariables(overlay);
 
     const dialog = document.createElement("div");
     dialog.className = "mrsf-dialog";
@@ -1148,7 +1183,7 @@ export class MrsfController {
     dialog.appendChild(header);
 
     const body = document.createElement("div");
-    body.style.padding = "16px";
+    body.className = "mrsf-dialog-body";
     body.textContent =
       action === "delete"
         ? "Delete this comment?"

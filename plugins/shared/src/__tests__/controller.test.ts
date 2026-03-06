@@ -383,6 +383,50 @@ describe("positionGutterItems", () => {
     expect(item).not.toBeNull();
     expect(item.style.top).toBe("76px");
   });
+
+  it("keeps gutter positions in content coordinates when the host container is scrolled", () => {
+    const threads = [makeThread({ id: "c1", line: 5 })];
+    container = buildContainer([5], threads);
+    ctrl = new MrsfController(container);
+
+    Object.defineProperty(container, "scrollTop", {
+      configurable: true,
+      value: 120,
+    });
+
+    const containerRect = {
+      top: 100,
+      left: 0,
+      right: 200,
+      bottom: 300,
+      width: 200,
+      height: 200,
+      x: 0,
+      y: 100,
+      toJSON() {},
+    };
+    const lineRect = {
+      top: 140,
+      left: 0,
+      right: 200,
+      bottom: 160,
+      width: 200,
+      height: 20,
+      x: 0,
+      y: 140,
+      toJSON() {},
+    };
+
+    const lineEl = container.querySelector('[data-mrsf-line="5"]') as HTMLElement;
+    vi.spyOn(container, "getBoundingClientRect").mockReturnValue(containerRect as DOMRect);
+    vi.spyOn(lineEl, "getBoundingClientRect").mockReturnValue(lineRect as DOMRect);
+
+    ctrl.refresh();
+
+    const item = container.querySelector('[data-mrsf-gutter-line="5"]') as HTMLElement;
+    expect(item).not.toBeNull();
+    expect(item.style.top).toBe("160px");
+  });
 });
 
 // ── Tooltip ──────────────────────────────────────────────
@@ -498,6 +542,26 @@ describe("tooltip interaction", () => {
     expect(tooltip!.innerHTML).toContain("Alice");
     expect(tooltip!.innerHTML).toContain("Bob");
   });
+
+  it("renders resolved top-level threads after unresolved ones on the same line", () => {
+    const threads = [
+      makeThread({ id: "resolved", line: 5, author: "Resolved", resolved: true }),
+      makeThread({ id: "open", line: 5, author: "Open", resolved: false }),
+    ];
+    container = buildContainer([5], threads);
+    ctrl = new MrsfController(container);
+
+    const badge = container.querySelector(".mrsf-badge") as HTMLElement;
+    badge.click();
+
+    const threadEls = Array.from(container.querySelectorAll(".mrsf-tooltip .mrsf-thread"));
+    const authors = threadEls.map((threadEl) => {
+      const authorEl = threadEl.querySelector(".mrsf-comment .mrsf-author");
+      return authorEl?.textContent;
+    });
+
+    expect(authors).toEqual(["Open", "Resolved"]);
+  });
 });
 
 // ── Click action dispatch ────────────────────────────────
@@ -546,6 +610,25 @@ describe("click action dispatch", () => {
     expect(dialog!.querySelector("header")!.textContent).toBe("Add comment");
   });
 
+  it("copies theme variables from the container onto action dialogs", () => {
+    container = buildContainer([1]);
+    container.style.setProperty("--mrsf-tooltip-bg", "rgb(10, 20, 30)");
+    container.style.setProperty("--mrsf-tooltip-fg", "rgb(40, 50, 60)");
+    container.style.setProperty("--mrsf-tooltip-border", "rgb(70, 80, 90)");
+    container.style.setProperty("--mrsf-font-family", "Test Sans");
+    ctrl = new MrsfController(container, { interactive: true });
+
+    const addBtn = container.querySelector(".mrsf-gutter-add") as HTMLElement;
+    addBtn.click();
+
+    const overlay = document.querySelector(".mrsf-overlay") as HTMLElement;
+    expect(overlay).not.toBeNull();
+    expect(overlay.style.getPropertyValue("--mrsf-tooltip-bg")).toBe("rgb(10, 20, 30)");
+    expect(overlay.style.getPropertyValue("--mrsf-tooltip-fg")).toBe("rgb(40, 50, 60)");
+    expect(overlay.style.getPropertyValue("--mrsf-tooltip-border")).toBe("rgb(70, 80, 90)");
+    expect(overlay.style.getPropertyValue("--mrsf-font-family")).toBe("Test Sans");
+  });
+
   it("opens form dialog for add action from an existing comment tooltip", () => {
     const threads = [makeThread({ id: "c1", line: 5 })];
     container = buildContainer([5], threads);
@@ -577,6 +660,35 @@ describe("click action dispatch", () => {
     const overlay = document.querySelector(".mrsf-overlay");
     expect(overlay).not.toBeNull();
     expect(overlay!.querySelector("header")!.textContent).toBe("Reply");
+  });
+
+  it("prefills the edit dialog with the comment data", () => {
+    const threads = [
+      makeThread({
+        id: "c1",
+        line: 5,
+        text: "Existing comment text",
+        type: "issue",
+        severity: "medium",
+        selected_text: "Original selection",
+      }),
+    ];
+    container = buildContainer([5], threads);
+    ctrl = new MrsfController(container, { interactive: true });
+
+    const badge = container.querySelector(".mrsf-badge") as HTMLElement;
+    badge.click();
+
+    const editBtn = container.querySelector('[data-mrsf-action="edit"]') as HTMLElement;
+    editBtn.click();
+
+    const overlay = document.querySelector(".mrsf-overlay");
+    expect(overlay).not.toBeNull();
+    expect(overlay!.querySelector("header")!.textContent).toBe("Edit comment");
+    expect((overlay!.querySelector("textarea[name=\"text\"]") as HTMLTextAreaElement).value).toBe("Existing comment text");
+    expect((overlay!.querySelector('select[name="type"]') as HTMLSelectElement).value).toBe("issue");
+    expect((overlay!.querySelector('select[name="severity"]') as HTMLSelectElement).value).toBe("medium");
+    expect(overlay!.textContent).toContain("Original selection");
   });
 
   it("opens confirm dialog for resolve action", () => {
