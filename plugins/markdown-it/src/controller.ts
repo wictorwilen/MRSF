@@ -202,12 +202,18 @@ export class MrsfController {
     const gutter = this.primaryGutter();
     if (!gutter) return;
 
+    const commentedLines = new Set(this.threads.keys());
+
     for (const line of lines) {
       const threads = this.threads.get(line);
       if (threads && threads.length > 0) {
         const item = this.createBadgeItem(line, threads);
         gutter.appendChild(item);
-      } else if (this.opts.interactive) {
+      } else if (
+        this.opts.interactive &&
+        !commentedLines.has(line - 1) &&
+        !commentedLines.has(line + 1)
+      ) {
         const item = this.createAddItem(line);
         gutter.appendChild(item);
       }
@@ -218,22 +224,49 @@ export class MrsfController {
     return this.gutterLeft ?? this.gutterRight;
   }
 
+  private shouldExpandRange(el: HTMLElement): boolean {
+    return el.tagName === "BLOCKQUOTE" || el.tagName === "PRE";
+  }
+
+  private addVisibleLinesForElement(el: HTMLElement, seen: Set<number>): void {
+    const line = parseInt(el.dataset.mrsfLine ?? "", 10);
+    const startLine = parseInt(el.dataset.mrsfStartLine ?? "", 10);
+    const endLine = parseInt(el.dataset.mrsfEndLine ?? "", 10);
+
+    if (el.tagName === "PRE" && !isNaN(startLine) && !isNaN(endLine) && endLine > startLine) {
+      const visibleStart = startLine + 1;
+      const visibleEnd = endLine - 1;
+      for (let currentLine = visibleStart; currentLine <= visibleEnd; currentLine++) {
+        seen.add(currentLine);
+      }
+      return;
+    }
+
+    if (!isNaN(line)) {
+      seen.add(line);
+    }
+
+    if (
+      this.shouldExpandRange(el) &&
+      !isNaN(startLine) &&
+      !isNaN(endLine) &&
+      endLine > startLine
+    ) {
+      for (let currentLine = startLine; currentLine <= endLine; currentLine++) {
+        seen.add(currentLine);
+      }
+    }
+  }
+
   /** Collect all unique line numbers from data-mrsf-line elements, expanding multi-line ranges. */
   private collectLines(): number[] {
     const els = this.container.querySelectorAll<HTMLElement>("[data-mrsf-line]");
     const seen = new Set<number>();
     for (const el of els) {
       if (el.tagName === "SCRIPT") continue;
-      const line = parseInt(el.dataset.mrsfLine!, 10);
-      if (isNaN(line)) continue;
-      const startLine = parseInt(el.dataset.mrsfStartLine ?? "", 10);
-      const endLine = parseInt(el.dataset.mrsfEndLine ?? "", 10);
-      if (!isNaN(startLine) && !isNaN(endLine) && endLine > startLine) {
-        for (let l = startLine; l <= endLine; l++) seen.add(l);
-      } else {
-        seen.add(line);
-      }
+      this.addVisibleLinesForElement(el, seen);
     }
+
     return [...seen].sort((a, b) => a - b);
   }
 
@@ -272,11 +305,6 @@ export class MrsfController {
 
     item.appendChild(badge);
 
-    if (this.opts.interactive) {
-      const addBtn = this.createAddButton(line);
-      item.appendChild(addBtn);
-    }
-
     return item;
   }
 
@@ -293,12 +321,13 @@ export class MrsfController {
   private createAddButton(line: number): HTMLButtonElement {
     const btn = document.createElement("button");
     btn.className = "mrsf-gutter-add";
+    btn.type = "button";
     btn.dataset.mrsfAction = "add";
     btn.dataset.mrsfLine = String(line);
     btn.dataset.mrsfStartLine = String(line);
     btn.dataset.mrsfEndLine = String(line);
     btn.setAttribute("aria-label", "Add comment");
-    btn.textContent = "+";
+    btn.textContent = "Add";
     return btn;
   }
 
@@ -313,10 +342,8 @@ export class MrsfController {
       const items = gutter.querySelectorAll<HTMLDivElement>(".mrsf-gutter-item");
       for (const item of items) {
         const line = parseInt(item.dataset.mrsfGutterLine!, 10);
-        // For expanded multi-line elements, find the element whose range contains this line
-        let target = this.container.querySelector<HTMLElement>(
-          `[data-mrsf-line="${line}"]:not(script):not(.mrsf-gutter-item)`,
-        );
+        // For expanded multi-line elements, find the rendered content element whose line data contains this line.
+        let target = this.findDirectElementForLine(line);
         if (!target) {
           target = this.findElementForLine(line);
         }
@@ -324,12 +351,59 @@ export class MrsfController {
           item.style.display = "none";
           continue;
         }
-        const targetRect = target.getBoundingClientRect();
-        const top = targetRect.top - containerRect.top;
+        const top = this.calculateItemTop(target, line, containerRect);
         item.style.top = `${top}px`;
         item.style.display = "";
       }
     }
+  }
+
+  private findDirectElementForLine(line: number): HTMLElement | null {
+    const els = this.container.querySelectorAll<HTMLElement>(`[data-mrsf-line="${line}"]`);
+    for (const el of els) {
+      if (el.tagName === "SCRIPT") continue;
+      if (el.closest(".mrsf-gutter")) continue;
+      if (el.classList.contains("mrsf-gutter-item")) continue;
+      return el;
+    }
+    return null;
+  }
+
+  private calculateItemTop(target: HTMLElement, line: number, containerRect: DOMRect): number {
+    const targetRect = target.getBoundingClientRect();
+    const rangeTop = targetRect.top - containerRect.top;
+
+    if (target.tagName !== "PRE") {
+      return rangeTop;
+    }
+
+    const startLine = parseInt(target.dataset.mrsfStartLine ?? "", 10);
+    const endLine = parseInt(target.dataset.mrsfEndLine ?? "", 10);
+    const visibleStart = startLine + 1;
+    const visibleEnd = endLine - 1;
+    const visibleLineCount = visibleEnd - visibleStart + 1;
+
+    if (
+      isNaN(startLine) ||
+      isNaN(endLine) ||
+      visibleLineCount <= 0 ||
+      line < visibleStart ||
+      line > visibleEnd
+    ) {
+      return rangeTop;
+    }
+
+    const styles = window.getComputedStyle(target);
+    const paddingTop = parseFloat(styles.paddingTop) || 0;
+    const paddingBottom = parseFloat(styles.paddingBottom) || 0;
+    const contentHeight = Math.max(targetRect.height - paddingTop - paddingBottom, 0);
+
+    let lineHeight = parseFloat(styles.lineHeight);
+    if (!Number.isFinite(lineHeight) || lineHeight <= 0) {
+      lineHeight = visibleLineCount > 0 ? contentHeight / visibleLineCount : 0;
+    }
+
+    return rangeTop + paddingTop + (line - visibleStart) * lineHeight;
   }
 
   /**

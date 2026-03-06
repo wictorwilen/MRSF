@@ -192,12 +192,12 @@ async function renderDemo() {
     import("remark-breaks"),
     import("remark-rehype"),
     import("rehype-stringify"),
-    import("@mrsf/rehype-mrsf"),
+    import("../../../plugins/rehype/dist/browser.js"),
   ]);
 
   // Lazy-load the controller class once
   if (!MrsfControllerClass) {
-    const mod = await import("@mrsf/rehype-mrsf/controller");
+    const mod = await import("../../../plugins/rehype/dist/controller.js");
     MrsfControllerClass = (mod as any).MrsfController;
   }
 
@@ -294,7 +294,7 @@ onUnmounted(() => {
 </template>
 
 <style>
-@import "@mrsf/rehype-mrsf/style.css";
+@import "../../../plugins/rehype/dist/style.css";
 
 .mrsf-demo-controls {
   margin-bottom: 16px;

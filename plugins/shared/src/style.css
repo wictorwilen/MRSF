@@ -19,6 +19,9 @@
   --mrsf-badge-bg: #007acc;
   --mrsf-badge-fg: #fff;
   --mrsf-badge-resolved-bg: #388a34;
+  --mrsf-add-bg: rgba(0, 122, 204, 0.12);
+  --mrsf-add-fg: #007acc;
+  --mrsf-add-border: rgba(0, 122, 204, 0.28);
   --mrsf-tooltip-bg: #252526;
   --mrsf-tooltip-fg: #cccccc;
   --mrsf-tooltip-border: #454545;
@@ -90,24 +93,29 @@
 
 /* ── Badge ──────────────────────────────────────────────── */
 
-.mrsf-badge {
+.mrsf-badge,
+.mrsf-gutter-add {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 2px;
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  padding: 2px 6px;
-  border-radius: 10px;
-  cursor: pointer;
+  min-height: 20px;
+  padding: 3px 8px;
+  border-radius: 999px;
   user-select: none;
   white-space: nowrap;
+  transition: opacity 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
 
+.mrsf-badge {
+  cursor: pointer;
   color: var(--mrsf-badge-fg);
   background: var(--mrsf-badge-bg);
+  border: 1px solid transparent;
   border-left: 3px solid transparent;
-
-  transition: opacity 0.15s ease;
 }
 
 .mrsf-badge-resolved {
@@ -126,26 +134,34 @@
 /* ── Add button (in gutter) ─────────────────────────────── */
 
 .mrsf-gutter-add {
-  opacity: 0;
-  pointer-events: none;
-  border: 1px solid var(--mrsf-tooltip-border);
-  background: var(--mrsf-tooltip-bg);
-  color: var(--mrsf-tooltip-fg);
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  font-size: 12px;
-  line-height: 18px;
-  text-align: center;
+  appearance: none;
+  opacity: 0.38;
+  pointer-events: auto;
+  border: 1px solid var(--mrsf-add-border);
+  background: var(--mrsf-add-bg);
+  color: var(--mrsf-add-fg);
   cursor: pointer;
-  transition: opacity 0.12s ease;
+  font-family: var(--mrsf-font-family);
 }
 
-/* Show add button on line hover (detected by controller via data attr) */
-[data-mrsf-line]:hover ~ .mrsf-gutter .mrsf-gutter-add,
-.mrsf-gutter-item:hover .mrsf-gutter-add {
+@media (prefers-color-scheme: light) {
+  :root {
+    --mrsf-add-bg: rgba(0, 122, 204, 0.08);
+    --mrsf-add-border: rgba(0, 122, 204, 0.18);
+  }
+}
+
+.mrsf-gutter-add:hover,
+.mrsf-gutter-add:focus-visible {
   opacity: 1;
-  pointer-events: auto;
+  background: rgba(0, 122, 204, 0.18);
+  border-color: rgba(0, 122, 204, 0.38);
+}
+
+.mrsf-gutter-add:focus-visible,
+.mrsf-badge:focus-visible {
+  outline: 2px solid var(--mrsf-accent);
+  outline-offset: 2px;
 }
 
 /* ── Tooltip (positioned by JS, appended to gutter item) ── */

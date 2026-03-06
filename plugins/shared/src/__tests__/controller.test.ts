@@ -264,20 +264,21 @@ describe("gutter rendering", () => {
     container = buildContainer([1, 2, 3], threads);
     ctrl = new MrsfController(container, { interactive: true });
 
-    // Line 1 has a comment badge, lines 2 and 3 should get add buttons
+    // Adjacent lines to comments are suppressed to avoid double stacks.
     const addBtns = container.querySelectorAll(".mrsf-gutter-add");
-    expect(addBtns.length).toBeGreaterThanOrEqual(2);
+    expect(addBtns.length).toBe(1);
+    expect((addBtns[0] as HTMLElement).dataset.mrsfLine).toBe("3");
   });
 
-  it("creates add buttons alongside badges in interactive mode", () => {
+  it("does not create add buttons alongside badges in interactive mode", () => {
     const threads = [makeThread({ id: "c1", line: 1 })];
     container = buildContainer([1], threads);
     ctrl = new MrsfController(container, { interactive: true });
 
-    // Line 1 has a badge AND an add button
+    // Commented lines reuse the tooltip action instead of rendering a second button.
     const gutterItem = container.querySelector('.mrsf-gutter-item[data-mrsf-gutter-line="1"]');
     expect(gutterItem!.querySelector(".mrsf-badge")).not.toBeNull();
-    expect(gutterItem!.querySelector(".mrsf-gutter-add")).not.toBeNull();
+    expect(gutterItem!.querySelector(".mrsf-gutter-add")).toBeNull();
   });
 
   it("sets data attributes on badge elements", () => {
@@ -350,6 +351,33 @@ describe("positionGutterItems", () => {
 
     // Should not throw when called directly
     expect(() => ctrl!.positionGutterItems()).not.toThrow();
+  });
+
+  it("positions expanded pre lines within the code block instead of at the block top", () => {
+    const div = document.createElement("div");
+    const pre = document.createElement("pre");
+    pre.dataset.mrsfLine = "44";
+    pre.dataset.mrsfStartLine = "44";
+    pre.dataset.mrsfEndLine = "49";
+    pre.textContent = "code block";
+    pre.style.paddingTop = "8px";
+    pre.style.paddingBottom = "8px";
+    pre.style.lineHeight = "16px";
+    div.appendChild(pre);
+    document.body.appendChild(div);
+    container = div;
+
+    const containerRect = { top: 0, left: 0, right: 0, bottom: 120, width: 200, height: 120, x: 0, y: 0, toJSON() {} };
+    const preRect = { top: 20, left: 0, right: 200, bottom: 100, width: 200, height: 80, x: 0, y: 20, toJSON() {} };
+    vi.spyOn(container, "getBoundingClientRect").mockReturnValue(containerRect as DOMRect);
+    vi.spyOn(pre, "getBoundingClientRect").mockReturnValue(preRect as DOMRect);
+
+    ctrl = new MrsfController(container, { interactive: true });
+    ctrl.positionGutterItems();
+
+    const item = container.querySelector('[data-mrsf-gutter-line="48"]') as HTMLElement;
+    expect(item).not.toBeNull();
+    expect(item.style.top).toBe("76px");
   });
 });
 
@@ -512,6 +540,22 @@ describe("click action dispatch", () => {
     const dialog = overlay!.querySelector(".mrsf-dialog");
     expect(dialog).not.toBeNull();
     expect(dialog!.querySelector("header")!.textContent).toBe("Add comment");
+  });
+
+  it("opens form dialog for add action from an existing comment tooltip", () => {
+    const threads = [makeThread({ id: "c1", line: 5 })];
+    container = buildContainer([5], threads);
+    ctrl = new MrsfController(container, { interactive: true });
+
+    const badge = container.querySelector(".mrsf-badge") as HTMLElement;
+    badge.click();
+
+    const addBtn = container.querySelector('.mrsf-tooltip [data-mrsf-action="add"]') as HTMLElement;
+    addBtn.click();
+
+    const overlay = document.querySelector(".mrsf-overlay");
+    expect(overlay).not.toBeNull();
+    expect(overlay!.querySelector("header")!.textContent).toBe("Add comment");
   });
 
   it("opens form dialog for reply action", () => {
@@ -1243,15 +1287,24 @@ describe("Multi-line element gutter expansion", () => {
     const thread = makeThread({ id: "c-on-11", line: 11 });
     container = buildMultiLineContainer(10, 12, [thread]);
     ctrl = new MrsfController(container, { interactive: true });
-    // Line 11 has badge (with add button in interactive mode), lines 10 and 12 have standalone add buttons
+    // Adjacent lines to the commented row are suppressed.
     const addBtns = container.querySelectorAll(".mrsf-gutter-add");
-    expect(addBtns.length).toBe(3);
-    const addLines = Array.from(addBtns).map((el) => (el as HTMLElement).dataset.mrsfLine);
-    expect(addLines).toContain("10");
-    expect(addLines).toContain("12");
+    expect(addBtns.length).toBe(0);
   });
 
-  it("expands code fence multi-line elements the same as blockquotes", () => {
+  it("suppresses add buttons directly above and below commented lines", () => {
+    const threads = [makeThread({ id: "c1", line: 2 })];
+    container = buildContainer([1, 2, 3, 4], threads);
+    ctrl = new MrsfController(container, { interactive: true });
+
+    const addLines = Array.from(container.querySelectorAll(".mrsf-gutter-add")).map(
+      (el) => (el as HTMLElement).dataset.mrsfLine,
+    );
+
+    expect(addLines).toEqual(["4"]);
+  });
+
+  it("expands code fence elements to visible code lines only", () => {
     const div = document.createElement("div");
     const pre = document.createElement("pre");
     pre.dataset.mrsfLine = "40";
@@ -1263,8 +1316,30 @@ describe("Multi-line element gutter expansion", () => {
     container = div;
 
     ctrl = new MrsfController(container, { interactive: true });
-    const items = container.querySelectorAll(".mrsf-gutter-item");
-    expect(items.length).toBe(8); // lines 40-47
+    const addLines = Array.from(container.querySelectorAll(".mrsf-gutter-add")).map(
+      (el) => (el as HTMLElement).dataset.mrsfLine,
+    );
+
+    expect(addLines).toEqual(["41", "42", "43", "44", "45", "46"]);
+  });
+
+  it("does not expand list containers into blank trailing lines", () => {
+    const div = document.createElement("div");
+    const ol = document.createElement("ol");
+    ol.dataset.mrsfLine = "53";
+    ol.dataset.mrsfStartLine = "53";
+    ol.dataset.mrsfEndLine = "59";
+    ol.textContent = "list";
+    div.appendChild(ol);
+    document.body.appendChild(div);
+    container = div;
+
+    ctrl = new MrsfController(container, { interactive: true });
+    const addLines = Array.from(container.querySelectorAll(".mrsf-gutter-add")).map(
+      (el) => (el as HTMLElement).dataset.mrsfLine,
+    );
+
+    expect(addLines).toEqual(["53"]);
   });
 
   it("does not expand single-line elements", () => {

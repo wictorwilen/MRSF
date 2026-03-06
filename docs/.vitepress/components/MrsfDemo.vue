@@ -187,12 +187,12 @@ async function renderDemo() {
 
   const [{ default: MarkdownIt }, { mrsfPlugin }] = await Promise.all([
     import("markdown-it"),
-    import("@mrsf/markdown-it-mrsf"),
+    import("../../../plugins/markdown-it/dist/browser.js"),
   ]);
 
   // Lazy-load the controller class once
   if (!MrsfControllerClass) {
-    const mod = await import("@mrsf/markdown-it-mrsf/controller");
+    const mod = await import("../../../plugins/markdown-it/dist/controller.js");
     MrsfControllerClass = mod.MrsfController;
   }
 
@@ -282,7 +282,7 @@ onUnmounted(() => {
 </template>
 
 <style>
-@import "@mrsf/markdown-it-mrsf/style.css";
+@import "../../../plugins/markdown-it/dist/style.css";
 
 .mrsf-demo-controls {
   margin-bottom: 16px;
