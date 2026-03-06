@@ -264,10 +264,9 @@ describe("gutter rendering", () => {
     container = buildContainer([1, 2, 3], threads);
     ctrl = new MrsfController(container, { interactive: true });
 
-    // Adjacent lines to comments are suppressed to avoid double stacks.
     const addBtns = container.querySelectorAll(".mrsf-gutter-add");
-    expect(addBtns.length).toBe(1);
-    expect((addBtns[0] as HTMLElement).dataset.mrsfLine).toBe("3");
+    expect(addBtns.length).toBe(2);
+    expect(Array.from(addBtns).map((el) => (el as HTMLElement).dataset.mrsfLine)).toEqual(["2", "3"]);
   });
 
   it("does not create add buttons alongside badges in interactive mode", () => {
@@ -1287,12 +1286,14 @@ describe("Multi-line element gutter expansion", () => {
     const thread = makeThread({ id: "c-on-11", line: 11 });
     container = buildMultiLineContainer(10, 12, [thread]);
     ctrl = new MrsfController(container, { interactive: true });
-    // Adjacent lines to the commented row are suppressed.
-    const addBtns = container.querySelectorAll(".mrsf-gutter-add");
-    expect(addBtns.length).toBe(0);
+    // Add rows that collapse onto the same rendered block as a badge are hidden.
+    const visibleAddBtns = Array.from(container.querySelectorAll(".mrsf-gutter-add")).filter(
+      (el) => (el.closest(".mrsf-gutter-item") as HTMLElement | null)?.style.display !== "none",
+    );
+    expect(visibleAddBtns.length).toBe(0);
   });
 
-  it("suppresses add buttons directly above and below commented lines", () => {
+  it("keeps add buttons on distinct rows around a commented line", () => {
     const threads = [makeThread({ id: "c1", line: 2 })];
     container = buildContainer([1, 2, 3, 4], threads);
     ctrl = new MrsfController(container, { interactive: true });
@@ -1301,7 +1302,82 @@ describe("Multi-line element gutter expansion", () => {
       (el) => (el as HTMLElement).dataset.mrsfLine,
     );
 
-    expect(addLines).toEqual(["4"]);
+    expect(addLines).toEqual(["1", "3", "4"]);
+  });
+
+  it("keeps ordered-list add buttons for rows adjacent to a commented item", () => {
+    const div = document.createElement("div");
+    const ol = document.createElement("ol");
+    ol.dataset.mrsfLine = "53";
+    ol.dataset.mrsfStartLine = "53";
+    ol.dataset.mrsfEndLine = "58";
+
+    const li53 = document.createElement("li");
+    li53.dataset.mrsfLine = "53";
+    li53.dataset.mrsfStartLine = "53";
+    li53.dataset.mrsfEndLine = "53";
+    li53.textContent = "Build the container image.";
+    ol.appendChild(li53);
+
+    const li54 = document.createElement("li");
+    li54.dataset.mrsfLine = "54";
+    li54.dataset.mrsfStartLine = "54";
+    li54.dataset.mrsfEndLine = "54";
+    li54.textContent = "Push to the registry.";
+    ol.appendChild(li54);
+
+    const li55 = document.createElement("li");
+    li55.dataset.mrsfLine = "55";
+    li55.dataset.mrsfStartLine = "55";
+    li55.dataset.mrsfEndLine = "57";
+    li55.textContent = "Update the deployment manifest.";
+
+    const nestedOl = document.createElement("ol");
+    nestedOl.dataset.mrsfLine = "56";
+    nestedOl.dataset.mrsfStartLine = "56";
+    nestedOl.dataset.mrsfEndLine = "57";
+
+    const li56 = document.createElement("li");
+    li56.dataset.mrsfLine = "56";
+    li56.dataset.mrsfStartLine = "56";
+    li56.dataset.mrsfEndLine = "56";
+    li56.textContent = "Set the new image tag.";
+    nestedOl.appendChild(li56);
+
+    const li57 = document.createElement("li");
+    li57.dataset.mrsfLine = "57";
+    li57.dataset.mrsfStartLine = "57";
+    li57.dataset.mrsfEndLine = "57";
+    li57.textContent = "Adjust replica count if needed.";
+    nestedOl.appendChild(li57);
+
+    li55.appendChild(nestedOl);
+    ol.appendChild(li55);
+
+    const li58 = document.createElement("li");
+    li58.dataset.mrsfLine = "58";
+    li58.dataset.mrsfStartLine = "58";
+    li58.dataset.mrsfEndLine = "58";
+    li58.textContent = "Apply with kubectl.";
+    ol.appendChild(li58);
+
+    div.appendChild(ol);
+
+    const script = document.createElement("script");
+    script.type = "application/mrsf+json";
+    script.textContent = JSON.stringify({ threads: [makeThread({ id: "deploy", line: 55 })] });
+    div.appendChild(script);
+
+    document.body.appendChild(div);
+    container = div;
+
+    ctrl = new MrsfController(container, { interactive: true });
+
+    const addLines = Array.from(container.querySelectorAll(".mrsf-gutter-add")).map(
+      (el) => (el as HTMLElement).dataset.mrsfLine,
+    );
+
+    expect(addLines).toEqual(["53", "54", "56", "57", "58"]);
   });
 
   it("expands code fence elements to visible code lines only", () => {

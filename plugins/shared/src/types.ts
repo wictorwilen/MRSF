@@ -46,10 +46,9 @@ export interface MrsfPluginOptions {
   /**
    * Position of the gutter badge relative to the line content.
    * - `'left'`: badge in a left margin gutter, outside the content area
-   * - `'tight'`: badge inline, immediately before the text
    * - `'right'`: badge floated to the right of the content (default)
    */
-  gutterPosition?: "left" | "tight" | "right";
+  gutterPosition?: "left" | "right";
 
   /**
    * Whether to show the gutter badge on lines that have inline-highlighted

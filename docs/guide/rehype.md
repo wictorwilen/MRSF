@@ -59,7 +59,7 @@ Pass `{ allowDangerousHtml: true }` to `rehype-stringify` so the raw HTML toolti
 | `documentPath` | `string` | — | Auto-discover sidecar next to this markdown file |
 | `showResolved` | `boolean` | `true` | Show resolved comments |
 | `interactive` | `boolean` | `false` | Show action buttons (resolve, reply, edit) |
-| `gutterPosition` | `'left' \| 'tight' \| 'right'` | `'right'` | Badge placement |
+| `gutterPosition` | `'left' \| 'right'` | `'right'` | Badge placement |
 | `gutterForInline` | `boolean` | `true` | Show badge for inline-highlighted comments |
 | `inlineHighlights` | `boolean` | `true` | Highlight `selected_text` with `<mark>` |
 | `lineHighlight` | `boolean` | `false` | Add background tint on commented lines |
@@ -75,18 +75,17 @@ The plugin supports four ways to load sidecar data, in priority order:
 3. **`sidecarPath`** — explicit file path (Node.js only)
 4. **`documentPath`** — auto-discover `.review.yaml`/`.json` (Node.js only)
 
-## Gutter Modes
+## Gutter Placement
 
 ```ts
 // Left gutter — badge in a margin column
 .use(rehypeMrsf, { comments, gutterPosition: "left" })
 
-// Tight — badge inline before text
-.use(rehypeMrsf, { comments, gutterPosition: "tight" })
-
 // Right — badge floated right (default)
 .use(rehypeMrsf, { comments, gutterPosition: "right" })
 ```
+
+For inline emphasis, use `inlineHighlights` and `gutterForInline` rather than a separate gutter mode.
 
 ## Framework Integration
 

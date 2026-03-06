@@ -112,7 +112,7 @@ Customise with CSS custom properties:
 
 ## Interactive Mode
 
-Enable `interactive: true` to add action buttons (Resolve, Reply, Edit) inside tooltips, plus:
+Enable `interactive: true` to add action buttons inside tooltips, plus:
 
 - Gutter “Add comment” buttons for each line badge
 - An inline “Add comment” floater that appears when users select text
@@ -128,27 +128,20 @@ md.use(mrsfPlugin, {
 
 ### Controller
 
-Include the optional controller to dispatch custom events when action buttons are clicked:
+Include the optional controller to wire up the inline and gutter actions. By default it shows built-in dialogs for add, reply, edit, resolve, unresolve, and delete, then dispatches events you can persist through your own API:
 
 ```ts
 import "@mrsf/markdown-it-mrsf/controller";
 
-document.addEventListener("mrsf:resolve", (e) => {
-  console.log("Resolve comment:", e.detail.commentId);
-});
-
-document.addEventListener("mrsf:reply", (e) => {
-  console.log("Reply to:", e.detail.commentId);
-});
-
-document.addEventListener("mrsf:add", (e) => {
-  console.log("Add on line", e.detail.line, "selection", e.detail.selectionText);
+document.addEventListener("mrsf:submit", async (e) => {
+  // { action, commentId, text?, line?, end_line?, start_column?, end_column?, selection_text? }
+  await saveComment(e.detail);
 });
 ```
 
-Events dispatched: `mrsf:add`, `mrsf:resolve`, `mrsf:unresolve`, `mrsf:reply`, `mrsf:edit`, `mrsf:navigate`.
+Events fired after user confirmation: `mrsf:add`, `mrsf:reply`, `mrsf:edit`, `mrsf:resolve`, `mrsf:unresolve`, `mrsf:delete`, `mrsf:navigate`, plus `mrsf:submit` with the full payload.
 
-Each event's `detail` contains `{ commentId: string | null, line: number | null, action: string, selectionText?: string | null, start_line?: number | null, end_line?: number | null, start_column?: number | null, end_column?: number | null }` (snake_case to align with the CLI SDK parameters).
+Set `window.mrsfDisableBuiltinUi = true` before loading the controller if you want to render your own UI and only consume the events.
 
 ## Options
 
@@ -160,7 +153,7 @@ Each event's `detail` contains `{ commentId: string | null, line: number | null,
 | `sidecarPath` | `string` | — | Explicit path to sidecar file |
 | `showResolved` | `boolean` | `true` | Whether to show resolved comments |
 | `interactive` | `boolean` | `false` | Add action buttons for host JS integration |
-| `gutterPosition` | `'left' \| 'tight' \| 'right'` | `'right'` | Badge position: left margin gutter, tight (before text), or floated right |
+| `gutterPosition` | `'left' \| 'right'` | `'right'` | Badge position: left margin gutter or floated right |
 | `gutterForInline` | `boolean` | `true` | Show gutter badge for comments that also have inline highlights |
 | `inlineHighlights` | `boolean` | `true` | Render inline text highlights for `selected_text` |
 | `lineHighlight` | `boolean` | `false` | Add background tint on commented lines |
@@ -181,7 +174,7 @@ All rendered elements follow a strict data-attribute contract:
 
 - `data-mrsf-line` — source line number (1-based)
 - `data-mrsf-comment-id` — comment identifier
-- `data-mrsf-action` — action type (`add`, `resolve`, `unresolve`, `reply`, `edit`, `navigate`)
+- `data-mrsf-action` — action type (`add`, `resolve`, `unresolve`, `reply`, `edit`, `delete`, `navigate`)
 - `data-mrsf-start-line`, `data-mrsf-end-line`, `data-mrsf-start-column`, `data-mrsf-end-column` — optional selection anchors when present
 
 ## License

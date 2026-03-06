@@ -195,18 +195,12 @@ export class MrsfController {
     const gutter = this.primaryGutter();
     if (!gutter) return;
 
-    const commentedLines = new Set(this.threads.keys());
-
     for (const line of lines) {
       const threads = this.threads.get(line);
       if (threads && threads.length > 0) {
         const item = this.createBadgeItem(line, threads);
         gutter.appendChild(item);
-      } else if (
-        this.opts.interactive &&
-        !commentedLines.has(line - 1) &&
-        !commentedLines.has(line + 1)
-      ) {
+      } else if (this.opts.interactive) {
         const item = this.createAddItem(line);
         gutter.appendChild(item);
       }
@@ -333,6 +327,7 @@ export class MrsfController {
     const gutters = [this.gutterLeft, this.gutterRight].filter(Boolean) as HTMLDivElement[];
     for (const gutter of gutters) {
       const items = gutter.querySelectorAll<HTMLDivElement>(".mrsf-gutter-item");
+      const positioned: Array<{ item: HTMLDivElement; target: HTMLElement; kind: "badge" | "add" }> = [];
       for (const item of items) {
         const line = parseInt(item.dataset.mrsfGutterLine!, 10);
         // For expanded multi-line elements, find the rendered content element whose line data contains this line.
@@ -347,6 +342,29 @@ export class MrsfController {
         const top = this.calculateItemTop(target, line, containerRect);
         item.style.top = `${top}px`;
         item.style.display = "";
+        positioned.push({
+          item,
+          target,
+          kind: item.querySelector(".mrsf-badge") ? "badge" : "add",
+        });
+      }
+
+      this.suppressAddItemsThatShareBadgeTargets(positioned);
+    }
+  }
+
+  private suppressAddItemsThatShareBadgeTargets(
+    positioned: Array<{ item: HTMLDivElement; target: HTMLElement; kind: "badge" | "add" }>,
+  ): void {
+    const badgeTargets = new Set(
+      positioned
+        .filter((entry) => entry.kind === "badge")
+        .map((entry) => entry.target),
+    );
+
+    for (const entry of positioned) {
+      if (entry.kind === "add" && badgeTargets.has(entry.target)) {
+        entry.item.style.display = "none";
       }
     }
   }

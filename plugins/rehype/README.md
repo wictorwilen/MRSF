@@ -45,7 +45,7 @@ import "@mrsf/rehype-mrsf/style.css";
 | `documentPath` | `string` | — | Auto-discover sidecar next to this markdown file |
 | `showResolved` | `boolean` | `true` | Show resolved comments |
 | `interactive` | `boolean` | `false` | Show action buttons (resolve, reply, edit) |
-| `gutterPosition` | `'left' \| 'tight' \| 'right'` | `'right'` | Badge placement |
+| `gutterPosition` | `'left' \| 'right'` | `'right'` | Badge placement |
 | `gutterForInline` | `boolean` | `true` | Show badge for inline-highlighted comments |
 | `inlineHighlights` | `boolean` | `true` | Highlight `selected_text` with `<mark>` |
 | `lineHighlight` | `boolean` | `false` | Add background tint on commented lines |
@@ -59,18 +59,17 @@ import "@mrsf/rehype-mrsf/style.css";
 3. **`sidecarPath`** — explicit file path (Node.js only)
 4. **`documentPath`** — auto-discover `.review.yaml`/`.json` (Node.js only)
 
-## Gutter Modes
+## Gutter Placement
 
 ```ts
 // Left gutter — badge in a margin column, content indented
 .use(rehypeMrsf, { comments, gutterPosition: "left" })
 
-// Tight — badge inline, immediately before the text
-.use(rehypeMrsf, { comments, gutterPosition: "tight" })
-
 // Right — badge floated right (default)
 .use(rehypeMrsf, { comments, gutterPosition: "right" })
 ```
+
+For inline emphasis, use `inlineHighlights` and `gutterForInline` instead of a separate gutter mode.
 
 ## Browser / Bundler Usage
 
@@ -127,17 +126,15 @@ Enable action buttons and hook into events (includes gutter “Add comment” bu
 ```ts
 import "@mrsf/rehype-mrsf/controller";
 
-document.addEventListener("mrsf:resolve", (e) => {
-  console.log("Resolve:", e.detail.commentId);
-});
-
-document.addEventListener("mrsf:add", (e) => {
-  console.log("Add comment on line", e.detail.line, "selection", e.detail.selectionText);
+document.addEventListener("mrsf:submit", async (e) => {
+  // { action, commentId, text?, line?, end_line?, start_column?, end_column?, selection_text? }
+  await saveComment(e.detail);
 });
 ```
 
-Events: `mrsf:add`, `mrsf:resolve`, `mrsf:unresolve`, `mrsf:reply`, `mrsf:edit`, `mrsf:navigate`.
-Each event has `detail = { commentId: string | null, line: number | null, action, selectionText?: string | null, start_line?: number | null, end_line?: number | null, start_column?: number | null, end_column?: number | null }` (snake_case matches CLI SDK parameters).
+Events fired after user confirmation: `mrsf:add`, `mrsf:reply`, `mrsf:edit`, `mrsf:resolve`, `mrsf:unresolve`, `mrsf:delete`, `mrsf:navigate`, plus `mrsf:submit` with the full payload.
+
+Set `window.mrsfDisableBuiltinUi = true` before loading the controller if you want to render your own dialogs and only consume the events.
 
 ## CSS Customization
 

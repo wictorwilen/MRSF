@@ -277,7 +277,6 @@ onUnmounted(() => {
         <select v-model="gutterPosition">
           <option value="right">Right</option>
           <option value="left">Left (margin gutter)</option>
-          <option value="tight">Tight (before text)</option>
         </select>
       </label>
       <label>

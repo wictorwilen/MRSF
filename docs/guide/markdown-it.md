@@ -55,11 +55,27 @@ import "@mrsf/markdown-it-mrsf/style.css";
 | `sidecarPath` | `string` | — | Explicit path to sidecar file |
 | `showResolved` | `boolean` | `true` | Whether to show resolved comments |
 | `interactive` | `boolean` | `false` | Add action buttons for host JS integration |
+| `gutterPosition` | `'left' \| 'right'` | `'right'` | Badge placement |
+| `gutterForInline` | `boolean` | `true` | Show gutter badges for inline-highlighted comments |
+| `inlineHighlights` | `boolean` | `true` | Highlight `selected_text` inline |
 | `lineHighlight` | `boolean` | `false` | Add background tint on commented lines |
 | `theme` | `'light' \| 'dark' \| 'auto'` | `'auto'` | Color scheme hint |
 | `cwd` | `string` | `process.cwd()` | Working directory for file resolution |
 
 See the full documentation in the [package README](https://github.com/wictorwilen/MRSF/tree/main/plugins/markdown-it#readme).
+
+## Display Modes
+
+- Gutter + inline: the default, with badges plus inline highlights for comments with `selected_text`.
+- Gutter only: set `inlineHighlights: false`.
+- Inline only for anchored text comments: set `gutterForInline: false` so highlighted selections rely on the inline tooltip instead of a duplicate gutter badge.
+
+## Gutter Placement
+
+```ts
+md.use(mrsfPlugin, { comments, gutterPosition: "left" });
+md.use(mrsfPlugin, { comments, gutterPosition: "right" });
+```
 
 ## Interactive Mode
 
