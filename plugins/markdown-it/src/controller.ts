@@ -606,6 +606,7 @@ export class MrsfController {
       : "mrsf-inline-tooltip mrsf-tooltip-visible";
     tooltip.dataset.mrsfForMark = thread.comment.id;
     tooltip.innerHTML = renderThreadHtml(thread, this.opts.interactive);
+    this.applyThemeVariables(tooltip);
 
     // Let user mouse into tooltip without it disappearing
     tooltip.addEventListener("mouseenter", () => {
@@ -631,6 +632,35 @@ export class MrsfController {
       tooltip.style.top = `${rect.bottom + margin}px`;
     }
     tooltip.style.left = `${Math.max(0, rect.left)}px`;
+  }
+
+  private applyThemeVariables(el: HTMLElement): void {
+    const styles = window.getComputedStyle(this.container);
+    const themeVars = [
+      "--mrsf-accent",
+      "--mrsf-badge-bg",
+      "--mrsf-badge-fg",
+      "--mrsf-badge-resolved-bg",
+      "--mrsf-add-bg",
+      "--mrsf-add-fg",
+      "--mrsf-add-border",
+      "--mrsf-tooltip-bg",
+      "--mrsf-tooltip-fg",
+      "--mrsf-tooltip-border",
+      "--mrsf-highlight-bg",
+      "--mrsf-highlight-border",
+      "--mrsf-severity-high",
+      "--mrsf-severity-medium",
+      "--mrsf-severity-low",
+      "--mrsf-font-family",
+    ];
+
+    for (const name of themeVars) {
+      const value = styles.getPropertyValue(name).trim();
+      if (value) {
+        el.style.setProperty(name, value);
+      }
+    }
   }
 
   private hideInlineTimeout: ReturnType<typeof setTimeout> | null = null;

@@ -1460,6 +1460,28 @@ describe("Interactive inline tooltips", () => {
     const actions = tooltip!.querySelectorAll("[data-mrsf-action]");
     expect(actions.length).toBeGreaterThan(0);
   });
+
+  it("copies theme variables from the container onto inline tooltips", () => {
+    const thread = makeThread({
+      id: "theme-inline",
+      line: 5,
+      selected_text: "target",
+    });
+    container = buildInlineContainer(5, "Click on target text.", [thread]);
+    container.style.setProperty("--mrsf-tooltip-bg", "rgb(1, 2, 3)");
+    container.style.setProperty("--mrsf-tooltip-fg", "rgb(4, 5, 6)");
+    container.style.setProperty("--mrsf-tooltip-border", "rgb(7, 8, 9)");
+    ctrl = new MrsfController(container, { interactive: true });
+
+    const mark = container.querySelector("mark.mrsf-inline-highlight") as HTMLElement;
+    mark.click();
+
+    const tooltip = document.querySelector(".mrsf-inline-tooltip") as HTMLElement;
+    expect(tooltip).not.toBeNull();
+    expect(tooltip.style.getPropertyValue("--mrsf-tooltip-bg")).toBe("rgb(1, 2, 3)");
+    expect(tooltip.style.getPropertyValue("--mrsf-tooltip-fg")).toBe("rgb(4, 5, 6)");
+    expect(tooltip.style.getPropertyValue("--mrsf-tooltip-border")).toBe("rgb(7, 8, 9)");
+  });
 });
 
 // ── Orphaned comments section ────────────────────────────
