@@ -384,6 +384,26 @@ const updated = addComment(doc, lines, {
 await writeSidecar("docs/api.md.review.yaml", updated);
 ```
 
+### Browser-safe reanchoring
+
+The default `@mrsf/cli` entrypoint is Node-oriented and includes file system and git-backed helpers such as `parseSidecar`, `readDocumentLines`, and `reanchorFile`. For browser bundles and editor integrations, use the `@mrsf/cli/browser` subpath instead.
+
+`@mrsf/cli/browser` exports the pure text-based matching and reanchoring primitives only:
+
+```typescript
+import {
+  applyReanchorResults,
+  reanchorDocumentText,
+} from "@mrsf/cli/browser";
+
+const results = reanchorDocumentText(sidecar, markdownText);
+const changed = applyReanchorResults(sidecar, results);
+
+console.log(changed, results.map((result) => result.status));
+```
+
+Use this entrypoint when you already have the document text and sidecar object in memory. It intentionally excludes Node-only helpers such as sidecar discovery, file parsing, file writing, and git-aware diff reanchoring.
+
 ## Configuration
 
 Place a `.mrsf.yaml` at your repository root to configure sidecar discovery:

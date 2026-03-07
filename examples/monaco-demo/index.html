@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MRSF Monaco Demo</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">@mrsf/monaco-mrsf</p>
+          <h1>Interactive Monaco Demo</h1>
+          <p class="lede">
+            Edit Markdown, inspect MRSF comments in the gutter and hover UI, then
+            save or trigger external host changes to see the plugin react.
+          </p>
+          <div class="hero-meta" aria-live="polite">
+            <span id="save-indicator" class="meta-pill meta-pill-clean">Saved</span>
+            <span id="anchor-indicator" class="meta-pill meta-pill-clean">Anchors in sync</span>
+            <span id="last-saved" class="meta-text">No host write yet</span>
+          </div>
+        </div>
+        <div class="hero-actions">
+          <button id="add-comment" type="button">Add Comment</button>
+          <button id="toggle-resolve" type="button">Toggle Resolve</button>
+          <button id="reanchor-saved" type="button">Reanchor Saved Snapshot</button>
+          <button id="sync-host" type="button">Write Host Snapshot</button>
+          <button id="refresh-view" type="button">Refresh View</button>
+          <button id="external-sidecar" type="button">External Sidecar Change</button>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="editor-card">
+          <div class="panel-header">
+            <span>Markdown Editor</span>
+            <span id="status-pill" class="status-pill">Idle</span>
+          </div>
+          <div id="editor-summary" class="editor-summary">
+            Select text or use the gutter to add comments. Unsaved sidecar edits and
+            live anchor shifts are tracked here.
+          </div>
+          <div id="editor" class="editor-host"></div>
+        </section>
+
+        <aside class="side-panel">
+          <section class="panel-card">
+            <div class="panel-header">
+              <span>Demo Status</span>
+            </div>
+            <div id="status-panel" class="status-panel"></div>
+          </section>
+          <section class="panel-card">
+            <div class="panel-header">
+              <span>Current Review State</span>
+            </div>
+            <pre id="state-output" class="code-panel"></pre>
+          </section>
+          <section class="panel-card">
+            <div class="panel-header">
+              <span>Host Snapshot</span>
+            </div>
+            <pre id="host-output" class="code-panel"></pre>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+  </html>

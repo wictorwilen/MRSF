@@ -87,7 +87,12 @@ export {
 
 // Re-anchoring
 export {
+  DEFAULT_THRESHOLD,
+  HIGH_THRESHOLD,
   reanchorComment,
+  reanchorDocumentLines,
+  reanchorDocumentText,
+  toReanchorLines,
   reanchorDocument,
   applyReanchorResults,
   reanchorFile,

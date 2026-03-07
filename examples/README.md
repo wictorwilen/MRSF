@@ -42,6 +42,17 @@ npx tsx demo-markdown-it.ts   # markdown-it plugin demo
 npx tsx demo-rehype.ts        # rehype plugin demo
 ```
 
+There is also a browser demo for the Monaco integration:
+
+```bash
+cd examples
+npm install
+npm run demo:monaco
+```
+
+Then open the printed local Vite URL and navigate to `/` to try the interactive Monaco editor demo.
+The toolbar now includes `Reanchor Saved Snapshot`, which restores the last host-written sidecar and runs the browser-safe MRSF re-anchoring algorithm against the current document so you can compare persisted anchors with the live revision.
+
 ## Trying the Examples
 
 If you have the MRSF CLI installed (`npm install -g @mrsf/cli` or via `npx`), you

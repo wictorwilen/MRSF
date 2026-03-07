@@ -1,0 +1,228 @@
+:root {
+  color-scheme: light;
+  --bg: #f4efe6;
+  --surface: rgba(255, 252, 246, 0.86);
+  --surface-strong: #fffdf9;
+  --text: #1d1a16;
+  --muted: #6f665c;
+  --border: rgba(75, 58, 38, 0.14);
+  --accent: #bc5b2c;
+  --accent-strong: #8d3c16;
+  --shadow: 0 18px 50px rgba(79, 55, 28, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at top left, rgba(228, 185, 112, 0.35), transparent 34%),
+    linear-gradient(180deg, #faf6ef 0%, var(--bg) 100%);
+}
+
+button {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.8rem 1rem;
+  font: inherit;
+  background: var(--surface-strong);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--border);
+  cursor: pointer;
+  transition: transform 120ms ease, background 120ms ease;
+}
+
+button:hover {
+  background: #fff;
+  transform: translateY(-1px);
+}
+
+.page-shell {
+  padding: 2rem;
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 2rem;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.hero h1 {
+  margin: 0;
+  font-family: "Fraunces", Georgia, serif;
+  font-size: clamp(2rem, 4vw, 3.6rem);
+  line-height: 0.95;
+}
+
+.lede {
+  max-width: 58ch;
+  color: var(--muted);
+  margin: 0.9rem 0 0;
+}
+
+.hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  align-items: center;
+  margin-top: 1rem;
+}
+
+.meta-pill,
+.meta-text {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.65);
+  box-shadow: inset 0 0 0 1px var(--border);
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.meta-pill-clean {
+  background: rgba(74, 140, 76, 0.12);
+  color: #2f6a35;
+}
+
+.meta-pill-dirty {
+  background: rgba(188, 91, 44, 0.14);
+  color: var(--accent-strong);
+}
+
+.meta-pill-warning {
+  background: rgba(196, 142, 29, 0.16);
+  color: #7d5a10;
+}
+
+.hero-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 0.7rem;
+  width: min(420px, 100%);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(320px, 0.9fr);
+  gap: 1.2rem;
+}
+
+.editor-card,
+.panel-card {
+  background: var(--surface);
+  backdrop-filter: blur(18px);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.2rem;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+
+.status-pill {
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(188, 91, 44, 0.12);
+  color: var(--accent-strong);
+  font-size: 0.86rem;
+}
+
+.editor-summary {
+  padding: 0.85rem 1.2rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.editor-host {
+  height: 72vh;
+  min-height: 520px;
+}
+
+.side-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.code-panel {
+  margin: 0;
+  padding: 1rem 1.2rem 1.4rem;
+  min-height: 240px;
+  max-height: 35vh;
+  overflow: auto;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: #2f2923;
+}
+
+.status-panel {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem 1.2rem 1.2rem;
+}
+
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: baseline;
+  font-size: 0.93rem;
+}
+
+.status-row strong {
+  font-size: 1rem;
+}
+
+.status-label {
+  color: var(--muted);
+}
+
+.status-value {
+  text-align: right;
+}
+
+@media (max-width: 1100px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .hero {
+    flex-direction: column;
+  }
+
+  .hero-actions {
+    width: 100%;
+  }
+
+  .editor-host {
+    height: 58vh;
+  }
+}
