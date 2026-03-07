@@ -32,7 +32,7 @@ export type { MrsfPluginOptions, SlimComment, CommentThread, LineMap, CommentLoa
 /**
  * The markdown-it plugin function (Node.js — full feature set).
  */
-export const mrsfPlugin = createMrsfPlugin((options: MrsfPluginOptions) => {
+export const mrsfPlugin = createMrsfPlugin((options: MrsfPluginOptions, env?: unknown) => {
   // Priority 1: inline data
   if (options.comments) {
     return options.comments;
@@ -41,7 +41,7 @@ export const mrsfPlugin = createMrsfPlugin((options: MrsfPluginOptions) => {
   // Priority 2: custom loader function
   if (options.loader) {
     try {
-      return options.loader();
+      return options.loader(options, env);
     } catch {
       return null;
     }

@@ -5,7 +5,8 @@
 import * as vscode from "vscode";
 import type { Comment } from "@mrsf/cli";
 import type { SidecarStore } from "../store/SidecarStore.js";
-import { mrsfToVscodeRange, relativeTime } from "../util/positions.js";
+import { editorRangeToVscodeRange, relativeTime } from "../util/positions.js";
+import { buildReviewSnapshot, toCommentMap } from "../util/reviewSnapshot.js";
 
 export class MrsfHoverProvider implements vscode.HoverProvider, vscode.Disposable {
   private registration: vscode.Disposable;
@@ -27,16 +28,20 @@ export class MrsfHoverProvider implements vscode.HoverProvider, vscode.Disposabl
 
     const config = vscode.workspace.getConfiguration("sidemark");
     const showResolved = config.get<boolean>("showResolved", true);
+    const snapshot = buildReviewSnapshot(document, mrsfDoc, showResolved);
+    const commentsById = toCommentMap(mrsfDoc);
 
     // Find comments whose anchor range contains the hover position
     const matchingRoots: Comment[] = [];
-    for (const comment of mrsfDoc.comments) {
-      if (comment.reply_to) continue; // Only show root comments as entry points
-      if (!showResolved && comment.resolved) continue;
-      const range = mrsfToVscodeRange(comment, document);
-      if (!range) continue;
-      if (range.contains(position)) {
-        matchingRoots.push(comment);
+    const lineThreads = snapshot.threadsByLine.find((entry) => entry.line === position.line + 1);
+    if (lineThreads) {
+      for (const thread of lineThreads.threads) {
+        const range = thread.range ? editorRangeToVscodeRange(thread.range) : undefined;
+        if (range && !range.contains(position)) continue;
+        const root = commentsById.get(thread.rootCommentId);
+        if (root) {
+          matchingRoots.push(root);
+        }
       }
     }
 

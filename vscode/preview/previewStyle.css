@@ -17,6 +17,40 @@
   position: relative;
 }
 
+.mrsf-preview-anchor {
+  position: relative;
+}
+
+.mrsf-preview-gutter {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 25;
+  overflow: visible;
+}
+
+.mrsf-preview-gutter-item {
+  position: absolute;
+  display: inline-flex;
+  align-items: flex-start;
+  pointer-events: none;
+}
+
+.mrsf-preview-gutter-item > * {
+  pointer-events: auto;
+}
+
+.mrsf-preview-gutter-item .mrsf-badge {
+  position: relative;
+  right: auto;
+  top: auto;
+}
+
+.mrsf-preview-gutter-item .mrsf-tooltip {
+  top: calc(100% + 4px);
+}
+
 .mrsf-line-highlight:hover {
   background: rgba(55, 148, 255, 0.12);
 }
@@ -57,6 +91,36 @@ th.mrsf-line-highlight {
   transition: opacity 0.15s ease, transform 0.1s ease;
 }
 
+.mrsf-add-button {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--vscode-button-border, var(--vscode-panel-border, #454545));
+  border-radius: 999px;
+  background: var(--vscode-button-secondaryBackground, var(--vscode-editorWidget-background, #2d2d30));
+  color: var(--vscode-button-secondaryForeground, var(--vscode-foreground, #cccccc));
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 18px;
+  text-align: center;
+  text-decoration: none;
+  opacity: 0.55;
+  z-index: 10;
+}
+
+.mrsf-add-button:hover {
+  opacity: 1;
+  background: var(--vscode-button-secondaryHoverBackground, var(--vscode-toolbar-hoverBackground, #3c3c3c));
+}
+
+.mrsf-preview-gutter-item[data-gutter-position="left"] .mrsf-tooltip {
+  left: calc(100% + 8px);
+}
+
+.mrsf-preview-gutter-item[data-gutter-position="right"] .mrsf-tooltip {
+  left: 0;
+}
+
 /* For table elements the badge is placed in an overlay wrapper
    positioned relative to the table itself. */
 .mrsf-table-badge-anchor {
@@ -65,7 +129,19 @@ th.mrsf-line-highlight {
   z-index: 10;
 }
 
+.mrsf-table-badge-anchor[data-gutter-position="right"] .mrsf-badge {
+  left: auto;
+  right: auto;
+}
+
 .mrsf-table-badge-anchor .mrsf-badge {
+  position: relative;
+  right: auto;
+  top: auto;
+  pointer-events: auto;
+}
+
+.mrsf-table-badge-anchor .mrsf-add-button {
   position: relative;
   right: auto;
   top: auto;

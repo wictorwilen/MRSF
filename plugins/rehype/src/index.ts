@@ -38,7 +38,7 @@ export type { MrsfPluginOptions, SlimComment, CommentThread, LineMap, CommentLoa
 /**
  * The rehype plugin function (Node.js — full feature set).
  */
-export const rehypeMrsf = createRehypeMrsf((options: MrsfPluginOptions) => {
+export const rehypeMrsf = createRehypeMrsf((options: MrsfPluginOptions, env?: unknown) => {
   // Priority 1: inline data
   if (options.comments) {
     return options.comments;
@@ -47,7 +47,7 @@ export const rehypeMrsf = createRehypeMrsf((options: MrsfPluginOptions) => {
   // Priority 2: custom loader function
   if (options.loader) {
     try {
-      return options.loader();
+      return options.loader(options, env);
     } catch {
       return null;
     }

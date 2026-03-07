@@ -56,6 +56,11 @@ features:
     details: "Sidemark for VS Code — gutter icons, inline previews, hover cards, sidebar panel, and automatic reanchoring built right into your editor."
     link: https://marketplace.visualstudio.com/items?itemName=wictor.mrsf-vscode
     linkText: "VS Code Marketplace"
+  - icon: 🧩
+    title: Monaco Plugin
+    details: "Embed Sidemark directly into Monaco-based editors with @mrsf/monaco-mrsf — gutter annotations, inline highlights, hover summaries, and host-driven comment workflows."
+    link: https://www.npmjs.com/package/@mrsf/monaco-mrsf
+    linkText: "@mrsf/monaco-mrsf on npm"
   - icon: 🎨
     title: markdown-it Plugin
     details: "Render review comments as badges, line highlights, and tooltips with @mrsf/markdown-it-mrsf — works with VitePress and any markdown-it project."

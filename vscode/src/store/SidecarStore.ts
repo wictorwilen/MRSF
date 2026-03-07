@@ -6,6 +6,10 @@
  */
 import * as vscode from "vscode";
 import {
+  applyLineShifts,
+  type EditorContentChange,
+} from "@mrsf/monaco-mrsf/browser";
+import {
   type MrsfDocument,
   type Comment,
   type AddCommentOptions,
@@ -32,9 +36,9 @@ import {
   getCurrentCommit,
   isStale,
 } from "@mrsf/cli";
-import { applyLineShifts } from "./LiveLineTracker.js";
 import * as path from "node:path";
 import * as fs from "node:fs";
+import { vscodeChangeToEditorChange } from "../util/positions.js";
 
 interface CacheEntry {
   doc: MrsfDocument;
@@ -199,7 +203,8 @@ export class SidecarStore implements vscode.Disposable {
     const entry = this.cache.get(documentUri.fsPath);
     if (!entry || entry.doc.comments.length === 0) return false;
 
-    const moved = applyLineShifts(entry.doc.comments, changes);
+    const mappedChanges: EditorContentChange[] = changes.map(vscodeChangeToEditorChange);
+    const moved = applyLineShifts(entry.doc.comments, mappedChanges);
     if (moved) {
       this._pendingShifts.add(documentUri.fsPath);
       this._onDidChange.fire(documentUri);

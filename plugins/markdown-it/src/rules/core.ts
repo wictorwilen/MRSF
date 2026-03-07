@@ -13,11 +13,16 @@
 import type Token from "markdown-it/lib/token.mjs";
 import type { Nesting } from "markdown-it/lib/token.mjs";
 import type StateCore from "markdown-it/lib/rules_core/state_core.mjs";
-import type { LineMap, CommentThread } from "../types.js";
+import type { LineMap, CommentThread, SlimComment } from "../types.js";
 
 export interface CoreRuleOptions {
   /** Whether to add mrsf-line-highlight class on commented tokens. Default: false. */
   lineHighlight?: boolean;
+}
+
+export interface ResolvedCommentData {
+  lineMap: LineMap;
+  comments: SlimComment[];
 }
 
 /**
@@ -25,10 +30,14 @@ export interface CoreRuleOptions {
  */
 export function installCoreRule(
   md: { core: { ruler: { push: (name: string, fn: (state: StateCore) => void) => void } } },
-  lineMap: LineMap,
+  resolveComments: (state: StateCore) => ResolvedCommentData | null,
   options: CoreRuleOptions = {},
 ): void {
   md.core.ruler.push("mrsf_inject", (state: StateCore) => {
+    const result = resolveComments(state);
+    if (!result) return;
+
+    const { lineMap } = result;
     const tokens = state.tokens;
     const TokenCtor = state.Token;
     const processed = new Set<number>();

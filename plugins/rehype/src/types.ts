@@ -39,10 +39,23 @@ export interface MrsfPluginOptions {
    * Takes precedence over `sidecarPath` and `documentPath`.
    * Useful for integrations that manage their own sidecar state.
    */
-  loader?: () => MrsfDocument | null;
+  loader?: (options: MrsfPluginOptions, env?: unknown) => MrsfDocument | null;
 
   /** Whether to show resolved comments (default: true). */
   showResolved?: boolean;
+
+  /**
+   * How serialized review data should be embedded into rendered HTML.
+   * - `script`: emits `<script type="application/mrsf+json">` (default)
+   * - `element`: emits a hidden element with JSON in a data attribute
+   */
+  dataContainer?: "script" | "element";
+
+  /**
+   * Element id used when `dataContainer` is set to `element`.
+   * Default: `mrsf-comment-data`.
+   */
+  dataElementId?: string;
 
   /**
    * Enable interactive mode — adds action buttons with `data-mrsf-action`
@@ -112,5 +125,5 @@ export interface CommentThread {
 /** Comments grouped by their anchored source line. */
 export type LineMap = Map<number, CommentThread[]>;
 
-/** A function that loads sidecar data from plugin options. */
-export type CommentLoader = (options: MrsfPluginOptions) => MrsfDocument | null;
+/** A function that loads sidecar data from plugin options and render context. */
+export type CommentLoader = (options: MrsfPluginOptions, env?: unknown) => MrsfDocument | null;

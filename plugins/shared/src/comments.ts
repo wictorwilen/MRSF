@@ -63,10 +63,11 @@ export function groupByLine(comments: SlimComment[]): LineMap {
 export function resolveComments(
   loader: CommentLoader,
   options: MrsfPluginOptions,
+  env?: unknown,
 ): { lineMap: LineMap; comments: SlimComment[] } | null {
   const showResolved = options.showResolved ?? true;
 
-  const doc = loader(options);
+  const doc = loader(options, env);
   if (!doc || !doc.comments || doc.comments.length === 0) {
     return null;
   }

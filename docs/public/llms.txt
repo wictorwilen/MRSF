@@ -20,6 +20,7 @@ Sidemark (formally MRSF — Markdown Review Sidecar Format) is a portable, versi
 |---------|-----|---------|
 | `@mrsf/cli` | https://www.npmjs.com/package/@mrsf/cli | CLI binary + programmatic library |
 | `@mrsf/mcp` | https://www.npmjs.com/package/@mrsf/mcp | Model Context Protocol server for AI agents |
+| `@mrsf/monaco-mrsf` | https://www.npmjs.com/package/@mrsf/monaco-mrsf | Monaco editor integration plugin |
 | `@mrsf/markdown-it-mrsf` | https://www.npmjs.com/package/@mrsf/markdown-it-mrsf | markdown-it rendering plugin |
 | `@mrsf/rehype-mrsf` | https://www.npmjs.com/package/@mrsf/rehype-mrsf | rehype rendering plugin (unified ecosystem) |
 | `mrsf-vscode` | https://marketplace.visualstudio.com/items?itemName=wictor.mrsf-vscode | VS Code extension |
@@ -91,6 +92,7 @@ Common: `author`, `timestamp`, `resolved`, `line`, `end_line`, `start_column`, `
 
 - Specification: https://sidemark.org/specification
 - Guide: https://sidemark.org/guide/
+- Monaco Plugin: https://sidemark.org/guide/monaco
 - CLI Reference: https://sidemark.org/cli/
 - Library API: https://sidemark.org/cli/api
 - MCP Server: https://sidemark.org/mcp/

@@ -92,6 +92,17 @@ If any comments reference a different git commit than HEAD, the status bar shows
 
 All commands are also available from the editor context menu (right-click) on Markdown files.
 
+## Default Keyboard Shortcuts
+
+Sidemark ships with default multi-key shortcuts for adding comments in the editor:
+
+| Action | Windows / Linux | macOS |
+|---|---|---|
+| Add Comment on Selection | `Ctrl+Alt+M`, `Ctrl+I` | `Cmd+Alt+M`, `Cmd+I` |
+| Add Line Comment | `Ctrl+Alt+M`, `Ctrl+L` | `Cmd+Alt+M`, `Cmd+L` |
+
+These are chord shortcuts, so press the first key combination and then the second.
+
 ## Settings
 
 All settings are under the **Sidemark** section in VS Code Settings.

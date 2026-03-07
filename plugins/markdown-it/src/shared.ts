@@ -18,10 +18,14 @@ import { installRendererRules } from "./rules/renderer.js";
  */
 export function createMrsfPlugin(loader: CommentLoader) {
   return function mrsfPlugin(md: MarkdownIt, options: MrsfPluginOptions = {}): void {
-    const result = resolveComments(loader, options);
-    if (!result) return;
-
-    installCoreRule(md, result.lineMap, { lineHighlight: options.lineHighlight ?? false });
-    installRendererRules(md);
+    installCoreRule(
+      md,
+      (state) => resolveComments(loader, options, state.env),
+      { lineHighlight: options.lineHighlight ?? false },
+    );
+    installRendererRules(md, {
+      dataContainer: options.dataContainer,
+      dataElementId: options.dataElementId,
+    });
   };
 }

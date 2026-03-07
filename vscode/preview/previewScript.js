@@ -13,9 +13,56 @@
 
   // ── Constants ──────────────────────────────────────────
   const BADGE_CLASS = "mrsf-badge";
+  const ADD_CLASS = "mrsf-add-button";
   const TOOLTIP_CLASS = "mrsf-tooltip";
   const HIGHLIGHT_CLASS = "mrsf-line-highlight";
+  const ANCHOR_CLASS = "mrsf-preview-anchor";
   const TOOLTIP_VISIBLE_CLASS = "mrsf-tooltip-visible";
+  const EXTENSION_URI_BASE = "vscode://wictor.mrsf-vscode";
+  const GUTTER_CLASS = "mrsf-preview-gutter";
+  const GUTTER_ITEM_CLASS = "mrsf-preview-gutter-item";
+
+  function getPreviewConfig() {
+    const el = document.getElementById("mrsf-comment-data");
+    return {
+      documentUri: el?.getAttribute("data-document-uri") || "",
+      gutterPosition: el?.getAttribute("data-gutter-position") === "left" ? "left" : "right",
+      gutterForInline: el?.getAttribute("data-gutter-for-inline") !== "false",
+      inlineHighlights: el?.getAttribute("data-inline-highlights") !== "false",
+      lineHighlight: el?.getAttribute("data-line-highlight") !== "false",
+    };
+  }
+
+  function buildCommandUri(command, args) {
+    return `command:${command}?${encodeURIComponent(JSON.stringify(args))}`;
+  }
+
+  function buildExtensionUri(path, params) {
+    const url = new URL(`${EXTENSION_URI_BASE}${path}`);
+    for (const [key, value] of Object.entries(params)) {
+      if (value != null && value !== "") {
+        url.searchParams.set(key, String(value));
+      }
+    }
+    return url.toString();
+  }
+
+  function openExtensionUri(path, params) {
+    const anchor = document.createElement("a");
+    anchor.href = buildExtensionUri(path, params);
+    anchor.style.display = "none";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  }
+
+  function revealCommentInSidebar(commentId, previewConfig) {
+    if (!commentId || !previewConfig.documentUri) return;
+    openExtensionUri("/revealComment", {
+      commentId,
+      documentUri: previewConfig.documentUri,
+    });
+  }
 
   // ── Data ───────────────────────────────────────────────
 
@@ -24,14 +71,48 @@
    */
   function getCommentData() {
     const el = document.getElementById("mrsf-comment-data");
-    if (!el) return [];
-    try {
-      // JSON is stored in a data attribute (script tags are stripped by CSP)
-      const raw = el.getAttribute("data-comments") || "";
-      return JSON.parse(raw);
-    } catch {
-      return [];
+    const parseThreads = (raw) => {
+      if (!raw) return [];
+      try {
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.threads)) return [];
+        return parsed.threads.flatMap((thread) => [
+          thread.comment,
+          ...(Array.isArray(thread.replies) ? thread.replies : []),
+        ]);
+      } catch {
+        return [];
+      }
+    };
+
+    const parseFlatComments = (raw) => {
+      if (!raw) return [];
+      try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    };
+
+    if (el) {
+      const flat = parseFlatComments(el.getAttribute("data-comments") || "");
+      if (flat.length > 0) return flat;
+      return parseThreads(el.getAttribute("data-mrsf-json") || "");
     }
+
+    const script = document.querySelector('script[type="application/mrsf+json"]');
+    if (!script) return [];
+    return parseThreads(script.textContent || "");
+  }
+
+  function getScrollTargetLine() {
+    const metaEl = document.getElementById("mrsf-preview-meta");
+    if (!metaEl) return null;
+    const scrollLine = metaEl.getAttribute("data-scroll-to-line");
+    if (!scrollLine) return null;
+    const targetLine = parseInt(scrollLine, 10);
+    return Number.isNaN(targetLine) ? null : targetLine;
   }
 
   /**
@@ -121,6 +202,9 @@
   const INLINE_HIGHLIGHT_CLASS = "mrsf-inline-highlight";
 
   function clearPreviousAnnotations() {
+    document
+      .querySelectorAll(`.${GUTTER_CLASS}`)
+      .forEach((el) => el.remove());
     // Remove table badge anchors first (they contain badges + tooltips)
     document
       .querySelectorAll(".mrsf-table-badge-anchor")
@@ -132,6 +216,12 @@
     document
       .querySelectorAll(`.${HIGHLIGHT_CLASS}`)
       .forEach((el) => el.classList.remove(HIGHLIGHT_CLASS));
+    document
+      .querySelectorAll(`.${ANCHOR_CLASS}`)
+      .forEach((el) => el.classList.remove(ANCHOR_CLASS));
+    document
+      .querySelectorAll(`.${ADD_CLASS}`)
+      .forEach((el) => el.remove());
     // Unwrap inline highlights back to plain text
     document.querySelectorAll(`.${INLINE_HIGHLIGHT_CLASS}`).forEach((mark) => {
       const parent = mark.parentNode;
@@ -141,6 +231,43 @@
       parent.removeChild(mark);
       parent.normalize();
     });
+  }
+
+  function createGutter(lineTargets, previewConfig) {
+    const body = document.body;
+    if (!body) return null;
+
+    const bodyRect = body.getBoundingClientRect();
+    let minLeft = Number.POSITIVE_INFINITY;
+    let maxRight = 0;
+
+    for (const targetEl of lineTargets.values()) {
+      const rect = targetEl.getBoundingClientRect();
+      minLeft = Math.min(minLeft, rect.left - bodyRect.left);
+      maxRight = Math.max(maxRight, rect.right - bodyRect.left);
+    }
+
+    if (!Number.isFinite(minLeft)) {
+      minLeft = 56;
+    }
+
+    const gutter = document.createElement("div");
+    gutter.className = GUTTER_CLASS;
+    gutter.dataset.gutterPosition = previewConfig.gutterPosition;
+
+    if (previewConfig.gutterPosition === "left") {
+      const width = Math.max(36, Math.floor(minLeft) - 8);
+      gutter.style.left = "0px";
+      gutter.style.width = `${width}px`;
+    } else {
+      const left = Math.ceil(maxRight) + 8;
+      const width = Math.max(40, Math.ceil(bodyRect.width - left));
+      gutter.style.left = `${left}px`;
+      gutter.style.width = `${width}px`;
+    }
+
+    body.appendChild(gutter);
+    return { gutter, bodyRect };
   }
 
   /**
@@ -209,10 +336,11 @@
     return null;
   }
 
-  function createBadge(comments, line) {
+  function createBadge(comments, line, previewConfig) {
     const badge = document.createElement("span");
     badge.className = BADGE_CLASS;
     badge.dataset.line = String(line);
+    badge.dataset.gutterPosition = previewConfig.gutterPosition;
 
     const total = comments.reduce(
       (n, c) => n + 1 + (c.replies ? c.replies.length : 0),
@@ -238,7 +366,53 @@
     return badge;
   }
 
-  function createTooltip(comments, line) {
+  function createAddButton(line, previewConfig) {
+    const button = document.createElement("a");
+    button.className = ADD_CLASS;
+    button.href = previewConfig.documentUri
+      ? buildExtensionUri("/addLineComment", {
+        line,
+        documentUri: previewConfig.documentUri,
+      })
+      : "#";
+    button.dataset.line = String(line);
+    button.dataset.gutterPosition = previewConfig.gutterPosition;
+    button.title = `Add comment on line ${line}`;
+    button.textContent = "+";
+    if (!previewConfig.documentUri) {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      });
+    }
+    return button;
+  }
+
+  function placeGutterElement(targetEl, element, previewConfig, gutterState) {
+    if (!gutterState) return;
+
+    const item = document.createElement("div");
+    item.className = GUTTER_ITEM_CLASS;
+    item.dataset.gutterPosition = previewConfig.gutterPosition;
+
+    const targetRect = targetEl.getBoundingClientRect();
+    item.style.top = `${Math.round(targetRect.top - gutterState.bodyRect.top)}px`;
+
+    if (previewConfig.gutterPosition === "left") {
+      item.style.right = "8px";
+    } else {
+      item.style.left = "8px";
+    }
+
+    if (element instanceof Element) {
+      element.dataset.gutterPosition = previewConfig.gutterPosition;
+    }
+
+    item.appendChild(element);
+    gutterState.gutter.appendChild(item);
+  }
+
+  function createTooltip(comments, line, previewConfig) {
     const tooltip = document.createElement("div");
     tooltip.className = TOOLTIP_CLASS;
     tooltip.dataset.line = String(line);
@@ -248,14 +422,14 @@
       thread.className = "mrsf-thread";
 
       // Root comment
-      thread.appendChild(createCommentEl(c));
+      thread.appendChild(createCommentEl(c, false, previewConfig));
 
       // Replies
       if (c.replies && c.replies.length > 0) {
         const repliesContainer = document.createElement("div");
         repliesContainer.className = "mrsf-replies";
         for (const r of c.replies) {
-          repliesContainer.appendChild(createCommentEl(r, true));
+          repliesContainer.appendChild(createCommentEl(r, true, previewConfig));
         }
         thread.appendChild(repliesContainer);
       }
@@ -266,11 +440,20 @@
     return tooltip;
   }
 
-  function createCommentEl(comment, isReply) {
+  function createCommentEl(comment, isReply, previewConfig) {
     const el = document.createElement("div");
     el.className = "mrsf-comment" + (isReply ? " mrsf-reply" : "");
+    el.dataset.commentId = comment.id;
     if (comment.resolved) {
       el.classList.add("mrsf-resolved");
+    }
+
+    if (previewConfig.documentUri) {
+      el.style.cursor = "pointer";
+      el.addEventListener("click", (event) => {
+        event.stopPropagation();
+        revealCommentInSidebar(comment.id, previewConfig);
+      });
     }
 
     // Header: author + date + severity/type badges
@@ -344,6 +527,28 @@
     clearPreviousAnnotations();
 
     const comments = getCommentData();
+    const previewConfig = getPreviewConfig();
+    const commentedLines = new Set((comments || []).filter((comment) => !comment.reply_to && comment.line != null).map((comment) => comment.line));
+
+    const lineTargets = new Map();
+    document.querySelectorAll("[data-line]").forEach((element) => {
+      const line0 = parseInt(element.getAttribute("data-line"), 10);
+      if (Number.isNaN(line0)) return;
+      const line = line0 + 1;
+      if (!lineTargets.has(line)) {
+        lineTargets.set(line, element);
+      }
+    });
+
+    const gutterState = createGutter(lineTargets, previewConfig);
+
+    for (const [line, targetEl] of lineTargets.entries()) {
+      if (commentedLines.has(line)) continue;
+      targetEl.classList.add(ANCHOR_CLASS);
+      const addButton = createAddButton(line, previewConfig);
+      placeGutterElement(targetEl, addButton, previewConfig, gutterState);
+    }
+
     if (!comments || comments.length === 0) return;
 
     const lineMap = groupByLine(comments);
@@ -352,19 +557,36 @@
       const targetEl = findElementForLine(line);
       if (!targetEl) continue;
 
-      // Add highlight class
-      targetEl.classList.add(HIGHLIGHT_CLASS);
+      const allInlineComments = groupedComments.length > 0
+        && groupedComments.every((comment) => !!comment.selected_text);
+
+      const shouldShowInlineHighlights = previewConfig.inlineHighlights;
+      const shouldShowBadge = previewConfig.gutterForInline || !allInlineComments || !shouldShowInlineHighlights;
+
+      if (shouldShowBadge) {
+        targetEl.classList.add(ANCHOR_CLASS);
+      }
+
+      if (previewConfig.lineHighlight) {
+        targetEl.classList.add(HIGHLIGHT_CLASS);
+      }
 
       // Highlight inline (selected_text) comments within the element
-      for (const c of groupedComments) {
-        if (c.selected_text) {
-          highlightTextInElement(targetEl, c.selected_text, c.id);
+      if (shouldShowInlineHighlights) {
+        for (const c of groupedComments) {
+          if (c.selected_text) {
+            highlightTextInElement(targetEl, c.selected_text, c.id);
+          }
         }
       }
 
+      if (!shouldShowBadge) {
+        continue;
+      }
+
       // Create and position badge
-      const badge = createBadge(groupedComments, line);
-      const tooltip = createTooltip(groupedComments, line);
+      const badge = createBadge(groupedComments, line, previewConfig);
+      const tooltip = createTooltip(groupedComments, line, previewConfig);
 
       // Attach tooltip toggle
       badge.addEventListener("click", (e) => {
@@ -376,42 +598,16 @@
             if (el !== tooltip) el.classList.remove(TOOLTIP_VISIBLE_CLASS);
           });
         tooltip.classList.toggle(TOOLTIP_VISIBLE_CLASS);
+        revealCommentInSidebar(groupedComments[0]?.id, previewConfig);
       });
 
       // ── Place badge + tooltip ──────────────────────────────
-      // We need to handle table elements specially because
-      // <tr>/<td>/<th> do not support position: relative and
-      // injecting children into them breaks the table layout.
-      const isTableEl = /^(TR|TD|TH|THEAD|TBODY|TABLE)$/.test(targetEl.tagName);
-
-      if (isTableEl) {
-        // Find the parent <table> and make it the positioning context
-        const table = targetEl.closest("table");
-        if (table) {
-          if (!table.style.position || table.style.position === "static") {
-            table.style.position = "relative";
-          }
-          // Create an absolutely-positioned anchor relative to the table,
-          // placed at the target row's vertical offset.
-          const anchor = document.createElement("div");
-          anchor.className = "mrsf-table-badge-anchor";
-          // Calculate the row's offset relative to the table
-          const tableRect = table.getBoundingClientRect();
-          const rowRect = targetEl.getBoundingClientRect();
-          anchor.style.top = (rowRect.top - tableRect.top) + "px";
-          anchor.style.left = "-4px";
-          anchor.style.transform = "translateX(-100%)";
-
-          anchor.appendChild(badge);
-          anchor.appendChild(tooltip);
-          table.appendChild(anchor);
-        }
-      } else {
-        // Normal block element — badge is absolutely positioned via CSS
-        // relative to the highlighted element.
-        targetEl.appendChild(badge);
-        targetEl.appendChild(tooltip);
-      }
+      placeGutterElement(targetEl, (() => {
+        const wrapper = document.createElement("div");
+        wrapper.appendChild(badge);
+        wrapper.appendChild(tooltip);
+        return wrapper;
+      })(), previewConfig, gutterState);
     }
 
     // Close tooltips when clicking outside
@@ -450,30 +646,25 @@
             if (el !== tooltip) el.classList.remove(TOOLTIP_VISIBLE_CLASS);
           });
         tooltip.classList.toggle(TOOLTIP_VISIBLE_CLASS);
+        revealCommentInSidebar(commentId, previewConfig);
       });
     });
 
     // ── Scroll-to-line (sidebar "Go to" in fullscreen preview) ───
-    const dataEl = document.getElementById("mrsf-comment-data");
-    if (dataEl) {
-      const scrollLine = dataEl.getAttribute("data-scroll-to-line");
-      if (scrollLine) {
-        const targetLine = parseInt(scrollLine, 10);
-        if (!isNaN(targetLine)) {
-          const el = findElementForLine(targetLine);
-          if (el) {
-            // Use requestAnimationFrame to ensure layout is settled
-            requestAnimationFrame(() => {
-              el.scrollIntoView({ behavior: "smooth", block: "center" });
-              // Brief flash to draw attention
-              el.style.transition = "background-color 0.3s ease";
-              el.style.backgroundColor = "rgba(255, 200, 0, 0.25)";
-              setTimeout(() => {
-                el.style.backgroundColor = "";
-              }, 1500);
-            });
-          }
-        }
+    const targetLine = getScrollTargetLine();
+    if (targetLine != null) {
+      const el = findElementForLine(targetLine);
+      if (el) {
+        // Use requestAnimationFrame to ensure layout is settled
+        requestAnimationFrame(() => {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          // Brief flash to draw attention
+          el.style.transition = "background-color 0.3s ease";
+          el.style.backgroundColor = "rgba(255, 200, 0, 0.25)";
+          setTimeout(() => {
+            el.style.backgroundColor = "";
+          }, 1500);
+        });
       }
     }
   }
@@ -486,14 +677,4 @@
   } else {
     render();
   }
-
-  // VS Code re-renders the preview HTML when content/settings change.
-  // We use a MutationObserver to detect when the body content is replaced.
-  const observer = new MutationObserver(() => {
-    // Debounce slightly to let VS Code finish updating
-    clearTimeout(observer._timer);
-    observer._timer = setTimeout(render, 100);
-  });
-
-  observer.observe(document.body, { childList: true, subtree: false });
 })();

@@ -2,7 +2,7 @@
   "name": "mrsf-vscode",
   "displayName": "Sidemark – MRSF Review Comments",
   "description": "Display, create, and manage Markdown Review Sidecar Format (MRSF) comments directly in VS Code",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "publisher": "wictor",
   "license": "MIT",
   "author": "Wictor Wilén (https://github.com/wictorwilen)",
@@ -118,6 +118,20 @@
         }
       ]
     },
+    "keybindings": [
+      {
+        "command": "mrsf.addInlineComment",
+        "key": "ctrl+alt+m ctrl+i",
+        "mac": "cmd+alt+m cmd+i",
+        "when": "editorTextFocus && editorHasSelection && resourceLangId == markdown"
+      },
+      {
+        "command": "mrsf.addLineComment",
+        "key": "ctrl+alt+m ctrl+l",
+        "mac": "cmd+alt+m cmd+l",
+        "when": "editorTextFocus && resourceLangId == markdown"
+      }
+    ],
     "viewsContainers": {
       "activitybar": [
         {
@@ -182,6 +196,30 @@
           "type": "boolean",
           "default": true,
           "description": "Show review comment badges and tooltips in the Markdown preview"
+        },
+        "sidemark.previewGutterPosition": {
+          "type": "string",
+          "enum": [
+            "left",
+            "right"
+          ],
+          "default": "left",
+          "description": "Preview badge position: left margin gutter or floated right, mirroring the markdown-it plugin"
+        },
+        "sidemark.previewGutterForInline": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show preview gutter badges for comments that also have inline highlights"
+        },
+        "sidemark.previewInlineHighlights": {
+          "type": "boolean",
+          "default": true,
+          "description": "Render inline text highlights for selected text comments in the preview"
+        },
+        "sidemark.previewLineHighlight": {
+          "type": "boolean",
+          "default": true,
+          "description": "Add background tint on commented lines in the preview"
         }
       }
     }
@@ -194,10 +232,10 @@
     "publish": "vsce publish",
     "prepublishOnly": "npm run build"
   },
-  "dependencies": {
-    "@mrsf/cli": "^0.3.0"
-  },
   "devDependencies": {
+    "@mrsf/cli": "file:../cli",
+    "@mrsf/markdown-it-mrsf": "file:../plugins/markdown-it",
+    "@mrsf/monaco-mrsf": "file:../plugins/monaco",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.13.10",
     "@types/vscode": "^1.85.0",

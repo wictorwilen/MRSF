@@ -25,6 +25,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
   private disposables: vscode.Disposable[] = [];
   private currentDocUri?: vscode.Uri;
   private sortMode: "line" | "date" = "line";
+  private pendingHighlightCommentId?: string;
   private static readonly STATE_KEY = "mrsf.lastDocUri";
 
   constructor(
@@ -163,13 +164,18 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
     // Ensure the sidebar is visible
     await vscode.commands.executeCommand("mrsf.commentsView.focus");
 
-    // Give the webview a moment to render, then send highlight message
-    setTimeout(() => {
-      this.view?.webview.postMessage({
-        type: "highlightComment",
-        commentId,
-      });
-    }, 100);
+    this.view?.webview.postMessage({
+      type: "highlightComment",
+      commentId,
+    });
+  }
+
+  async revealComment(documentUri: vscode.Uri, commentId: string): Promise<void> {
+    this.currentDocUri = documentUri;
+    this.pendingHighlightCommentId = commentId;
+    this.persistDocUri();
+    await vscode.commands.executeCommand("mrsf.commentsView.focus");
+    await this.refresh();
   }
 
   private async handleMessage(msg: WebviewMessage): Promise<void> {
@@ -219,7 +225,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
         await vscode.commands.executeCommand("mrsf.addLineComment", undefined, this.currentDocUri);
         break;
       case "addComment":
-        await vscode.commands.executeCommand("mrsf.addLineComment", undefined, this.currentDocUri);
+        await this.addCommentFromSidebar();
         break;
       case "reanchor":
         await vscode.commands.executeCommand("mrsf.reanchor", this.currentDocUri);
@@ -238,6 +244,28 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
         break;
       }
     }
+  }
+
+  private async addCommentFromSidebar(): Promise<void> {
+    if (!this.currentDocUri) return;
+
+    const selectedEditor = vscode.window.visibleTextEditors.find(
+      (editor) =>
+        editor.document.languageId === "markdown"
+        && editor.document.uri.toString() === this.currentDocUri?.toString()
+        && !editor.selection.isEmpty,
+    );
+
+    if (selectedEditor) {
+      await vscode.window.showTextDocument(selectedEditor.document, {
+        viewColumn: selectedEditor.viewColumn,
+        preserveFocus: false,
+      });
+      await vscode.commands.executeCommand("mrsf.addInlineComment", this.currentDocUri);
+      return;
+    }
+
+    await vscode.commands.executeCommand("mrsf.addLineComment", undefined, this.currentDocUri);
   }
 
   private async navigateToComment(commentId: string): Promise<void> {
@@ -330,6 +358,10 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
     const dateActive = this.sortMode === "date" ? " active" : "";
     const filterIcon = showResolved ? "👁" : "👁‍🗨";
     const filterTitle = showResolved ? "Hide resolved" : "Show resolved";
+    const initialHighlightCommentId = this.pendingHighlightCommentId
+      ? this.esc(this.pendingHighlightCommentId)
+      : "";
+    this.pendingHighlightCommentId = undefined;
 
     return /* html */ `<!DOCTYPE html>
 <html lang="en">
@@ -338,7 +370,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>${this.getStyles()}</style>
 </head>
-<body>
+<body data-highlight-comment-id="${initialHighlightCommentId}">
   <div class="header">
     <span class="summary">${summary.open} open · ${summary.resolved} resolved${summary.orphaned > 0 ? ` · <span class="orphan-count">${summary.orphaned} orphaned</span>` : ""}</span>
     <div class="header-actions">
@@ -692,6 +724,29 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
         vscode.postMessage(msg);
       }
 
+      function highlightCommentThread(commentId) {
+        if (!commentId) {
+          return;
+        }
+
+        document.querySelectorAll('.thread.highlighted').forEach(el => {
+          el.classList.remove('highlighted');
+        });
+
+        const commentEl = document.querySelector('[data-id="' + commentId + '"]');
+        if (!commentEl) {
+          return;
+        }
+
+        const threadEl = commentEl.closest('.thread');
+        if (!threadEl) {
+          return;
+        }
+
+        threadEl.classList.add('highlighted');
+        threadEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+
       function toggleReply(parentId) {
         const el = document.getElementById('reply-' + parentId);
         if (el) {
@@ -720,21 +775,16 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
       window.addEventListener('message', (event) => {
         const msg = event.data;
         if (msg.type === 'highlightComment' && msg.commentId) {
-          // Remove any existing highlights
-          document.querySelectorAll('.thread.highlighted').forEach(el => {
-            el.classList.remove('highlighted');
-          });
-          // Find the comment element and highlight its thread
-          const commentEl = document.querySelector('[data-id="' + msg.commentId + '"]');
-          if (commentEl) {
-            const threadEl = commentEl.closest('.thread');
-            if (threadEl) {
-              threadEl.classList.add('highlighted');
-              threadEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-          }
+          highlightCommentThread(msg.commentId);
         }
       });
+
+      const initialHighlightCommentId = document.body.dataset.highlightCommentId;
+      if (initialHighlightCommentId) {
+        requestAnimationFrame(() => {
+          highlightCommentThread(initialHighlightCommentId);
+        });
+      }
     `;
   }
 

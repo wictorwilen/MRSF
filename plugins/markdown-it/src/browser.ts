@@ -22,14 +22,14 @@ export type { MrsfPluginOptions, SlimComment, CommentThread, LineMap, CommentLoa
  *
  * Supports `comments` (inline data) and `loader` (custom function) options.
  */
-export const mrsfPlugin = createMrsfPlugin((options: MrsfPluginOptions) => {
+export const mrsfPlugin = createMrsfPlugin((options: MrsfPluginOptions, env?: unknown) => {
   if (options.comments) {
     return options.comments;
   }
 
   if (options.loader) {
     try {
-      return options.loader();
+      return options.loader(options, env);
     } catch {
       return null;
     }

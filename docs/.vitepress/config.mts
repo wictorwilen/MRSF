@@ -124,6 +124,7 @@ export default withMermaid(defineConfig({
             { text: "Examples", link: "/guide/examples" },
             { text: "Agent Skill", link: "/guide/agent-skill" },
             { text: "Python CLI & SDK", link: "/guide/python" },
+            { text: "Monaco Plugin", link: "/guide/monaco" },
             { text: "markdown-it Plugin", link: "/guide/markdown-it" },
             { text: "rehype Plugin", link: "/guide/rehype" },
             { text: "CI/CD Integration", link: "/guide/ci-integration" },

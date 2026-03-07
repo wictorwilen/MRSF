@@ -4,6 +4,51 @@
  */
 import * as vscode from "vscode";
 import type { Comment } from "@mrsf/cli";
+import {
+  commentToEditorRange,
+  selectionToAnchor,
+  isInlineComment as isInlineCommentShared,
+  isDocumentLevelComment as isDocumentLevelCommentShared,
+  type DocumentGeometry,
+  type EditorContentChange,
+  type EditorRange,
+} from "@mrsf/monaco-mrsf/browser";
+
+export function toDocumentGeometry(document: vscode.TextDocument): DocumentGeometry {
+  return {
+    lineCount: document.lineCount,
+    getLineLength(lineIndex: number): number {
+      return document.lineAt(lineIndex).text.length;
+    },
+  };
+}
+
+export function editorRangeToVscodeRange(range: EditorRange): vscode.Range {
+  return new vscode.Range(
+    range.start.lineIndex,
+    range.start.column,
+    range.end.lineIndex,
+    range.end.column,
+  );
+}
+
+export function vscodeChangeToEditorChange(
+  change: vscode.TextDocumentContentChangeEvent,
+): EditorContentChange {
+  return {
+    range: {
+      start: {
+        lineIndex: change.range.start.line,
+        column: change.range.start.character,
+      },
+      end: {
+        lineIndex: change.range.end.line,
+        column: change.range.end.character,
+      },
+    },
+    text: change.text,
+  };
+}
 
 /**
  * Convert an MRSF comment's anchor to a VS Code Range.
@@ -17,46 +62,9 @@ export function mrsfToVscodeRange(
   comment: Comment,
   document?: vscode.TextDocument,
 ): vscode.Range | undefined {
-  if (comment.line == null) {
-    return undefined; // document-level comment
-  }
-
-  const startLine = comment.line - 1; // MRSF 1-based → VS Code 0-based
-
-  // Guard: line must be non-negative and within document bounds
-  if (startLine < 0) return undefined;
-  if (document && startLine >= document.lineCount) return undefined;
-
-  if (comment.start_column != null && comment.end_column != null) {
-    // Column-span (inline) comment
-    let endLine =
-      comment.end_line != null ? comment.end_line - 1 : startLine;
-    if (document) endLine = Math.min(endLine, document.lineCount - 1);
-    return new vscode.Range(
-      startLine,
-      comment.start_column,
-      endLine,
-      comment.end_column,
-    );
-  }
-
-  if (comment.end_line != null) {
-    // Multi-line range comment without columns — span full lines
-    let endLine = comment.end_line - 1;
-    if (document) {
-      endLine = Math.min(endLine, document.lineCount - 1);
-    }
-    const endChar = document
-      ? document.lineAt(endLine).text.length
-      : Number.MAX_SAFE_INTEGER;
-    return new vscode.Range(startLine, 0, endLine, endChar);
-  }
-
-  // Single-line comment — full line range
-  const endChar = document
-    ? document.lineAt(startLine).text.length
-    : Number.MAX_SAFE_INTEGER;
-  return new vscode.Range(startLine, 0, startLine, endChar);
+  const geometry = document ? toDocumentGeometry(document) : undefined;
+  const range = commentToEditorRange(comment, geometry);
+  return range ? editorRangeToVscodeRange(range) : undefined;
 }
 
 /**
@@ -68,46 +76,30 @@ export function vscodeSelectionToMrsf(selection: vscode.Selection): {
   start_column?: number;
   end_column?: number;
 } {
-  // Normalize so start <= end regardless of selection direction
-  const start = selection.start;
-  const end = selection.end;
-
-  const line = start.line + 1; // VS Code 0-based → MRSF 1-based
-
-  if (start.line === end.line && start.character === end.character) {
-    // Cursor, no selection — line comment only
-    return { line };
-  }
-
-  const result: {
-    line: number;
-    end_line?: number;
-    start_column?: number;
-    end_column?: number;
-  } = { line };
-
-  if (start.line !== end.line) {
-    result.end_line = end.line + 1;
-  }
-
-  result.start_column = start.character; // both 0-based
-  result.end_column = end.character;
-
-  return result;
+  return selectionToAnchor({
+    start: {
+      lineIndex: selection.start.line,
+      column: selection.start.character,
+    },
+    end: {
+      lineIndex: selection.end.line,
+      column: selection.end.character,
+    },
+  });
 }
 
 /**
  * Check if a comment has column-level anchoring (inline/text-specific).
  */
 export function isInlineComment(comment: Comment): boolean {
-  return comment.start_column != null && comment.end_column != null;
+  return isInlineCommentShared(comment);
 }
 
 /**
  * Check if a comment is a document-level comment (no positioning).
  */
 export function isDocumentLevelComment(comment: Comment): boolean {
-  return comment.line == null && comment.selected_text == null;
+  return isDocumentLevelCommentShared(comment);
 }
 
 /**

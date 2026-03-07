@@ -129,3 +129,4 @@ Each step is **machine-readable**. The agent never modifies the Markdown directl
 - [Specification](/specification) — the full MRSF v1.0 spec
 - [Examples](./examples) — worked examples for every re-anchoring strategy
 - [Python CLI & SDK](./python) — same CLI and library in Python
+- [Monaco Plugin](./monaco) — embed Sidemark in Monaco-based editors

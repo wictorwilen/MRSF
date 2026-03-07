@@ -10,15 +10,7 @@
 import * as vscode from "vscode";
 import type { Comment } from "@mrsf/cli";
 import type { SidecarStore } from "../store/SidecarStore.js";
-import { mrsfToVscodeRange } from "../util/positions.js";
-
-interface LineGroup {
-  line: number; // 0-based
-  comments: Comment[];
-  hasOpen: boolean;
-  hasOrphaned: boolean;
-  allResolved: boolean;
-}
+import { buildReviewSnapshot, toCommentMap } from "../util/reviewSnapshot.js";
 
 export class GutterDecorationProvider implements vscode.Disposable {
   private openDecoration: vscode.TextEditorDecorationType;
@@ -95,22 +87,37 @@ export class GutterDecorationProvider implements vscode.Disposable {
       return;
     }
 
-    // Group comments by line
-    const lineGroups = this.groupByLine(doc.comments, editor, showResolved);
+    const snapshot = buildReviewSnapshot(editor.document, doc, showResolved);
+    const commentsById = toCommentMap(doc);
 
     const openRanges: vscode.DecorationOptions[] = [];
     const resolvedRanges: vscode.DecorationOptions[] = [];
     const orphanedRanges: vscode.DecorationOptions[] = [];
     const multipleRanges: vscode.DecorationOptions[] = [];
 
-    const allComments = doc.comments;
-    for (const group of lineGroups.values()) {
+    for (const mark of snapshot.gutterMarks) {
+      const lineIndex = mark.line - 1;
+      const lineThreads = snapshot.threadsByLine.find((entry) => entry.line === mark.line);
+      if (!lineThreads) continue;
+
+      const threadComments = lineThreads.threads.flatMap((thread) =>
+        thread.commentIds
+          .map((commentId) => commentsById.get(commentId))
+          .filter((comment): comment is Comment => !!comment),
+      );
+      const rootComments = lineThreads.threads
+        .map((thread) => commentsById.get(thread.rootCommentId))
+        .filter((comment): comment is Comment => !!comment);
+      const hasOrphaned = rootComments.some(
+        (comment) => (comment as Record<string, unknown>).x_reanchor_status === "orphaned",
+      );
+
       // Use full-line range so hover triggers anywhere on the line text
-      const lineLen = editor.document.lineAt(group.line).text.length;
-      const range = new vscode.Range(group.line, 0, group.line, Math.max(lineLen, 1));
+      const lineLen = editor.document.lineAt(lineIndex).text.length;
+      const range = new vscode.Range(lineIndex, 0, lineIndex, Math.max(lineLen, 1));
 
       // Build a compact inline preview shown after the line text
-      const preview = this.buildPreviewText(group);
+      const preview = this.buildPreviewText(rootComments, threadComments, hasOrphaned);
 
       const decoOption: vscode.DecorationOptions = {
         range,
@@ -124,14 +131,14 @@ export class GutterDecorationProvider implements vscode.Disposable {
         },
       };
 
-      if (group.comments.length > 1) {
+      if (mark.threadCount > 1) {
         multipleRanges.push(decoOption);
-      } else if (group.hasOrphaned) {
+      } else if (hasOrphaned) {
         orphanedRanges.push(decoOption);
-      } else if (group.hasOpen) {
-        openRanges.push(decoOption);
-      } else if (group.allResolved) {
+      } else if (mark.resolvedState === "resolved") {
         resolvedRanges.push(decoOption);
+      } else {
+        openRanges.push(decoOption);
       }
     }
 
@@ -141,60 +148,22 @@ export class GutterDecorationProvider implements vscode.Disposable {
     editor.setDecorations(this.multipleDecoration, multipleRanges);
   }
 
-  private groupByLine(
-    comments: Comment[],
-    editor: vscode.TextEditor,
-    showResolved: boolean,
-  ): Map<number, LineGroup> {
-    const groups = new Map<number, LineGroup>();
-
-    for (const comment of comments) {
-      if (!showResolved && comment.resolved) continue;
-      if (comment.reply_to) continue; // Replies inherit parent's line
-
-      const range = mrsfToVscodeRange(comment, editor.document);
-      if (!range) continue; // Document-level comment
-
-      const lineNum = range.start.line;
-      let group = groups.get(lineNum);
-      if (!group) {
-        group = {
-          line: lineNum,
-          comments: [],
-          hasOpen: false,
-          hasOrphaned: false,
-          allResolved: true,
-        };
-        groups.set(lineNum, group);
-      }
-
-      group.comments.push(comment);
-      if (!comment.resolved) {
-        group.hasOpen = true;
-        group.allResolved = false;
-      }
-      if (
-        (comment as Record<string, unknown>).x_reanchor_status === "orphaned"
-      ) {
-        group.hasOrphaned = true;
-      }
-    }
-
-    return groups;
-  }
-
   /**
    * Build a compact inline preview string for a line group.
    * Shown as faded text after the line content (like GitLens blame).
    */
-  private buildPreviewText(group: LineGroup): string {
-    if (group.comments.length > 1) {
-      const unresolved = group.comments.filter((c) => !c.resolved).length;
+  private buildPreviewText(
+    rootComments: Comment[],
+    threadComments: Comment[],
+    hasOrphaned: boolean,
+  ): string {
+    if (rootComments.length > 1) {
+      const unresolved = rootComments.filter((comment) => !comment.resolved).length;
       return unresolved > 0
-        ? `  💬 ${group.comments.length} comments (${unresolved} open)`
-        : `  ✅ ${group.comments.length} comments (all resolved)`;
+        ? `  💬 ${threadComments.length} comments (${unresolved} open)`
+        : `  ✅ ${threadComments.length} comments (all resolved)`;
     }
-    const comment = group.comments[0];
+    const comment = rootComments[0];
     const author = comment.author.split(" ")[0]; // first name only
     const maxLen = 60;
     const text =
@@ -202,9 +171,7 @@ export class GutterDecorationProvider implements vscode.Disposable {
         ? comment.text.substring(0, maxLen) + "…"
         : comment.text;
 
-    if (
-      (comment as Record<string, unknown>).x_reanchor_status === "orphaned"
-    ) {
+    if (hasOrphaned) {
       return `  ⚠️ orphaned — ${author}: ${text}`;
     }
     const icon = comment.resolved ? "✅" : "💬";

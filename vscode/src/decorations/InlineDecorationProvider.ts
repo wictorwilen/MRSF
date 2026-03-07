@@ -9,7 +9,8 @@
  */
 import * as vscode from "vscode";
 import type { SidecarStore } from "../store/SidecarStore.js";
-import { mrsfToVscodeRange, isInlineComment } from "../util/positions.js";
+import { editorRangeToVscodeRange } from "../util/positions.js";
+import { buildReviewSnapshot, toCommentMap } from "../util/reviewSnapshot.js";
 
 export class InlineDecorationProvider implements vscode.Disposable {
   private openDecoration: vscode.TextEditorDecorationType;
@@ -79,26 +80,26 @@ export class InlineDecorationProvider implements vscode.Disposable {
       return;
     }
 
+    const snapshot = buildReviewSnapshot(editor.document, doc, showResolved);
+    const commentsById = toCommentMap(doc);
+
     const openRanges: vscode.DecorationOptions[] = [];
     const resolvedRanges: vscode.DecorationOptions[] = [];
     const orphanedRanges: vscode.DecorationOptions[] = [];
 
-    for (const comment of doc.comments) {
-      if (comment.reply_to) continue; // Replies inherit parent anchor
-      if (!isInlineComment(comment)) continue; // Only inline/column-span
-      if (!showResolved && comment.resolved) continue;
-
-      const range = mrsfToVscodeRange(comment, editor.document);
-      if (!range) continue;
-
-      const decoOption: vscode.DecorationOptions = { range };
+    for (const inline of snapshot.inlineRanges) {
+      const comment = commentsById.get(inline.commentId);
+      if (!comment) continue;
+      const decoOption: vscode.DecorationOptions = {
+        range: editorRangeToVscodeRange(inline.range),
+      };
 
       const isOrphaned =
         (comment as Record<string, unknown>).x_reanchor_status === "orphaned";
 
       if (isOrphaned) {
         orphanedRanges.push(decoOption);
-      } else if (comment.resolved) {
+      } else if (inline.resolved) {
         resolvedRanges.push(decoOption);
       } else {
         openRanges.push(decoOption);

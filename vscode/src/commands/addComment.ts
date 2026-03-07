@@ -40,23 +40,94 @@ async function getAuthor(): Promise<string | undefined> {
   return author;
 }
 
+function toUri(uriArg?: vscode.Uri | string | { fsPath?: string; path?: string }): vscode.Uri | undefined {
+  if (!uriArg) return undefined;
+  if (uriArg instanceof vscode.Uri) return uriArg;
+  if (typeof uriArg === "string") {
+    try {
+      return uriArg.includes("://") ? vscode.Uri.parse(uriArg) : vscode.Uri.file(uriArg);
+    } catch {
+      return undefined;
+    }
+  }
+  if (typeof uriArg === "object") {
+    if (typeof uriArg.fsPath === "string") return vscode.Uri.file(uriArg.fsPath);
+    if (typeof uriArg.path === "string") return vscode.Uri.file(uriArg.path);
+  }
+  return undefined;
+}
+
+function findMarkdownEditor(
+  docUri?: vscode.Uri,
+  requireSelection = false,
+): vscode.TextEditor | undefined {
+  const matches = (editor: vscode.TextEditor): boolean => {
+    if (editor.document.languageId !== "markdown") return false;
+    if (docUri && editor.document.uri.toString() !== docUri.toString()) return false;
+    if (requireSelection && editor.selection.isEmpty) return false;
+    return true;
+  };
+
+  const active = vscode.window.activeTextEditor;
+  if (active && matches(active)) return active;
+
+  return vscode.window.visibleTextEditors.find(matches);
+}
+
+function normalizeLineCommandArgs(
+  lineArg?: unknown,
+  uriArg?: unknown,
+): { lineArg?: number; uriArg?: vscode.Uri | string | { fsPath?: string; path?: string } } {
+  if (Array.isArray(lineArg)) {
+    const [line, uri] = lineArg;
+    return {
+      lineArg: typeof line === "number" ? line : typeof line === "string" ? parseInt(line, 10) : undefined,
+      uriArg: uri as vscode.Uri | string | { fsPath?: string; path?: string } | undefined,
+    };
+  }
+
+  if (lineArg && typeof lineArg === "object" && !(lineArg instanceof vscode.Uri)) {
+    const value = lineArg as { line?: unknown; uri?: unknown; documentUri?: unknown };
+    const line = value.line;
+    return {
+      lineArg: typeof line === "number" ? line : typeof line === "string" ? parseInt(line, 10) : undefined,
+      uriArg: (value.uri ?? value.documentUri) as vscode.Uri | string | { fsPath?: string; path?: string } | undefined,
+    };
+  }
+
+  return {
+    lineArg: typeof lineArg === "number" ? lineArg : typeof lineArg === "string" ? parseInt(lineArg, 10) : undefined,
+    uriArg: uriArg as vscode.Uri | string | { fsPath?: string; path?: string } | undefined,
+  };
+}
+
+function normalizeInlineCommandArg(
+  uriArg?: unknown,
+): vscode.Uri | string | { fsPath?: string; path?: string } | undefined {
+  if (Array.isArray(uriArg)) {
+    return uriArg[0] as vscode.Uri | string | { fsPath?: string; path?: string } | undefined;
+  }
+
+  if (uriArg && typeof uriArg === "object" && !(uriArg instanceof vscode.Uri)) {
+    const value = uriArg as { uri?: unknown; documentUri?: unknown; fsPath?: string; path?: string };
+    return (value.uri ?? value.documentUri ?? value) as vscode.Uri | string | { fsPath?: string; path?: string };
+  }
+
+  return uriArg as vscode.Uri | string | { fsPath?: string; path?: string } | undefined;
+}
+
 export function registerAddLineComment(store: SidecarStore): vscode.Disposable {
   return vscode.commands.registerCommand(
     "mrsf.addLineComment",
-    async (lineArg?: number, uriArg?: vscode.Uri) => {
-      let editor = vscode.window.activeTextEditor;
-
-      // Fallback: when a preview is focused, find a visible markdown editor
-      if (!editor || editor.document.languageId !== "markdown") {
-        editor = vscode.window.visibleTextEditors.find(
-          (e) => e.document.languageId === "markdown",
-        ) as vscode.TextEditor | undefined;
-      }
+    async (lineArg?: unknown, uriArg?: unknown) => {
+      const normalized = normalizeLineCommandArgs(lineArg, uriArg);
+      const requestedUri = toUri(normalized.uriArg);
+      let editor = findMarkdownEditor(requestedUri, false);
 
       // Determine the target URI and line
       const docUri = editor?.document.languageId === "markdown"
         ? editor.document.uri
-        : uriArg;
+        : requestedUri;
 
       if (!docUri) {
         vscode.window.showWarningMessage(
@@ -65,7 +136,7 @@ export function registerAddLineComment(store: SidecarStore): vscode.Disposable {
         return;
       }
 
-      let line = lineArg;
+      let line = normalized.lineArg;
       if (line == null && editor && editor.document.uri.toString() === docUri.toString()) {
         line = editor.selection.active.line + 1; // 1-based
       }
@@ -128,16 +199,9 @@ export function registerAddInlineComment(
 ): vscode.Disposable {
   return vscode.commands.registerCommand(
     "mrsf.addInlineComment",
-    async () => {
-      let editor = vscode.window.activeTextEditor;
-
-      // Fallback: find a visible markdown editor with a selection
-      if (!editor || editor.document.languageId !== "markdown") {
-        editor = vscode.window.visibleTextEditors.find(
-          (e) =>
-            e.document.languageId === "markdown" && !e.selection.isEmpty,
-        ) as vscode.TextEditor | undefined;
-      }
+    async (uriArg?: unknown) => {
+      const requestedUri = toUri(normalizeInlineCommandArg(uriArg));
+      const editor = findMarkdownEditor(requestedUri, true);
 
       if (!editor || editor.document.languageId !== "markdown") {
         vscode.window.showWarningMessage(
