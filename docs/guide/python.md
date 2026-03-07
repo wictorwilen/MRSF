@@ -86,9 +86,24 @@ opts = mrsf.AddCommentOptions(
 )
 new_comment = mrsf.add_comment(doc, opts)
 
+# Add a comment with tool-specific x_* metadata
+bot_opts = mrsf.AddCommentOptions(
+    author="review-bot",
+    text="Needs a second pass",
+    line=12,
+    extensions={
+        "x_source": "review-bot",
+        "x_score": 0.91,
+        "x_labels": ["needs-review", "docs"],
+    },
+)
+mrsf.add_comment(doc, bot_opts)
+
 # Write back (preserves YAML formatting)
 mrsf.write_sidecar("README.md.review.yaml", doc)
 ```
+
+`AddCommentOptions` accepts an optional `extensions` map. Keys must start with `x_`, and values are persisted as flat `x_*` fields on the comment.
 
 ### Validation
 

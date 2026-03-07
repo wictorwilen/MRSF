@@ -78,6 +78,19 @@ opts = mrsf.AddCommentOptions(
 )
 new_comment = mrsf.add_comment(doc, opts)
 
+# Add a comment with tool-specific x_* metadata
+bot_opts = mrsf.AddCommentOptions(
+    author="review-bot",
+    text="Needs a second pass",
+    line=12,
+    extensions={
+        "x_source": "review-bot",
+        "x_score": 0.91,
+        "x_labels": ["needs-review", "docs"],
+    },
+)
+mrsf.add_comment(doc, bot_opts)
+
 # Write back (preserves YAML formatting)
 mrsf.write_sidecar("README.md.review.yaml", doc)
 
@@ -131,6 +144,8 @@ matches = mrsf.fuzzy_search("search text", ["line 1", "line 2", "line 3"])
 | `filter_comments(comments, filter)` | Filter by status/author/type/severity |
 | `get_threads(comments)` | Group into reply threads |
 | `summarize(comments)` | Aggregate statistics |
+
+`AddCommentOptions` accepts an optional `extensions` map. Keys must start with `x_`, and entries are written back to the sidecar as flat `x_*` fields on the comment.
 
 ### Validation
 

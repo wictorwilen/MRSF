@@ -32,6 +32,40 @@ ANCHOR_FIELDS = [
 ]
 
 
+def _is_plain_object(value: object) -> bool:
+    return isinstance(value, dict)
+
+
+def _is_comment_extension_value(value: object) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, bool | str):
+        return True
+    if isinstance(value, int | float):
+        return value == value and value not in (float("inf"), float("-inf"))
+    if isinstance(value, list):
+        return all(_is_comment_extension_value(item) for item in value)
+    if _is_plain_object(value):
+        return all(isinstance(key, str) and _is_comment_extension_value(item) for key, item in value.items())
+    return False
+
+
+def normalize_comment_extensions(extensions: dict[str, object] | None = None) -> dict[str, object]:
+    if not extensions:
+        return {}
+
+    normalized: dict[str, object] = {}
+    for key, value in extensions.items():
+        if not key.startswith("x_"):
+            raise ValueError(f"Comment extension key '{key}' must start with 'x_'.")
+        if not _is_comment_extension_value(value):
+            raise ValueError(
+                f"Comment extension '{key}' must be JSON-serializable (null, boolean, finite number, string, array, or plain object)."
+            )
+        normalized[key] = value
+    return normalized
+
+
 def add_comment(
     doc: MrsfDocument,
     opts: AddCommentOptions,
@@ -72,6 +106,8 @@ def add_comment(
         comment.selected_text_hash = compute_hash(opts.selected_text)
     if commit:
         comment.commit = commit
+
+    comment.extra.update(normalize_comment_extensions(opts.extensions))
 
     doc.comments.append(comment)
     return comment

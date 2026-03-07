@@ -171,6 +171,20 @@ function valueType(v: unknown): string {
   return valueToSource(v).startsWith('"') ? "double-quoted-scalar" : "scalar";
 }
 
+function isStructuredValue(value: unknown): boolean {
+  if (value == null) return false;
+  if (Array.isArray(value)) return true;
+  return typeof value === "object" && !(value instanceof Date);
+}
+
+function hasStructuredCommentExtensions(doc: MrsfDocument): boolean {
+  return doc.comments.some((comment) =>
+    Object.entries(comment).some(([key, value]) =>
+      !COMMENT_KEY_ORDER.includes(key) && value !== undefined && isStructuredValue(value),
+    ),
+  );
+}
+
 /* ·· CST node construction ············································ */
 
 const NL = "\n";
@@ -424,17 +438,24 @@ async function writeSidecarInternal(
 ): Promise<void> {
   const isJson = abs.endsWith(".review.json");
 
+  for (const comment of doc.comments) syncHash(comment);
+
   if (isJson) {
-    // For JSON, always sync hashes and write fresh
-    for (const comment of doc.comments) syncHash(comment);
+    // For JSON, always write fresh
     await atomicWriteFile(abs, toJson(doc));
+    return;
+  }
+
+  // The CST patcher only supports scalar map values. Fall back to full YAML
+  // serialisation when comment extensions include arrays or objects.
+  if (hasStructuredCommentExtensions(doc)) {
+    await atomicWriteFile(abs, toYaml(doc));
     return;
   }
 
   // ── YAML round-trip path ──────────────────────────────────────────
 
   if (!existsSync(abs)) {
-    for (const comment of doc.comments) syncHash(comment);
     await atomicWriteFile(abs, toYaml(doc));
     return;
   }

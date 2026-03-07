@@ -82,6 +82,15 @@ mrsf add docs/api.md \
   --author "alice" \
   --text "Good catch, fixed in abc123" \
   --reply-to 3eeccbd3
+
+# Attach tool-specific x_* metadata
+mrsf add docs/api.md \
+  --author "bot" \
+  --text "Flagging this for follow-up" \
+  --line 27 \
+  --ext x_source=triage-bot \
+  --ext x_score=0.91 \
+  --ext 'x_labels=["needs-review","docs"]'
 ```
 
 | Option | Description |
@@ -96,6 +105,9 @@ mrsf add docs/api.md \
 | `--severity <level>` | Importance: `low`, `medium`, `high` |
 | `--reply-to <id>` | Reply to an existing comment by ID |
 | `--selected-text <text>` | Override auto-detected selected text |
+| `--ext <key=value>` | Add an `x_*` extension field; repeat for multiple fields |
+
+`--ext` values are stored as flat `x_*` fields in the sidecar. Primitive JSON literals like numbers, `true`, `false`, and `null` are parsed automatically, and objects/arrays can be passed as JSON.
 
 ---
 

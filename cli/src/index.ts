@@ -9,6 +9,8 @@
 export type {
   MrsfDocument,
   Comment,
+  CommentExtensions,
+  CommentExtensionValue,
   MrsfConfig,
   DiagnosticSeverity,
   ValidationDiagnostic,
@@ -94,6 +96,7 @@ export {
 // Comments
 export {
   addComment,
+  normalizeCommentExtensions,
   populateSelectedText,
   resolveComment,
   unresolveComment,

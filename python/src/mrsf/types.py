@@ -254,6 +254,7 @@ class AddCommentOptions:
     selected_text: str | None = None
     id: str | None = None
     timestamp: str | None = None
+    extensions: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

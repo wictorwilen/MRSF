@@ -862,6 +862,34 @@ comments:
     const result = await readFile(fp, "utf-8");
     expect(result).toBe(original);
   });
+
+  it("preserves structured x_-prefixed fields when writing", async () => {
+    const fp = path.join(tmpDir, "structured-ext.review.yaml");
+    const doc: MrsfDocument = {
+      mrsf_version: "1.0",
+      document: "test.md",
+      comments: [
+        {
+          id: "c-001",
+          author: "Alice",
+          timestamp: "2026-01-01T00:00:00Z",
+          text: "Fix this",
+          resolved: false,
+          x_labels: ["one", "two"],
+          x_meta: { source: "writer", score: 0.9 },
+        },
+      ],
+    };
+
+    await writeSidecar(fp, doc);
+    const result = await readFile(fp, "utf-8");
+    expect(result).toContain("x_labels:");
+    expect(result).toContain("- one");
+    expect(result).toContain("- two");
+    expect(result).toContain("x_meta:");
+    expect(result).toContain("source: writer");
+    expect(result).toContain("score: 0.9");
+  });
 });
 
 /* ================================================================ */

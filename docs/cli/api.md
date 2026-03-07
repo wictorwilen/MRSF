@@ -190,6 +190,23 @@ Read a sidecar file, re-anchor all comments against the current document, write 
 
 Add a new comment to a sidecar file. Creates the sidecar if it doesn't exist.
 
+`AddCommentOptions` accepts an optional `extensions` map for tool-specific metadata. Keys must start with `x_`, for example:
+
+```ts
+await addComment(doc, {
+  author: "review-bot",
+  text: "Needs a second pass",
+  line: 12,
+  extensions: {
+    x_source: "review-bot",
+    x_score: 0.91,
+    x_labels: ["needs-review", "docs"],
+  },
+});
+```
+
+Extension entries are flattened onto the persisted comment as standard MRSF `x_*` fields.
+
 ### `populateSelectedText(comment: Comment, lines: string[]): Comment`
 
 Fill in `selected_text` from the document lines based on the comment's line/column anchors.

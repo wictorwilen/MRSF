@@ -64,6 +64,46 @@ describe("addComment", () => {
     expect(c.severity).toBe("medium");
   });
 
+  it("applies x_* extensions from the dedicated map", async () => {
+    const doc = makeDoc();
+    const c = await addComment(doc, {
+      author: "Frank",
+      text: "With extensions",
+      extensions: {
+        x_source: "sdk",
+        x_meta: { reviewed: true, tags: ["api", "docs"] },
+      },
+    });
+
+    expect(c.x_source).toBe("sdk");
+    expect(c.x_meta).toEqual({ reviewed: true, tags: ["api", "docs"] });
+  });
+
+  it("rejects extension keys that do not start with x_", async () => {
+    const doc = makeDoc();
+
+    await expect(addComment(doc, {
+      author: "Grace",
+      text: "Invalid extension",
+      extensions: { extension1: "high" } as any,
+    })).rejects.toThrow(/must start with 'x_'/i);
+
+    await expect(addComment(doc, {
+      author: "Grace",
+      text: "Invalid extension",
+      extensions: { y_flag: true } as any,
+    })).rejects.toThrow(/must start with 'x_'/i);
+  });
+
+  it("rejects non-serializable extension values", async () => {
+    const doc = makeDoc();
+    await expect(addComment(doc, {
+      author: "Heidi",
+      text: "Invalid extension value",
+      extensions: { x_handler: (() => "nope") as any },
+    })).rejects.toThrow(/JSON-serializable/i);
+  });
+
   it("auto-detects commit from HEAD when repoRoot is provided", async () => {
     const doc = makeDoc();
     const repoRoot = await findRepoRoot();

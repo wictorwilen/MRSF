@@ -7,6 +7,8 @@ import type {
   AddCommentOptions,
   Comment,
   CommentFilter,
+  CommentExtensions,
+  CommentExtensionValue,
   MrsfDocument,
 } from "./types.js";
 import { computeHash } from "./writer.js";
@@ -15,6 +17,61 @@ import { getCurrentCommit, findRepoRoot, isGitAvailable } from "./git.js";
 // ---------------------------------------------------------------------------
 // Add
 // ---------------------------------------------------------------------------
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== "object") return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function isCommentExtensionValue(value: unknown): value is CommentExtensionValue {
+  if (value == null) return true;
+
+  switch (typeof value) {
+    case "boolean":
+    case "string":
+      return true;
+    case "number":
+      return Number.isFinite(value);
+    case "object": {
+      if (Array.isArray(value)) {
+        return value.every((item) => isCommentExtensionValue(item));
+      }
+
+      if (!isPlainObject(value)) {
+        return false;
+      }
+
+      return Object.values(value).every((item) => isCommentExtensionValue(item));
+    }
+    default:
+      return false;
+  }
+}
+
+export function normalizeCommentExtensions(
+  extensions?: Record<string, unknown>,
+): CommentExtensions {
+  if (!extensions) return {} as CommentExtensions;
+
+  const normalizedEntries: Array<[`x_${string}`, CommentExtensionValue]> = [];
+
+  for (const [key, value] of Object.entries(extensions)) {
+    if (!key.startsWith("x_")) {
+      throw new Error(`Comment extension key '${key}' must start with 'x_'.`);
+    }
+
+    if (!isCommentExtensionValue(value)) {
+      throw new Error(
+        `Comment extension '${key}' must be JSON-serializable (null, boolean, finite number, string, array, or plain object).`,
+      );
+    }
+
+    normalizedEntries.push([key as `x_${string}`, value]);
+  }
+
+  return Object.fromEntries(normalizedEntries) as CommentExtensions;
+}
 
 /**
  * Add a new comment to a document. Mutates doc.comments in place.
@@ -51,6 +108,8 @@ export async function addComment(
   if (opts.severity) comment.severity = opts.severity;
   if (opts.reply_to) comment.reply_to = opts.reply_to;
   if (commit) comment.commit = commit;
+
+  Object.assign(comment, normalizeCommentExtensions(opts.extensions));
 
   doc.comments.push(comment);
   return comment;

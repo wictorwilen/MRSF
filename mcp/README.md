@@ -140,6 +140,7 @@ Add a review comment to a Sidemark (MRSF) sidecar.
 | `type` | string | | Comment type: suggestion, issue, question, accuracy, style, clarity |
 | `severity` | `"low"` \| `"medium"` \| `"high"` | | Severity level |
 | `reply_to` | string | | Parent comment ID for threading |
+| `extensions` | object | | Tool-specific `x_*` extension fields; keys must start with `x_` |
 | `cwd` | string | | Working directory |
 
 #### `mrsf_add_batch`
@@ -149,7 +150,7 @@ Add multiple review comments to a Sidemark (MRSF) sidecar in one atomic write.
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `document` | string | ✔ | Path to the Markdown document |
-| `comments` | object[] | ✔ | Array of comments: each needs `text` and `author`, optional `line`, `end_line`, `start_column`, `end_column`, `type`, `severity`, `reply_to` |
+| `comments` | object[] | ✔ | Array of comments: each needs `text` and `author`, optional `line`, `end_line`, `start_column`, `end_column`, `type`, `severity`, `reply_to`, `extensions` |
 | `cwd` | string | | Working directory |
 
 #### `mrsf_update`
@@ -167,7 +168,10 @@ Update fields of an existing comment by ID (only provided fields are changed).
 | `end_line` | number | | New ending line number (inclusive) |
 | `start_column` | number | | New starting column (0-based) |
 | `end_column` | number | | New ending column |
+| `extensions` | object | | Merge tool-specific `x_*` fields into the comment |
 | `cwd` | string | | Working directory |
+
+`extensions` values are stored on disk as flat `x_*` fields on the comment, not as a nested object.
 
 #### `mrsf_resolve`
 

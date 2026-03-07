@@ -1,5 +1,7 @@
 """Tests for comments CRUD module — 1:1 match with comments.test.ts."""
 
+import pytest
+
 from mrsf.comments import (
     add_comment,
     filter_comments,
@@ -70,6 +72,56 @@ class TestAddComment:
         assert c.end_line == 12
         assert c.type == "suggestion"
         assert c.severity == "medium"
+
+    def test_applies_x_extensions_from_the_dedicated_map(self):
+        doc = make_doc()
+        c = add_comment(
+            doc,
+            AddCommentOptions(
+                author="Frank",
+                text="With extensions",
+                extensions={
+                    "x_source": "python",
+                    "x_meta": {"reviewed": True, "tags": ["api", "docs"]},
+                },
+            ),
+        )
+        assert c.extra["x_source"] == "python"
+        assert c.extra["x_meta"] == {"reviewed": True, "tags": ["api", "docs"]}
+
+    def test_rejects_extension_keys_that_do_not_start_with_x(self):
+        doc = make_doc()
+        with pytest.raises(ValueError, match="must start with 'x_'"):
+            add_comment(
+                doc,
+                AddCommentOptions(
+                    author="Grace",
+                    text="Invalid extension",
+                    extensions={"extension1": "high"},
+                ),
+            )
+
+        with pytest.raises(ValueError, match="must start with 'x_'"):
+            add_comment(
+                doc,
+                AddCommentOptions(
+                    author="Grace",
+                    text="Invalid extension",
+                    extensions={"y_flag": True},
+                ),
+            )
+
+    def test_rejects_non_serializable_extension_values(self):
+        doc = make_doc()
+        with pytest.raises(ValueError, match="JSON-serializable"):
+            add_comment(
+                doc,
+                AddCommentOptions(
+                    author="Heidi",
+                    text="Invalid extension value",
+                    extensions={"x_handler": object()},
+                ),
+            )
 
 
 # ---------------------------------------------------------------------------

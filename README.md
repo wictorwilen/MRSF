@@ -80,6 +80,18 @@ mrsf reanchor
 mrsf status
 ```
 
+You can also attach tool-specific extension fields when creating comments. The public SDKs and MCP server accept these as key/value maps, and they are stored on disk as flat `x_*` fields:
+
+```bash
+mrsf add docs/architecture.md \
+  --author "review-bot" \
+  --text "Needs a second pass" \
+  --line 12 \
+  --ext x_source=review-bot \
+  --ext x_score=0.91 \
+  --ext 'x_labels=["needs-review","docs"]'
+```
+
 See the full CLI documentation in [`cli/README.md`](cli/README.md), or run `mrsf --help`.
 
 ## 📦 Examples
@@ -167,6 +179,21 @@ for comment in doc.comments:
     print(f"{comment.author}: {comment.text}")
 
 result = mrsf.validate(doc)
+```
+
+Python uses the same explicit extension-map contract when adding comments:
+
+```python
+opts = mrsf.AddCommentOptions(
+  author="review-bot",
+  text="Needs a second pass",
+  line=12,
+  extensions={
+    "x_source": "review-bot",
+    "x_score": 0.91,
+    "x_labels": ["needs-review", "docs"],
+  },
+)
 ```
 
 See [`python/README.md`](python/README.md) for the full SDK reference.

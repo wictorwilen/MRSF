@@ -22,6 +22,8 @@ The skill lives at [`examples/mrsf-review/SKILL.md`](https://github.com/wictorwi
 
 Each comment is anchored to a specific line with a category (`accuracy`, `clarity`, `suggestion`, `style`, `issue`, `question`) and severity (`low`, `medium`, `high`).
 
+If an agent needs to attach tool-specific metadata, the MCP tools also support an explicit `extensions` object whose keys must start with `x_`. Those entries are stored on disk as flat `x_*` fields on the comment.
+
 ## Installation
 
 Copy the skill folder into your project:

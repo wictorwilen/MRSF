@@ -43,6 +43,16 @@ export interface Comment {
   [key: string]: unknown;
 }
 
+export type CommentExtensionValue =
+  | null
+  | boolean
+  | number
+  | string
+  | CommentExtensionValue[]
+  | { [key: string]: CommentExtensionValue };
+
+export type CommentExtensions = Record<`x_${string}`, CommentExtensionValue>;
+
 // ---------------------------------------------------------------------------
 // Configuration (.mrsf.yaml)
 // ---------------------------------------------------------------------------
@@ -156,6 +166,8 @@ export interface AddCommentOptions {
   id?: string;
   /** Override auto-generated timestamp. */
   timestamp?: string;
+  /** Tool-specific extension fields keyed by x_*. */
+  extensions?: CommentExtensions;
 }
 
 export interface CommentFilter {

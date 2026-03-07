@@ -274,6 +274,69 @@ describe("mrsf_add", () => {
     expect(parsed.status).toBe("added");
     expect(parsed.sidecarPath).toContain("test.md.review.yaml");
   });
+
+  it("adds comment extensions from the dedicated map", async () => {
+    await resetFixture();
+    const result = await client.callTool({
+      name: "mrsf_add",
+      arguments: {
+        document: "test.md",
+        text: "Comment with extensions",
+        author: "Test",
+        line: 1,
+        extensions: {
+          x_source: "mcp",
+          x_rank: 2,
+        },
+        cwd: tmpDir,
+      },
+    });
+    expect(result.isError).not.toBe(true);
+
+    const listResult = await client.callTool({
+      name: "mrsf_list",
+      arguments: { files: ["test.md.review.yaml"], cwd: tmpDir },
+    });
+    const listText = (listResult.content as Array<{ text: string }>)[0].text;
+    const comments = JSON.parse(listText)[0].comments;
+    const added = comments.find((c: { text: string }) => c.text === "Comment with extensions");
+    expect(added.x_source).toBe("mcp");
+    expect(added.x_rank).toBe(2);
+  });
+
+  it("rejects extension keys that do not start with x_", async () => {
+    await resetFixture();
+
+    const noPrefix = await client.callTool({
+      name: "mrsf_add",
+      arguments: {
+        document: "test.md",
+        text: "Comment with invalid extension",
+        author: "Test",
+        line: 1,
+        extensions: {
+          extension1: "bad",
+        },
+        cwd: tmpDir,
+      },
+    });
+    expect(noPrefix.isError).toBe(true);
+
+    const wrongPrefix = await client.callTool({
+      name: "mrsf_add",
+      arguments: {
+        document: "test.md",
+        text: "Comment with invalid extension",
+        author: "Test",
+        line: 1,
+        extensions: {
+          y_flag: true,
+        },
+        cwd: tmpDir,
+      },
+    });
+    expect(wrongPrefix.isError).toBe(true);
+  });
 });
 
 describe("mrsf_add_batch", () => {
@@ -306,6 +369,36 @@ describe("mrsf_add_batch", () => {
     const listParsed = JSON.parse(listText);
     // Original 3 + 3 batch = 6
     expect(listParsed[0].comments).toHaveLength(6);
+  });
+
+  it("applies extensions to batched comments", async () => {
+    await resetFixture();
+    const result = await client.callTool({
+      name: "mrsf_add_batch",
+      arguments: {
+        document: "test.md",
+        comments: [
+          {
+            text: "Batch with extensions",
+            author: "Alice",
+            line: 1,
+            extensions: { x_source: "batch", x_labels: ["one", "two"] },
+          },
+        ],
+        cwd: tmpDir,
+      },
+    });
+    expect(result.isError).not.toBe(true);
+
+    const listResult = await client.callTool({
+      name: "mrsf_list",
+      arguments: { files: ["test.md.review.yaml"], cwd: tmpDir },
+    });
+    const listText = (listResult.content as Array<{ text: string }>)[0].text;
+    const comments = JSON.parse(listText)[0].comments;
+    const added = comments.find((c: { text: string }) => c.text === "Batch with extensions");
+    expect(added.x_source).toBe("batch");
+    expect(added.x_labels).toEqual(["one", "two"]);
   });
 
   it("parallel mrsf_add calls are serialised (no lost writes)", async () => {
@@ -477,6 +570,35 @@ describe("mrsf_update", () => {
     const parsed = JSON.parse(text);
     expect(parsed.updated).toContain("severity");
     expect(parsed.updated).toContain("type");
+  });
+
+  it("merges extensions into an existing comment", async () => {
+    const result = await client.callTool({
+      name: "mrsf_update",
+      arguments: {
+        document: "test.md.review.yaml",
+        id: "c-parent",
+        extensions: {
+          x_source: "updated",
+          x_flags: ["fresh"],
+        },
+        cwd: tmpDir,
+      },
+    });
+    const text = (result.content as Array<{ text: string }>)[0].text;
+    const parsed = JSON.parse(text);
+    expect(parsed.updated).toContain("x_source");
+    expect(parsed.updated).toContain("x_flags");
+
+    const listResult = await client.callTool({
+      name: "mrsf_list",
+      arguments: { files: ["test.md.review.yaml"], cwd: tmpDir },
+    });
+    const listText = (listResult.content as Array<{ text: string }>)[0].text;
+    const comments = JSON.parse(listText)[0].comments;
+    const updated = comments.find((c: { id: string }) => c.id === "c-parent");
+    expect(updated.x_source).toBe("updated");
+    expect(updated.x_flags).toEqual(["fresh"]);
   });
 
   it("returns error for non-existent comment", async () => {

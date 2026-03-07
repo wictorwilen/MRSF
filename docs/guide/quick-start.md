@@ -42,6 +42,18 @@ mrsf add docs/architecture.md -l 12 "This section needs more detail."
 
 This adds an anchored comment at line 12, automatically capturing the `selected_text` and current git commit.
 
+You can attach tool-specific metadata with repeatable `--ext key=value` flags. These values are persisted as flat `x_*` fields on the comment:
+
+```bash
+mrsf add docs/architecture.md \
+	--author "review-bot" \
+	--text "Needs a second pass" \
+	--line 12 \
+	--ext x_source=review-bot \
+	--ext x_score=0.91 \
+	--ext 'x_labels=["needs-review","docs"]'
+```
+
 ## Validate
 
 ```bash

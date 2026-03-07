@@ -41,6 +41,7 @@ import {
 
   // Comments
   addComment,
+  normalizeCommentExtensions,
   populateSelectedText,
   resolveComment,
   unresolveComment,
@@ -99,6 +100,24 @@ export function createMrsfServer(): McpServer {
 // ---------------------------------------------------------------------------
 
 const _fileLocks = new Map<string, Promise<void>>();
+
+const commentExtensionsInputSchema = z.record(
+  z.string().regex(/^x_/u, "Extension keys must start with x_."),
+  z.unknown(),
+).describe("Tool-specific extension fields keyed by x_*");
+
+const addCommentInputSchema = {
+  text: z.string().describe("Comment text"),
+  author: z.string().describe("Author identifier (e.g. 'Name (handle)')"),
+  line: z.number().int().min(1).optional().describe("Starting line number (1-based)"),
+  end_line: z.number().int().min(1).optional().describe("Ending line number (inclusive)"),
+  start_column: z.number().int().min(0).optional().describe("Starting column (0-based)"),
+  end_column: z.number().int().min(0).optional().describe("Ending column"),
+  type: z.string().optional().describe("Comment type: suggestion, issue, question, accuracy, style, clarity"),
+  severity: z.enum(["low", "medium", "high"]).optional().describe("Severity level"),
+  reply_to: z.string().optional().describe("Parent comment ID for threading"),
+  extensions: commentExtensionsInputSchema.optional(),
+} as const;
 
 /**
  * Run `fn` while holding an exclusive lock for `filePath`.
@@ -284,19 +303,11 @@ function registerTools(server: McpServer): void {
         "document and the current git commit.",
       inputSchema: {
         document: z.string().describe("Path to the Markdown document"),
-        text: z.string().describe("Comment text"),
-        author: z.string().describe("Author identifier (e.g. 'Name (handle)')"),
-        line: z.number().int().min(1).optional().describe("Starting line number (1-based)"),
-        end_line: z.number().int().min(1).optional().describe("Ending line number (inclusive)"),
-        start_column: z.number().int().min(0).optional().describe("Starting column (0-based)"),
-        end_column: z.number().int().min(0).optional().describe("Ending column"),
-        type: z.string().optional().describe("Comment type: suggestion, issue, question, accuracy, style, clarity"),
-        severity: z.enum(["low", "medium", "high"]).optional().describe("Severity level"),
-        reply_to: z.string().optional().describe("Parent comment ID for threading"),
+        ...addCommentInputSchema,
         cwd: z.string().optional().describe("Working directory"),
       },
     },
-    async ({ document, text, author, line, end_line, start_column, end_column, type, severity, reply_to, cwd }) => {
+    async ({ document, text, author, line, end_line, start_column, end_column, type, severity, reply_to, extensions, cwd }) => {
       try {
         const workDir = cwd ?? process.cwd();
         const docPath = path.resolve(workDir, document);
@@ -329,6 +340,7 @@ function registerTools(server: McpServer): void {
           type,
           severity,
           reply_to,
+          extensions: normalizeCommentExtensions(extensions),
         }, repoRoot ?? undefined);
 
         // Populate selected_text from document content
@@ -376,17 +388,7 @@ function registerTools(server: McpServer): void {
         "avoid race conditions when adding comments in parallel.",
       inputSchema: {
         document: z.string().describe("Path to the Markdown document"),
-        comments: z.array(z.object({
-          text: z.string().describe("Comment text"),
-          author: z.string().describe("Author identifier (e.g. 'Name (handle)')"),
-          line: z.number().int().min(1).optional().describe("Starting line number (1-based)"),
-          end_line: z.number().int().min(1).optional().describe("Ending line number (inclusive)"),
-          start_column: z.number().int().min(0).optional().describe("Starting column (0-based)"),
-          end_column: z.number().int().min(0).optional().describe("Ending column"),
-          type: z.string().optional().describe("Comment type: suggestion, issue, question, accuracy, style, clarity"),
-          severity: z.enum(["low", "medium", "high"]).optional().describe("Severity level"),
-          reply_to: z.string().optional().describe("Parent comment ID for threading"),
-        })).describe("Array of comments to add"),
+        comments: z.array(z.object(addCommentInputSchema)).describe("Array of comments to add"),
         cwd: z.string().optional().describe("Working directory"),
       },
     },
@@ -433,6 +435,7 @@ function registerTools(server: McpServer): void {
             type: c.type,
             severity: c.severity,
             reply_to: c.reply_to,
+            extensions: normalizeCommentExtensions(c.extensions),
           }, repoRoot ?? undefined);
 
           if (comment.line != null && docLines) {
@@ -481,10 +484,11 @@ function registerTools(server: McpServer): void {
         end_line: z.number().int().min(1).optional().describe("New ending line number (inclusive)"),
         start_column: z.number().int().min(0).optional().describe("New starting column (0-based)"),
         end_column: z.number().int().min(0).optional().describe("New ending column"),
+        extensions: commentExtensionsInputSchema.optional(),
         cwd: z.string().optional().describe("Working directory"),
       },
     },
-    async ({ document, id, text, type: commentType, severity, line, end_line, start_column, end_column, cwd }) => {
+    async ({ document, id, text, type: commentType, severity, line, end_line, start_column, end_column, extensions, cwd }) => {
       try {
         const workDir = cwd ?? process.cwd();
         const [sp] = await resolveSidecarPaths([document], workDir);
@@ -508,6 +512,11 @@ function registerTools(server: McpServer): void {
         if (end_line !== undefined) { comment.end_line = end_line; updated.push("end_line"); }
         if (start_column !== undefined) { comment.start_column = start_column; updated.push("start_column"); }
         if (end_column !== undefined) { comment.end_column = end_column; updated.push("end_column"); }
+        if (extensions !== undefined) {
+          const normalizedExtensions = normalizeCommentExtensions(extensions);
+          Object.assign(comment, normalizedExtensions);
+          updated.push(...Object.keys(normalizedExtensions));
+        }
 
         // Re-populate selected_text if anchor changed
         if (comment.line != null && (updated.includes("line") || updated.includes("end_line"))) {
