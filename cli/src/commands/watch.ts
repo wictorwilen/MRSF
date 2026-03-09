@@ -354,6 +354,8 @@ export function registerWatch(program: Command): void {
 
       // ── Graceful shutdown ────────────────────────────────
       async function shutdown(): Promise<void> {
+        cleanupSignalHandlers();
+
         // Clear pending debounce timers
         for (const t of timers.values()) clearTimeout(t);
         timers.clear();
@@ -374,8 +376,21 @@ export function registerWatch(program: Command): void {
         process.exit(totalErrors > 0 ? 1 : 0);
       }
 
-      process.on("SIGINT", () => void shutdown());
-      process.on("SIGTERM", () => void shutdown());
+      const onSigint = (): void => {
+        void shutdown();
+      };
+      const onSigterm = (): void => {
+        void shutdown();
+      };
+
+      function cleanupSignalHandlers(): void {
+        process.off("SIGINT", onSigint);
+        process.off("SIGTERM", onSigterm);
+      }
+
+      process.on("SIGINT", onSigint);
+      process.on("SIGTERM", onSigterm);
+      watcher.once("close", cleanupSignalHandlers);
 
       // Keep the process alive
       await new Promise<void>(() => {

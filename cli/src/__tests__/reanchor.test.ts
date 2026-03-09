@@ -3,7 +3,13 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
-import { reanchorComment, applyReanchorResults, reanchorDocument, reanchorFile } from "../lib/reanchor.js";
+import {
+  reanchorComment,
+  applyReanchorResults,
+  reanchorDocument,
+  reanchorDocumentText,
+  reanchorFile,
+} from "../lib/reanchor.js";
 import type { Comment, DiffHunk, MrsfDocument, ReanchorResult } from "../lib/types.js";
 import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import path from "node:path";
@@ -239,6 +245,51 @@ describe("reanchorComment — diff shift (line-only, no selected_text)", () => {
     expect(result.status).toBe("shifted");
     expect(result.newLine).toBe(2);
   });
+
+  it("matches a shifted single-line column slice via diff", () => {
+    const lines = lines1("inserted", "Hello World");
+    const comment = makeComment({
+      line: 1,
+      start_column: 6,
+      end_column: 11,
+      selected_text: "World",
+    });
+    const hunks: DiffHunk[] = [
+      { oldStart: 0, oldCount: 0, newStart: 1, newCount: 1, lines: ["+inserted"] },
+    ];
+
+    const result = reanchorComment(comment, lines, { diffHunks: hunks });
+
+    expect(result.status).toBe("shifted");
+    expect(result.newLine).toBe(2);
+    expect(result.reason).toContain("Diff shifted by +1 line");
+  });
+
+  it("matches a shifted multi-line selection with start/end columns via diff", () => {
+    const lines = lines1(
+      "inserted",
+      "Hello World",
+      "middle line",
+      "end text here",
+    );
+    const comment = makeComment({
+      line: 1,
+      end_line: 3,
+      start_column: 6,
+      end_column: 3,
+      selected_text: "World\nmiddle line\nend",
+    });
+    const hunks: DiffHunk[] = [
+      { oldStart: 0, oldCount: 0, newStart: 1, newCount: 1, lines: ["+inserted"] },
+    ];
+
+    const result = reanchorComment(comment, lines, { diffHunks: hunks });
+
+    expect(result.status).toBe("shifted");
+    expect(result.newLine).toBe(2);
+    expect(result.newEndLine).toBe(4);
+    expect(result.reason).toContain("Diff shifted by +1 line");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -306,8 +357,26 @@ describe("reanchorComment — line/column fallback", () => {
     });
     const result = reanchorComment(comment, lines);
     // Should find fuzzy match at line 2
-    expect(["fuzzy", "anchored"]).toContain(result.status);
+    expect(result.status).toBe("fuzzy");
     expect(result.newLine).toBe(2);
+  });
+
+  it("uses single-line fuzzy matching before plain line fallback", () => {
+    const lines = lines1(
+      "header",
+      "The rough revised sentence that should still resemble the candidate after edits.",
+      "footer",
+    );
+    const comment = makeComment({
+      selected_text: "The precise original sentence that should only weakly resemble the candidate after edits.",
+      line: 2,
+    });
+
+    const result = reanchorComment(comment, lines, { commitIsStale: true });
+
+    expect(result.status).toBe("fuzzy");
+    expect(result.newLine).toBe(2);
+    expect(result.reason).toContain("Line-fallback with fuzzy text match");
   });
 
   it("returns ambiguous for stale commit with text mismatch at line", () => {
@@ -373,19 +442,16 @@ describe("reanchorComment — line/column fallback", () => {
   });
 
   it("falls to pure line fallback when text at line differs (Step 2)", () => {
-    // fuzzySearch([lineText], ...) on a 0-based single-element array returns empty,
-    // so this always falls through to the pure line fallback
     const lines = lines1(
       "unrelated header line",
-      "hello earth foo bar qux",
+      "completely different content",
       "another unrelated line",
     );
     const comment = makeComment({
-      selected_text: "hello world foo bar baz",
+      selected_text: "a very different string with no meaningful overlap at all",
       line: 2,
     });
     const result = reanchorComment(comment, lines);
-    // Falls to pure line fallback (non-stale → anchored with score 0.8)
     expect(result.status).toBe("anchored");
     expect(result.score).toBe(0.8);
     expect(result.newLine).toBe(2);
@@ -398,38 +464,37 @@ describe("reanchorComment — line/column fallback", () => {
 // ---------------------------------------------------------------------------
 
 describe("reanchorComment — low-threshold fuzzy", () => {
-  it("finds single low-threshold fuzzy match (Step 3, needle >= 200 chars)", () => {
-    // Use a needle >= 200 chars to avoid substring matching (which creates multiple candidates)
+  it("finds single low-threshold fuzzy match (Step 3)", () => {
     const needle =
-      "alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo lima mike " +
-      "november oscar papa quebec romeo sierra tango uniform victor whiskey xray yankee zulu";
+      "The precise original sentence that should only weakly resemble the candidate after edits. " +
+      "The precise original sentence that should only weakly resemble the candidate after edits. " +
+      "The precise original sentence that should only weakly resemble the candidate after edits.";
     const matchLine =
-      "alpha bravo XXXXX delta echo XXXXX golf hotel india juliet kilo lima mike " +
-      "november oscar papa quebec romeo XXXXX tango uniform victor whiskey xray yankee zulu";
-    const lines = lines1(
-      "totally unrelated line",
-      matchLine,
-      "another unrelated line",
-    );
+      "The rough revised sentence that should still resemble the candidate after edits. " +
+      "The rough revised sentence that should still resemble the candidate after edits. " +
+      "The rough revised sentence that should still resemble the candidate after edits.";
+    const lines = lines1(matchLine);
     const comment = makeComment({
       selected_text: needle,
       line: 999, // out of bounds → skip Step 2
     });
     const result = reanchorComment(comment, lines);
     expect(result.status).toBe("fuzzy");
-    expect(result.newLine).toBe(2);
+    expect(result.newLine).toBe(1);
     expect(result.score).toBeGreaterThanOrEqual(0.6);
-    expect(result.reason).toContain("fuzzy match");
+    expect(result.score).toBeLessThan(0.8);
+    expect(result.reason).toContain("Low-threshold fuzzy match");
   });
 
   it("reports ambiguous when multiple low-confidence matches exist (Step 3)", () => {
-    // Two lines with the same partial match, needle >= 200 chars
     const needle =
-      "alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo lima mike " +
-      "november oscar papa quebec romeo sierra tango uniform victor whiskey xray yankee zulu";
+      "The precise original sentence that should only weakly resemble the candidate after edits. " +
+      "The precise original sentence that should only weakly resemble the candidate after edits. " +
+      "The precise original sentence that should only weakly resemble the candidate after edits.";
     const matchLine =
-      "alpha bravo XXXXX delta echo XXXXX golf hotel india juliet kilo lima mike " +
-      "november oscar papa quebec romeo XXXXX tango uniform victor whiskey xray yankee zulu";
+      "The rough revised sentence that should still resemble the candidate after edits. " +
+      "The rough revised sentence that should still resemble the candidate after edits. " +
+      "The rough revised sentence that should still resemble the candidate after edits.";
     const lines = lines1(
       matchLine,
       "something completely different goes here to separate",
@@ -440,7 +505,10 @@ describe("reanchorComment — low-threshold fuzzy", () => {
       line: 999, // out of bounds
     });
     const result = reanchorComment(comment, lines, { threshold: 0.5 });
-    expect(["ambiguous", "fuzzy"]).toContain(result.status);
+    expect(result.status).toBe("ambiguous");
+    expect(result.score).toBeGreaterThanOrEqual(0.5);
+    expect(result.score).toBeLessThan(0.8);
+    expect(result.reason).toContain("Ambiguous");
   });
 });
 
@@ -549,6 +617,32 @@ describe("applyReanchorResults — updateText", () => {
     expect(changed).toBe(1);
     expect(comment.start_column).toBe(5);
     expect(comment.end_column).toBe(15);
+  });
+
+  it("updates end_line for multi-line anchors", () => {
+    const comment = makeComment({
+      id: "c-range",
+      line: 3,
+      end_line: 4,
+      selected_text: "line three\nline four",
+    });
+    const doc = makeDoc([comment]);
+
+    const results: ReanchorResult[] = [
+      {
+        commentId: "c-range",
+        status: "shifted",
+        score: 1,
+        newLine: 5,
+        newEndLine: 6,
+        reason: "Shifted via diff",
+      },
+    ];
+
+    const changed = applyReanchorResults(doc, results);
+    expect(changed).toBe(1);
+    expect(comment.line).toBe(5);
+    expect(comment.end_line).toBe(6);
   });
 
   it("skips comments not in results", () => {
@@ -808,6 +902,26 @@ describe("reanchorDocument", () => {
     };
     const results = await reanchorDocument(doc, lines1("line1"), { noGit: true });
     expect(results).toHaveLength(0);
+  });
+
+  it("re-anchors document text directly and normalizes CRLF line endings", () => {
+    const doc: MrsfDocument = {
+      mrsf_version: "1.0",
+      document: "test.md",
+      comments: [
+        makeComment({
+          id: "c1",
+          line: 99,
+          selected_text: "second line",
+        }),
+      ],
+    };
+
+    const results = reanchorDocumentText(doc, "first line\r\nsecond line\r\nthird line\r\n");
+
+    expect(results).toHaveLength(1);
+    expect(results[0].status).toBe("anchored");
+    expect(results[0].newLine).toBe(2);
   });
 });
 

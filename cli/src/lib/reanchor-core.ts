@@ -168,15 +168,15 @@ export function reanchorComment(
   }
 
   if (comment.line != null) {
-    const lineIdx = comment.line - 1;
-    if (lineIdx >= 0 && lineIdx < documentLines.length) {
+    const lineIdx = comment.line;
+    if (lineIdx > 0 && lineIdx < documentLines.length) {
       const qualifier = opts.commitIsStale
         ? " (commit is stale — line may have shifted)"
         : "";
 
       if (selectedText) {
         const lineText = documentLines[lineIdx];
-        const candidates = fuzzySearch([lineText], selectedText, DEFAULT_THRESHOLD);
+        const candidates = fuzzySearch(["", lineText], selectedText, DEFAULT_THRESHOLD);
         if (candidates.length > 0) {
           return {
             commentId,

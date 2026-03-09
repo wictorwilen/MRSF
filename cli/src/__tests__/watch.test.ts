@@ -19,6 +19,7 @@ class MockWatcher extends EventEmitter {
   closed = false;
   async close(): Promise<void> {
     this.closed = true;
+    this.emit("close");
   }
 }
 
@@ -95,9 +96,13 @@ async function emitAdd(
 // ── Setup / Teardown ───────────────────────────────────────
 
 let tmpDir: string;
+let consoleLogSpy: ReturnType<typeof vi.spyOn>;
+let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(async () => {
   vi.clearAllMocks();
+  consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+  consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
   // Use a temp dir as cwd so paths resolve
   tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "mrsf-watch-test-"));
@@ -122,6 +127,8 @@ afterEach(async () => {
   if (mockWatcher && !mockWatcher.closed) {
     await mockWatcher.close();
   }
+  consoleLogSpy.mockRestore();
+  consoleErrorSpy.mockRestore();
   await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
 });
 
@@ -273,6 +280,41 @@ describe("watch — markdown change with --reanchor", () => {
 
     await mockWatcher.close();
   });
+
+  it("passes noGit, fromCommit, updateText, and force through to reanchorFile", async () => {
+    const program = makeProgram([]);
+    program.parseAsync([
+      "node",
+      "mrsf",
+      "watch",
+      "--cwd",
+      tmpDir,
+      "-q",
+      "--debounce",
+      "50",
+      "--reanchor",
+      "--no-git",
+      "--from",
+      "abc123",
+      "--update-text",
+      "--force",
+      path.join(tmpDir, "doc.md"),
+    ]);
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    await emitChange(path.join(tmpDir, "doc.md"), 120);
+
+    const [, optsArg] = mockReanchorFile.mock.calls[0];
+    expect(optsArg).toMatchObject({
+      noGit: true,
+      fromCommit: "abc123",
+      updateText: true,
+      force: true,
+    });
+
+    await mockWatcher.close();
+  });
 });
 
 describe("watch — debounce", () => {
@@ -331,6 +373,32 @@ describe("watch — add event", () => {
     await emitAdd(sidecarPath, 120);
 
     expect(mockValidateFile).toHaveBeenCalledWith(sidecarPath);
+
+    await mockWatcher.close();
+  });
+});
+
+describe("watch — ignored files", () => {
+  it("ignores non-markdown, non-sidecar file changes", async () => {
+    const program = makeProgram([]);
+    program.parseAsync([
+      "node",
+      "mrsf",
+      "watch",
+      "--cwd",
+      tmpDir,
+      "-q",
+      "--debounce",
+      "50",
+      path.join(tmpDir, "doc.md"),
+    ]);
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    await emitChange(path.join(tmpDir, "notes.txt"), 120);
+
+    expect(mockValidateFile).not.toHaveBeenCalled();
+    expect(mockReanchorFile).not.toHaveBeenCalled();
 
     await mockWatcher.close();
   });
@@ -417,5 +485,161 @@ describe("watch — no sidecar found", () => {
     expect(mockReanchorFile).not.toHaveBeenCalled();
 
     await mockWatcher.close();
+  });
+});
+
+describe("watch — logging and error paths", () => {
+  it("prints startup and verbose reanchor details when not quiet", async () => {
+    mockReanchorFile.mockResolvedValue({
+      results: [
+        {
+          commentId: "c-1",
+          status: "fuzzy",
+          reason: "Fuzzy match",
+          score: 0.9123,
+          newLine: 2,
+        },
+      ],
+      changed: 1,
+      written: true,
+    });
+
+    const program = makeProgram([]);
+    program.parseAsync([
+      "node",
+      "mrsf",
+      "watch",
+      "--cwd",
+      tmpDir,
+      "-v",
+      "--debounce",
+      "50",
+      "--reanchor",
+      path.join(tmpDir, "doc.md"),
+    ]);
+
+    await new Promise((r) => setTimeout(r, 50));
+    await emitChange(path.join(tmpDir, "doc.md"), 120);
+
+    const output = consoleLogSpy.mock.calls.flat().join("\n");
+    expect(output).toContain("Watching");
+    expect(output).toContain("score: 0.912");
+    expect(output).toContain("reanchor");
+
+    await mockWatcher.close();
+  });
+
+  it("prints validation warnings as errors in strict mode", async () => {
+    mockValidateFile.mockResolvedValue({
+      valid: true,
+      errors: [],
+      warnings: [{ message: "Needs attention", path: "comments[0]" }],
+    });
+
+    const program = makeProgram([]);
+    program.parseAsync([
+      "node",
+      "mrsf",
+      "watch",
+      "--cwd",
+      tmpDir,
+      "--strict",
+      "--debounce",
+      "50",
+      path.join(tmpDir, "doc.md"),
+    ]);
+
+    await new Promise((r) => setTimeout(r, 50));
+    await emitChange(path.join(tmpDir, "doc.md.review.yaml"), 120);
+
+    const output = consoleLogSpy.mock.calls.flat().join("\n");
+    expect(output).toContain("ERROR: Needs attention");
+
+    await mockWatcher.close();
+  });
+
+  it("logs validate failures", async () => {
+    mockValidateFile.mockRejectedValue(new Error("boom"));
+
+    const program = makeProgram([]);
+    program.parseAsync([
+      "node",
+      "mrsf",
+      "watch",
+      "--cwd",
+      tmpDir,
+      "-q",
+      "--debounce",
+      "50",
+      path.join(tmpDir, "doc.md"),
+    ]);
+
+    await new Promise((r) => setTimeout(r, 50));
+    await emitChange(path.join(tmpDir, "doc.md.review.yaml"), 120);
+
+    expect(consoleErrorSpy).toHaveBeenCalled();
+    const output = consoleErrorSpy.mock.calls.flat().join("\n");
+    expect(output).toContain("validate ✗");
+    expect(output).toContain("boom");
+
+    await mockWatcher.close();
+  });
+
+  it("logs reanchor failures", async () => {
+    mockReanchorFile.mockRejectedValue(new Error("bad anchor"));
+
+    const program = makeProgram([]);
+    program.parseAsync([
+      "node",
+      "mrsf",
+      "watch",
+      "--cwd",
+      tmpDir,
+      "-q",
+      "--debounce",
+      "50",
+      "--reanchor",
+      path.join(tmpDir, "doc.md"),
+    ]);
+
+    await new Promise((r) => setTimeout(r, 50));
+    await emitChange(path.join(tmpDir, "doc.md"), 120);
+
+    expect(consoleErrorSpy).toHaveBeenCalled();
+    const output = consoleErrorSpy.mock.calls.flat().join("\n");
+    expect(output).toContain("reanchor ✗");
+    expect(output).toContain("bad anchor");
+
+    await mockWatcher.close();
+  });
+});
+
+describe("watch — signal cleanup", () => {
+  it("removes process signal handlers when the watcher closes", async () => {
+    const sigintBefore = process.listenerCount("SIGINT");
+    const sigtermBefore = process.listenerCount("SIGTERM");
+
+    const program = makeProgram([]);
+    program.parseAsync([
+      "node",
+      "mrsf",
+      "watch",
+      "--cwd",
+      tmpDir,
+      "-q",
+      "--debounce",
+      "50",
+      path.join(tmpDir, "doc.md"),
+    ]);
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(process.listenerCount("SIGINT")).toBe(sigintBefore + 1);
+    expect(process.listenerCount("SIGTERM")).toBe(sigtermBefore + 1);
+
+    await mockWatcher.close();
+
+    expect(process.listenerCount("SIGINT")).toBe(sigintBefore);
+    expect(process.listenerCount("SIGTERM")).toBe(sigtermBefore);
   });
 });

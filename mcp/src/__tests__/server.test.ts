@@ -677,7 +677,7 @@ describe("mrsf_delete", () => {
 });
 
 describe("mrsf_status", () => {
-  beforeAll(resetFixture);
+  beforeEach(resetFixture);
 
   it("returns anchor health for comments", async () => {
     const result = await client.callTool({
@@ -688,6 +688,52 @@ describe("mrsf_status", () => {
     const parsed = JSON.parse(text);
     expect(parsed.counts).toBeDefined();
     expect(parsed.counts.total).toBeGreaterThan(0);
+  });
+
+  it("returns unknown when the document file is missing", async () => {
+    await fs.unlink(path.join(tmpDir, "test.md"));
+
+    const result = await client.callTool({
+      name: "mrsf_status",
+      arguments: { files: ["test.md.review.yaml"], cwd: tmpDir },
+    });
+
+    const text = (result.content as Array<{ text: string }>)[0].text;
+    const parsed = JSON.parse(text);
+    expect(parsed.counts.unknown).toBe(3);
+    expect(parsed.results.every((entry: { health: string }) => entry.health === "unknown")).toBe(true);
+  });
+});
+
+describe("mrsf_rename", () => {
+  beforeEach(resetFixture);
+
+  it("moves the sidecar and updates the stored document name", async () => {
+    const renamedDir = path.join(tmpDir, "docs");
+    await fs.mkdir(renamedDir, { recursive: true });
+
+    const result = await client.callTool({
+      name: "mrsf_rename",
+      arguments: {
+        oldDocument: "test.md",
+        newDocument: "docs/renamed.md",
+        cwd: tmpDir,
+      },
+    });
+
+    expect(result.isError).toBeFalsy();
+
+    const text = (result.content as Array<{ text: string }>)[0].text;
+    const parsed = JSON.parse(text);
+    expect(parsed.oldSidecar).toContain("test.md.review.yaml");
+    expect(parsed.newSidecar).toContain(path.join("docs", "renamed.md.review.yaml"));
+    expect(parsed.document).toBe("renamed.md");
+
+    await expect(fs.access(path.join(tmpDir, "docs", "renamed.md.review.yaml"))).resolves.toBeUndefined();
+    await expect(fs.access(path.join(tmpDir, "test.md.review.yaml"))).rejects.toThrow();
+
+    const renamed = await fs.readFile(path.join(tmpDir, "docs", "renamed.md.review.yaml"), "utf-8");
+    expect(renamed).toContain("document: renamed.md");
   });
 });
 
@@ -767,6 +813,91 @@ describe("mrsf_repair", () => {
     const data = JSON.parse((result.content as Array<{ text: string }>)[0].text);
     expect(data.strategy).toBe("salvage");
     expect(data.commentsRecovered).toBe(3);
+  });
+
+  it("falls back to reset when salvage cannot recover anything", async () => {
+    await fs.writeFile(
+      path.join(tmpDir, "broken.md"),
+      "# Broken\n",
+    );
+    await fs.writeFile(
+      path.join(tmpDir, "broken.md.review.yaml"),
+      "comments:\n  - [ totally invalid yaml\n",
+    );
+
+    const result = await client.callTool({
+      name: "mrsf_repair",
+      arguments: { document: "broken.md.review.yaml", strategy: "salvage", cwd: tmpDir },
+    });
+
+    expect(result.isError).toBeFalsy();
+    const data = JSON.parse((result.content as Array<{ text: string }>)[0].text);
+    expect(data.strategy).toBe("salvage");
+    expect(data.commentsRecovered).toBe(0);
+    expect(data.result).toContain("File reset to empty");
+  });
+});
+
+describe("resources", () => {
+  beforeEach(resetFixture);
+
+  it("lists the registered resource templates", async () => {
+    const result = await client.listResourceTemplates();
+    const templates = result.resourceTemplates.map((template) => template.name);
+
+    expect(templates).toContain("sidecar");
+    expect(templates).toContain("comment");
+    expect(templates).toContain("anchors");
+  });
+
+  it("reads the sidecar resource", async () => {
+    const sidecarPath = path.join(tmpDir, "test.md.review.yaml");
+    const result = await client.readResource({
+      uri: `mrsf://sidecar/${sidecarPath}`,
+    });
+
+    const text = (result.contents as Array<{ text: string }>)[0].text;
+    const parsed = JSON.parse(text);
+    expect(parsed.document).toBe("test.md");
+    expect(parsed.comments).toHaveLength(3);
+  });
+
+  it("reads a single comment resource", async () => {
+    const sidecarPath = path.join(tmpDir, "test.md.review.yaml");
+    const result = await client.readResource({
+      uri: `mrsf://comment/${sidecarPath}/c-parent`,
+    });
+
+    const text = (result.contents as Array<{ text: string }>)[0].text;
+    const parsed = JSON.parse(text);
+    expect(parsed.id).toBe("c-parent");
+    expect(parsed.text).toBe("Parent comment");
+  });
+
+  it("reads anchors from a markdown path via sidecar discovery", async () => {
+    const docPath = path.join(tmpDir, "test.md");
+    const result = await client.readResource({
+      uri: `mrsf://anchors/${docPath}`,
+    });
+
+    const text = (result.contents as Array<{ text: string }>)[0].text;
+    const parsed = JSON.parse(text);
+    expect(parsed).toHaveLength(3);
+    expect(parsed.some((entry: { health: string }) => entry.health === "fresh")).toBe(true);
+  });
+
+  it("returns unknown anchor health when the document file is missing", async () => {
+    await fs.unlink(path.join(tmpDir, "test.md"));
+
+    const sidecarPath = path.join(tmpDir, "test.md.review.yaml");
+    const result = await client.readResource({
+      uri: `mrsf://anchors/${sidecarPath}`,
+    });
+
+    const text = (result.contents as Array<{ text: string }>)[0].text;
+    const parsed = JSON.parse(text);
+    expect(parsed).toHaveLength(3);
+    expect(parsed.every((entry: { health: string }) => entry.health === "unknown")).toBe(true);
   });
 });
 
