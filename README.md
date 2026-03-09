@@ -161,6 +161,32 @@ See the full MCP server documentation in [`mcp/README.md`](mcp/README.md).
 
 Install from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=wictor.mrsf-vscode) or search for **"Sidemark"** in the VS Code Extensions view.
 
+## 🧪 Monorepo Tests
+
+All TypeScript/Vitest packages can now be run from the repository root:
+
+```bash
+npm install
+npm test
+```
+
+For watch mode or coverage from the root:
+
+```bash
+npm run test:watch
+npm run test:coverage
+```
+
+The root Vitest project aggregates:
+
+- `cli/`
+- `mcp/`
+- `plugins/shared/`
+- `plugins/markdown-it/`
+- `plugins/monaco/`
+- `plugins/rehype/`
+- `vscode/`
+
 ## 🐍 Python CLI & SDK
 
 A full Python port of the CLI and library, installable via pip:

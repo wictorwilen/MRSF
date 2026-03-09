@@ -460,6 +460,7 @@ export class SidecarStore implements vscode.Disposable {
    * (their commit differs from HEAD). Returns the count of stale comments.
    */
   async checkStaleness(documentUri: vscode.Uri): Promise<number> {
+    await this._rootsReady;
     if (!this.repoRoot) return 0;
     const doc = this.get(documentUri);
     if (!doc || doc.comments.length === 0) return 0;
@@ -484,6 +485,7 @@ export class SidecarStore implements vscode.Disposable {
     documentUri: vscode.Uri,
     opts?: Partial<ReanchorOptions>,
   ): Promise<ReanchorResult[]> {
+    await this._rootsReady;
     const entry = this.cache.get(documentUri.fsPath);
     if (!entry) return [];
 
@@ -509,6 +511,7 @@ export class SidecarStore implements vscode.Disposable {
     results: ReanchorResult[],
     updateText?: boolean,
   ): Promise<number> {
+    await this._rootsReady;
     const entry = this.cache.get(documentUri.fsPath);
     if (!entry) return 0;
     const changed = applyReanchorResults(entry.doc, results, { updateText });

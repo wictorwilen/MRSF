@@ -227,6 +227,8 @@
   "scripts": {
     "build": "node esbuild.config.mjs",
     "watch": "node esbuild.config.mjs --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "lint": "tsc --noEmit",
     "package": "vsce package",
     "publish": "vsce publish",
@@ -236,11 +238,13 @@
     "@mrsf/cli": "file:../cli",
     "@mrsf/markdown-it-mrsf": "file:../plugins/markdown-it",
     "@mrsf/monaco-mrsf": "file:../plugins/monaco",
+    "@vitest/coverage-v8": "^3.2.4",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.13.10",
     "@types/vscode": "^1.85.0",
     "@vscode/vsce": "^3.0.0",
     "esbuild": "^0.24.0",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.9"
   }
 }
