@@ -10,6 +10,7 @@
  */
 
 import type { Command } from "commander";
+import { EventEmitter } from "node:events";
 import path from "node:path";
 import chalk from "chalk";
 import { watch as chokidarWatch, type FSWatcher } from "chokidar";
@@ -390,7 +391,7 @@ export function registerWatch(program: Command): void {
 
       process.on("SIGINT", onSigint);
       process.on("SIGTERM", onSigterm);
-      watcher.once("close", cleanupSignalHandlers);
+      (watcher as unknown as EventEmitter).once("close", cleanupSignalHandlers);
 
       // Keep the process alive
       await new Promise<void>(() => {
