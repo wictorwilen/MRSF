@@ -1,3 +1,6 @@
+import * as fuzzy from "./lib/fuzzy.js";
+import * as reanchorCore from "./lib/reanchor-core.js";
+
 export type {
   Comment,
   DiffHunk,
@@ -7,21 +10,17 @@ export type {
   ReanchorStatus,
 } from "./lib/types.js";
 
-export {
-  combinedScore,
-  exactMatch,
-  fuzzySearch,
-  levenshteinScore,
-  normalizedMatch,
-  tokenLcsScore,
-} from "./lib/fuzzy.js";
+export const combinedScore = fuzzy.combinedScore;
+export const exactMatch = fuzzy.exactMatch;
+export const fuzzySearch = fuzzy.fuzzySearch;
+export const levenshteinScore = fuzzy.levenshteinScore;
+export const normalizedMatch = fuzzy.normalizedMatch;
+export const tokenLcsScore = fuzzy.tokenLcsScore;
 
-export {
-  applyReanchorResults,
-  DEFAULT_THRESHOLD,
-  HIGH_THRESHOLD,
-  reanchorComment,
-  reanchorDocumentLines,
-  reanchorDocumentText,
-  toReanchorLines,
-} from "./lib/reanchor-core.js";
+export const applyReanchorResults = reanchorCore.applyReanchorResults;
+export const DEFAULT_THRESHOLD = reanchorCore.DEFAULT_THRESHOLD;
+export const HIGH_THRESHOLD = reanchorCore.HIGH_THRESHOLD;
+export const reanchorComment = reanchorCore.reanchorComment;
+export const reanchorDocumentLines = reanchorCore.reanchorDocumentLines;
+export const reanchorDocumentText = reanchorCore.reanchorDocumentText;
+export const toReanchorLines = reanchorCore.toReanchorLines;

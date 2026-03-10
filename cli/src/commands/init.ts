@@ -35,17 +35,20 @@ export function registerInit(program: Command): void {
       const sidecarPath = await discoverSidecar(docPath, { cwd: root ?? cwd });
 
       // Check if sidecar already exists
+      let sidecarExists = false;
       try {
         await fs.access(sidecarPath);
-        if (!opts.force) {
-          console.error(
-            chalk.yellow(`Sidecar already exists: ${sidecarPath}`),
-          );
-          console.error("Use --force to overwrite.");
-          process.exit(1);
-        }
+        sidecarExists = true;
       } catch {
         // Good — doesn't exist yet
+      }
+
+      if (sidecarExists && !opts.force) {
+        console.error(
+          chalk.yellow(`Sidecar already exists: ${sidecarPath}`),
+        );
+        console.error("Use --force to overwrite.");
+        process.exit(1);
       }
 
       const doc: MrsfDocument = {
