@@ -244,11 +244,12 @@ export class MrsfController {
   /** Build badge/add-button elements for each line in the gutter(s). */
   private renderGutterItems(): void {
     const lines = this.collectLines();
+    const displayMap = this.collectThreadDisplayMap(lines);
     const gutter = this.primaryGutter();
     if (!gutter) return;
 
     for (const line of lines) {
-      const threads = this.threads.get(line);
+      const threads = displayMap.get(line);
       if (threads && threads.length > 0) {
         const item = this.createBadgeItem(line, threads);
         gutter.appendChild(item);
@@ -307,6 +308,41 @@ export class MrsfController {
     }
 
     return [...seen].sort((a, b) => a - b);
+  }
+
+  private resolveThreadDisplayLine(thread: CommentThread, availableLines: Set<number>): number | null {
+    const startLine = thread.comment.line;
+    if (startLine == null) return null;
+
+    const endLine = thread.comment.end_line != null && thread.comment.end_line >= startLine
+      ? thread.comment.end_line
+      : startLine;
+
+    for (let currentLine = startLine; currentLine <= endLine; currentLine++) {
+      if (availableLines.has(currentLine)) {
+        return currentLine;
+      }
+    }
+
+    return null;
+  }
+
+  private collectThreadDisplayMap(lines: number[]): Map<number, CommentThread[]> {
+    const availableLines = new Set(lines);
+    const displayMap = new Map<number, CommentThread[]>();
+
+    for (const threads of this.threads.values()) {
+      for (const thread of threads) {
+        const displayLine = this.resolveThreadDisplayLine(thread, availableLines);
+        if (displayLine == null) continue;
+
+        const existing = displayMap.get(displayLine) ?? [];
+        existing.push(thread);
+        displayMap.set(displayLine, existing);
+      }
+    }
+
+    return displayMap;
   }
 
   private createBadgeItem(line: number, threads: CommentThread[]): HTMLDivElement {
@@ -541,9 +577,11 @@ export class MrsfController {
     const lineSet = new Set(lines);
     const orphanedThreads: CommentThread[] = [];
 
-    for (const [line, threads] of this.threads) {
-      if (!lineSet.has(line)) {
-        orphanedThreads.push(...threads);
+    for (const threads of this.threads.values()) {
+      for (const thread of threads) {
+        if (this.resolveThreadDisplayLine(thread, lineSet) == null) {
+          orphanedThreads.push(thread);
+        }
       }
     }
 
@@ -581,17 +619,22 @@ export class MrsfController {
   private renderInlineHighlights(): void {
     if (!this.opts.inlineHighlights) return;
 
-    for (const [line, threads] of this.threads) {
+    const lineSet = new Set(this.collectLines());
+
+    for (const threads of this.threads.values()) {
       for (const thread of threads) {
         const comment = thread.comment;
         if (!comment.selected_text) continue;
 
+        const displayLine = this.resolveThreadDisplayLine(thread, lineSet);
+        if (displayLine == null) continue;
+
         const el = this.container.querySelector<HTMLElement>(
-          `[data-mrsf-line="${line}"]:not(script):not(.mrsf-gutter):not(.mrsf-gutter-item)`,
+          `[data-mrsf-line="${displayLine}"]:not(script):not(.mrsf-gutter):not(.mrsf-gutter-item)`,
         );
         if (!el) continue;
 
-        this.wrapSelectedText(el, comment.selected_text, thread);
+        this.wrapSelectedText(el, comment.selected_text, thread, displayLine);
       }
     }
   }
@@ -623,6 +666,7 @@ export class MrsfController {
     root: HTMLElement,
     selectedText: string,
     thread: CommentThread,
+    displayLine: number,
   ): void {
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     let accumulated = "";
@@ -669,7 +713,7 @@ export class MrsfController {
     const mark = document.createElement("mark");
     mark.className = "mrsf-inline-highlight";
     mark.dataset.mrsfCommentId = thread.comment.id;
-    mark.dataset.mrsfLine = String(thread.comment.line);
+    mark.dataset.mrsfLine = String(displayLine);
 
     try {
       range.surroundContents(mark);

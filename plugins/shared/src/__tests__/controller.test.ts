@@ -1939,4 +1939,19 @@ describe("Orphaned comments section", () => {
     const heading = container.querySelector(".mrsf-orphaned-heading");
     expect(heading!.textContent).toBe("Orphaned Comments (3)");
   });
+
+  it("does not orphan a range when a later line in the range exists in the DOM", () => {
+    const thread = makeThread({
+      id: "range-blank-start",
+      line: 7,
+      end_line: 9,
+      selected_text: "\ntext text\n",
+    });
+    container = buildContainer([8], [thread]);
+    ctrl = new MrsfController(container);
+
+    expect(container.querySelector(".mrsf-orphaned-section")).toBeNull();
+    const badge = container.querySelector('.mrsf-badge[data-mrsf-line="8"]');
+    expect(badge).not.toBeNull();
+  });
 });

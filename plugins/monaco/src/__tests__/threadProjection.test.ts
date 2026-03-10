@@ -91,4 +91,57 @@ describe("threadProjection", () => {
 
     expect(snapshot.orphanedCommentIds).toContain("reply-2");
   });
+
+  it("keeps blank-edge multi-line threads anchored to the start line", () => {
+    const document: MrsfDocument = {
+      version: "1.0",
+      comments: [
+        {
+          id: "root-blank-range",
+          text: "Blank-edge selection",
+          line: 7,
+          end_line: 9,
+          selected_text: "\ntext text\n",
+        },
+      ],
+    } as MrsfDocument;
+
+    const snapshot = projectDecorationSnapshot(document, {
+      geometry: {
+        lineCount: 9,
+        getLineLength: (lineIndex: number) =>
+          [4, 4, 4, 4, 4, 4, 0, 9, 0][lineIndex] ?? 0,
+      },
+    });
+
+    expect(snapshot.threadsByLine).toEqual([
+      {
+        line: 7,
+        threads: [
+          {
+            line: 7,
+            rootCommentId: "root-blank-range",
+            commentIds: ["root-blank-range"],
+            replyCount: 0,
+            resolved: false,
+            highestSeverity: null,
+            range: {
+              start: { lineIndex: 6, column: 0 },
+              end: { lineIndex: 8, column: 0 },
+            },
+          },
+        ],
+      },
+    ]);
+    expect(snapshot.gutterMarks).toEqual([
+      {
+        line: 7,
+        threadCount: 1,
+        commentCount: 1,
+        resolvedState: "open",
+        highestSeverity: null,
+      },
+    ]);
+    expect(snapshot.orphanedCommentIds).toEqual([]);
+  });
 });

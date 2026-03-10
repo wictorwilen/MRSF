@@ -92,19 +92,20 @@ def parse_sidecar(file_path: str | Path) -> MrsfDocument:
 def parse_sidecar_content(content: str, filename_hint: str | None = None) -> MrsfDocument:
     """Parse MRSF sidecar content from a string."""
     trimmed = content.strip()
+    leading_trimmed = content.lstrip()
 
-    is_json = trimmed.startswith("{") or (
+    is_json = leading_trimmed.startswith("{") or (
         filename_hint is not None and filename_hint.endswith(".review.json")
     )
 
     if is_json:
         try:
-            parsed = json.loads(trimmed)
+            parsed = json.loads(leading_trimmed)
         except json.JSONDecodeError as e:
             raise ValueError(f"Failed to parse JSON: {e}") from e
     else:
         try:
-            parsed = _yaml.load(trimmed)
+            parsed = _yaml.load(content)
         except Exception as e:
             raise ValueError(f"Failed to parse YAML: {e}") from e
 
@@ -131,10 +132,11 @@ def parse_sidecar_content_lenient(
 ) -> LenientParseResult:
     """Lenient parse from string content."""
     trimmed = content.strip()
+    leading_trimmed = content.lstrip()
     if not trimmed:
         return LenientParseResult(doc=None, error="File is empty")
 
-    is_json = trimmed.startswith("{") or (
+    is_json = leading_trimmed.startswith("{") or (
         filename_hint is not None and filename_hint.endswith(".review.json")
     )
 
@@ -142,12 +144,12 @@ def parse_sidecar_content_lenient(
     parsed = None
     try:
         if is_json:
-            parsed = json.loads(trimmed)
+            parsed = json.loads(leading_trimmed)
         else:
-            parsed = _yaml.load(trimmed)
+            parsed = _yaml.load(content)
     except Exception as e:
         if not is_json:
-            return _salvage_yaml(trimmed)
+            return _salvage_yaml(content)
         return LenientParseResult(doc=None, error=f"Failed to parse JSON: {e}")
 
     if not isinstance(parsed, dict):

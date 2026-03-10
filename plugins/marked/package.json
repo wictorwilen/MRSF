@@ -1,6 +1,6 @@
 {
   "name": "@mrsf/marked-mrsf",
-  "version": "0.4.7",
+  "version": "0.4.8",
   "description": "Marked plugin for rendering Sidemark/MRSF review comments",
   "type": "module",
   "main": "./dist/index.js",

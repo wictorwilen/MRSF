@@ -10,6 +10,8 @@ import {
   reanchorDocumentText,
   reanchorFile,
 } from "../lib/reanchor.js";
+import { parseSidecar } from "../lib/parser.js";
+import { writeSidecar } from "../lib/writer.js";
 import type { Comment, DiffHunk, MrsfDocument, ReanchorResult } from "../lib/types.js";
 import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import path from "node:path";
@@ -108,6 +110,33 @@ describe("reanchorComment — exact match", () => {
     const result = reanchorComment(comment, dupeLines);
     expect(result.status).toBe("anchored");
     expect(result.newLine).toBe(5); // nearest to hint line 5
+  });
+
+  it("anchors a multiline selection that starts and ends on blank lines", () => {
+    const lines = lines1(
+      "line 1",
+      "line 2",
+      "line 3",
+      "line 4",
+      "line 5",
+      "line 6",
+      "",
+      "text text",
+      "",
+      "line 10",
+    );
+    const comment = makeComment({
+      line: 7,
+      end_line: 9,
+      selected_text: "\ntext text\n",
+    });
+
+    const result = reanchorComment(comment, lines);
+
+    expect(result.status).toBe("anchored");
+    expect(result.newLine).toBe(7);
+    expect(result.newEndLine).toBe(9);
+    expect(result.score).toBe(1);
   });
 });
 
@@ -456,6 +485,29 @@ describe("reanchorComment — line/column fallback", () => {
     expect(result.score).toBe(0.8);
     expect(result.newLine).toBe(2);
     expect(result.reason).toContain("Line/column fallback");
+  });
+
+  it("does not orphan a range when the anchored selection begins on a blank line", () => {
+    const lines = lines1(
+      "alpha",
+      "beta",
+      "gamma",
+      "delta",
+      "epsilon",
+      "zeta",
+      "",
+      "text text",
+      "",
+    );
+    const comment = makeComment({
+      line: 7,
+      end_line: 9,
+      selected_text: "\ntext text\n",
+    });
+
+    const result = reanchorComment(comment, lines, { commitIsStale: true });
+
+    expect(result.status).not.toBe("orphaned");
   });
 });
 
@@ -975,5 +1027,122 @@ describe("reanchorFile", () => {
     expect(results[0].newLine).toBe(2);
     expect(changed).toBeGreaterThanOrEqual(1);
     expect(written).toBe(true);
+  });
+
+  it("re-anchors a sidecar whose selected_text starts and ends with blank lines", async () => {
+    const docPath = path.join(tmpDir, "blank-range.md");
+    const sidecarPath = path.join(tmpDir, "blank-range.md.review.yaml");
+
+    await writeFile(
+      docPath,
+      [
+        "line 1",
+        "line 2",
+        "line 3",
+        "line 4",
+        "line 5",
+        "line 6",
+        "",
+        "text text",
+        "",
+        "line 10",
+        "",
+      ].join("\n"),
+    );
+
+    await writeSidecar(sidecarPath, {
+      mrsf_version: "1.0",
+      document: "blank-range.md",
+      comments: [
+        makeComment({
+          id: "c-blank",
+          line: 7,
+          end_line: 9,
+          selected_text: "\ntext text\n",
+        }),
+      ],
+    });
+
+    const parsed = await parseSidecar(sidecarPath);
+    expect(parsed.comments[0].selected_text).toBe("\ntext text\n");
+
+    const { results } = await reanchorFile(sidecarPath, {
+      dryRun: true,
+      noGit: true,
+    });
+
+    expect(results).toHaveLength(1);
+    expect(results[0].status).toBe("anchored");
+    expect(results[0].newLine).toBe(7);
+    expect(results[0].newEndLine).toBe(9);
+  });
+
+  it("parses and re-anchors a YAML block scalar with a leading blank line", async () => {
+    const docPath = path.join(tmpDir, "blank-range-block.md");
+    const sidecarPath = path.join(tmpDir, "blank-range-block.md.review.yaml");
+
+    await writeFile(docPath, ["a", "b", "", "text text", "", "c"].join("\n"));
+    await writeFile(
+      sidecarPath,
+      [
+        'mrsf_version: "1.0"',
+        "document: blank-range-block.md",
+        "comments:",
+        "  - id: c-block",
+        "    author: A",
+        '    timestamp: "2025-01-01T00:00:00Z"',
+        "    text: Example",
+        "    resolved: false",
+        "    line: 3",
+        "    end_line: 5",
+        "    selected_text: |+",
+        "",
+        "      text text",
+        "",
+      ].join("\n"),
+    );
+
+    const parsed = await parseSidecar(sidecarPath);
+    expect(parsed.comments[0].selected_text).toBe("\ntext text\n");
+
+    const { results } = await reanchorFile(sidecarPath, {
+      dryRun: true,
+      noGit: true,
+    });
+
+    expect(results[0].status).toBe("anchored");
+    expect(results[0].newLine).toBe(3);
+    expect(results[0].newEndLine).toBe(5);
+  });
+
+  it("re-anchors LF selected_text against a CRLF document with blank edge lines", async () => {
+    const docPath = path.join(tmpDir, "blank-range-crlf.md");
+    const sidecarPath = path.join(tmpDir, "blank-range-crlf.md.review.yaml");
+
+    await writeFile(
+      docPath,
+      ["line 1", "line 2", "", "text text", "", "line 6", ""].join("\r\n"),
+    );
+    await writeSidecar(sidecarPath, {
+      mrsf_version: "1.0",
+      document: "blank-range-crlf.md",
+      comments: [
+        makeComment({
+          id: "c-crlf",
+          line: 3,
+          end_line: 5,
+          selected_text: "\ntext text\n",
+        }),
+      ],
+    });
+
+    const { results } = await reanchorFile(sidecarPath, {
+      dryRun: true,
+      noGit: true,
+    });
+
+    expect(results[0].status).toBe("anchored");
+    expect(results[0].newLine).toBe(3);
+    expect(results[0].newEndLine).toBe(5);
   });
 });

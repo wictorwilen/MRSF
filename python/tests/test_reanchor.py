@@ -89,6 +89,27 @@ class TestReanchorCommentExactMatch:
         assert result.status == "anchored"
         assert result.new_line == 5
 
+    def test_matches_multiline_selection_with_blank_edges(self):
+        blank_edge_lines = lines1(
+            "# Title",
+            "intro",
+            "",
+            "text text",
+            "",
+            "tail",
+        )
+        comment = make_comment(
+            selected_text="\ntext text\n",
+            line=7,
+            end_line=9,
+        )
+
+        result = reanchor_comment(comment, blank_edge_lines)
+
+        assert result.status == "anchored"
+        assert result.new_line == 3
+        assert result.new_end_line == 5
+
 
 # ---------------------------------------------------------------------------
 # Step 4: Orphan
@@ -458,6 +479,38 @@ class TestReanchorFile:
         results, changed, written = reanchor_file(str(sidecar), opts)
         assert len(results) == 1
         # Comment line was 5 but exact match is at line 1 → changed
+        assert changed >= 1
+        assert written is True
+
+    def test_reanchors_blank_edge_multiline_selection(self, tmp_path):
+        sidecar = tmp_path / "doc.md.review.yaml"
+        sidecar.write_text(
+            "mrsf_version: '1.0'\n"
+            "document: doc.md\n"
+            "comments:\n"
+            "  - id: c-1\n"
+            "    author: Alice\n"
+            "    timestamp: '2025-01-01T00:00:00Z'\n"
+            "    text: Fix this\n"
+            "    resolved: false\n"
+            "    line: 7\n"
+            "    end_line: 9\n"
+            "    selected_text: |\n"
+            "      \n"
+            "      text text\n"
+            "\n",
+            encoding="utf-8",
+        )
+        doc_file = tmp_path / "doc.md"
+        doc_file.write_text("# Title\nintro\n\ntext text\n\ntail\n", encoding="utf-8")
+
+        opts = ReanchorOptions(dry_run=False, no_git=True)
+        results, changed, written = reanchor_file(str(sidecar), opts)
+
+        assert len(results) == 1
+        assert results[0].status == "anchored"
+        assert results[0].new_line == 3
+        assert results[0].new_end_line == 5
         assert changed >= 1
         assert written is True
 
