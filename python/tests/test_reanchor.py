@@ -290,6 +290,24 @@ class TestReanchorCommentNormalizedMatch:
 
 
 class TestReanchorCommentLineFallback:
+    def test_uses_single_line_fuzzy_matching_before_plain_line_fallback(self):
+        lines = lines1(
+            "header",
+            "The rough revised sentence that should still resemble the candidate after edits.",
+            "footer",
+        )
+        comment = make_comment(
+            selected_text="The precise original sentence that should only weakly resemble the candidate after edits.",
+            line=2,
+        )
+
+        result = reanchor_comment(comment, lines, commit_is_stale=True)
+
+        assert result.status == "fuzzy"
+        assert result.new_line == 2
+        assert result.reason is not None
+        assert "Line-fallback with fuzzy text match" in result.reason
+
     def test_line_only_no_selected_text_returns_anchored(self):
         lines = lines1("first", "second", "third")
         comment = make_comment(line=2)
@@ -298,24 +316,28 @@ class TestReanchorCommentLineFallback:
         assert result.new_line == 2
 
     def test_stale_commit_returns_ambiguous(self):
-        lines = lines1("first", "different text", "third")
+        lines = lines1("AAAA", "BBBB", "CCCC")
         comment = make_comment(
             line=2,
-            selected_text="This definitely won't match anywhere including not even fuzzy matching at all!",
+            selected_text="ZZZZZZZZZZZ totally unrelated very long text",
         )
         result = reanchor_comment(comment, lines, commit_is_stale=True)
-        # Falls to line fallback; stale → ambiguous
-        assert result.status in ("ambiguous", "fuzzy", "orphaned")
+        assert result.status == "ambiguous"
+        assert result.score == 0.5
+        assert result.reason is not None
+        assert "stale" in result.reason
 
     def test_non_stale_line_fallback(self):
-        lines = lines1("first", "different text that won't fuzzy match at all whatsoever for sure ever!", "third")
+        lines = lines1("AAAA", "BBBB", "CCCC")
         comment = make_comment(
             line=2,
-            selected_text="completely unrelated original text that has no similarity at all!",
+            selected_text="ZZZZZZZZZZZZZZZZZ completely unrelated very long text",
         )
         result = reanchor_comment(comment, lines, commit_is_stale=False)
-        # Should fall to line fallback, return anchored
-        assert result.status in ("anchored", "fuzzy", "orphaned")
+        assert result.status == "anchored"
+        assert result.score == 0.8
+        assert result.reason is not None
+        assert "Line/column fallback" in result.reason
 
 
 # ---------------------------------------------------------------------------

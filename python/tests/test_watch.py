@@ -7,6 +7,7 @@ that the watch handler calls the correct functions.
 from __future__ import annotations
 
 import os
+import signal
 import tempfile
 import time
 from pathlib import Path
@@ -14,6 +15,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mrsf.cli.watch_signals import register_signal_handlers
 from mrsf.types import ReanchorOptions, ReanchorResult, ValidationResult
 
 
@@ -225,3 +227,28 @@ class TestWatchNoSidecarFound:
 
         handler.validate_file.assert_not_called()
         handler.reanchor_file.assert_not_called()
+
+
+class TestWatchSignalCleanup:
+    def test_restores_previous_signal_handlers_on_cleanup(self):
+        previous_sigint = signal.getsignal(signal.SIGINT)
+        previous_sigterm = signal.getsignal(signal.SIGTERM)
+
+        shutdown = MagicMock()
+        cleanup = register_signal_handlers(shutdown)
+
+        try:
+            assert signal.getsignal(signal.SIGINT) is not previous_sigint
+            assert signal.getsignal(signal.SIGTERM) is not previous_sigterm
+        finally:
+            cleanup()
+
+        assert signal.getsignal(signal.SIGINT) == previous_sigint
+        assert signal.getsignal(signal.SIGTERM) == previous_sigterm
+
+    def test_cleanup_is_idempotent(self):
+        shutdown = MagicMock()
+        cleanup = register_signal_handlers(shutdown)
+
+        cleanup()
+        cleanup()

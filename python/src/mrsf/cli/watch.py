@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import signal
 import sys
 import time
 from datetime import datetime
@@ -17,6 +16,7 @@ from ..resolve_files import resolve_sidecar_paths
 from ..types import ReanchorOptions
 from ..validator import validate_file
 from .main import MrsfContext, pass_ctx
+from .watch_signals import register_signal_handlers
 
 
 @click.command("watch")
@@ -176,6 +176,7 @@ def watch_cmd(
         click.echo(f"Watching {len(watch_paths)} path(s)... Press Ctrl+C to stop.")
 
     def shutdown(*_: Any) -> None:
+        cleanup_signal_handlers()
         observer.stop()
         if not ctx.quiet:
             click.echo(
@@ -183,10 +184,11 @@ def watch_cmd(
             )
         sys.exit(1 if error_count > 0 else 0)
 
-    signal.signal(signal.SIGINT, shutdown)
-    signal.signal(signal.SIGTERM, shutdown)
+    cleanup_signal_handlers = register_signal_handlers(shutdown)
 
     try:
         observer.join()
     except KeyboardInterrupt:
         shutdown()
+    finally:
+        cleanup_signal_handlers()

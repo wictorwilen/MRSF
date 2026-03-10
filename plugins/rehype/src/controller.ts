@@ -925,18 +925,24 @@ export class MrsfController {
     }
 
     const range = sel.getRangeAt(0);
+    if (!this.selectionBelongsToContainer(range)) {
+      this.hideFloatingAddButton();
+      return;
+    }
+
     const rect = range.getBoundingClientRect();
     if (!rect || (rect.width === 0 && rect.height === 0)) {
       this.hideFloatingAddButton();
       return;
     }
 
-    const startAnchor = (range.startContainer as Node).parentElement?.closest<HTMLElement>(
-      "[data-mrsf-line]",
-    );
-    const endAnchor = (range.endContainer as Node).parentElement?.closest<HTMLElement>(
-      "[data-mrsf-line]",
-    );
+    const startAnchor = this.findSelectionAnchor(range.startContainer);
+    const endAnchor = this.findSelectionAnchor(range.endContainer);
+    if (!startAnchor || !endAnchor) {
+      this.hideFloatingAddButton();
+      return;
+    }
+
     const startLineStr = startAnchor?.dataset.mrsfStartLine ?? startAnchor?.dataset.mrsfLine;
     const endLineStr = endAnchor?.dataset.mrsfEndLine ?? endAnchor?.dataset.mrsfLine ?? startLineStr;
     const startLine = startLineStr ? parseInt(startLineStr, 10) : null;
@@ -950,6 +956,18 @@ export class MrsfController {
     this.showFloatingAddButton(startLine, endLine, startColumn, endColumn, rect, text);
   }
 
+  private selectionBelongsToContainer(range: Range): boolean {
+    return this.container.contains(range.commonAncestorContainer)
+      && this.container.contains(range.startContainer)
+      && this.container.contains(range.endContainer);
+  }
+
+  private findSelectionAnchor(node: Node): HTMLElement | null {
+    const element = node instanceof Element ? node : node.parentElement;
+    const anchor = element?.closest<HTMLElement>("[data-mrsf-line]") ?? null;
+    return anchor && this.container.contains(anchor) ? anchor : null;
+  }
+
   private ensureFloatingAddButton(): HTMLButtonElement {
     if (this.floatingAddButton) return this.floatingAddButton;
     const btn = document.createElement("button");
@@ -959,7 +977,7 @@ export class MrsfController {
     btn.style.display = "none";
     btn.style.position = "absolute";
     btn.style.zIndex = "1200";
-    document.body.appendChild(btn);
+    this.container.appendChild(btn);
     this.floatingAddButton = btn;
     return btn;
   }
@@ -1004,13 +1022,27 @@ export class MrsfController {
     this.lastSelectionText = selectionText;
 
     const margin = 6;
+    const containerRect = this.container.getBoundingClientRect();
     btn.style.visibility = "hidden";
     btn.style.display = "block";
+    const width = btn.offsetWidth || 0;
     const height = btn.offsetHeight || 0;
-    const top = window.scrollY + rect.top - height - margin;
-    const left = window.scrollX + rect.left;
-    btn.style.top = `${Math.max(0, top)}px`;
-    btn.style.left = `${Math.max(0, left)}px`;
+
+    const minTop = this.container.scrollTop;
+    const maxTop = Math.max(minTop, minTop + this.container.clientHeight - height);
+    const minLeft = this.container.scrollLeft;
+    const maxLeft = Math.max(minLeft, minLeft + this.container.clientWidth - width);
+
+    const preferredTop = rect.top - containerRect.top + this.container.scrollTop - height - margin;
+    const fallbackTop = rect.bottom - containerRect.top + this.container.scrollTop + margin;
+    const unclampedTop = preferredTop < minTop ? fallbackTop : preferredTop;
+    const unclampedLeft = rect.left - containerRect.left + this.container.scrollLeft;
+
+    const top = Math.min(Math.max(unclampedTop, minTop), maxTop);
+    const left = Math.min(Math.max(unclampedLeft, minLeft), maxLeft);
+
+    btn.style.top = `${top}px`;
+    btn.style.left = `${left}px`;
     btn.style.visibility = "visible";
   }
 

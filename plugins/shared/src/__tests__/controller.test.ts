@@ -932,6 +932,156 @@ describe("destroy", () => {
   });
 });
 
+// ── Selection floater ───────────────────────────────────
+
+describe("selection floater", () => {
+  it("renders the selection add button inside the markdown container", () => {
+    container = buildContainer([1]);
+    ctrl = new MrsfController(container, { interactive: true });
+
+    const line = container.querySelector('[data-mrsf-line="1"]') as HTMLElement;
+    const range = document.createRange();
+    range.selectNodeContents(line);
+
+    Object.defineProperty(range, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({
+        top: 80,
+        left: 40,
+        right: 140,
+        bottom: 100,
+        width: 100,
+        height: 20,
+        x: 40,
+        y: 80,
+        toJSON() {},
+      } as DOMRect),
+    });
+
+    vi.spyOn(document, "getSelection").mockReturnValue({
+      isCollapsed: false,
+      rangeCount: 1,
+      toString: () => "Line 1 content",
+      getRangeAt: () => range,
+    } as unknown as Selection);
+
+    document.dispatchEvent(new Event("selectionchange"));
+
+    const button = container.querySelector(".mrsf-add-inline-button");
+    expect(button).not.toBeNull();
+    expect(button?.parentElement).toBe(container);
+  });
+
+  it("hides the selection add button when the selection is outside the container", () => {
+    container = buildContainer([1]);
+    ctrl = new MrsfController(container, { interactive: true });
+
+    const outside = document.createElement("p");
+    outside.textContent = "Outside";
+    document.body.appendChild(outside);
+
+    const range = document.createRange();
+    range.selectNodeContents(outside);
+
+    Object.defineProperty(range, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({
+        top: 120,
+        left: 50,
+        right: 120,
+        bottom: 140,
+        width: 70,
+        height: 20,
+        x: 50,
+        y: 120,
+        toJSON() {},
+      } as DOMRect),
+    });
+
+    vi.spyOn(document, "getSelection").mockReturnValue({
+      isCollapsed: false,
+      rangeCount: 1,
+      toString: () => "Outside",
+      getRangeAt: () => range,
+    } as unknown as Selection);
+
+    document.dispatchEvent(new Event("selectionchange"));
+
+    expect(container.querySelector(".mrsf-add-inline-button")).toBeNull();
+  });
+
+  it("clamps the selection add button within the visible container bounds", () => {
+    container = buildContainer([1]);
+    ctrl = new MrsfController(container, { interactive: true });
+
+    Object.defineProperty(container, "clientWidth", {
+      configurable: true,
+      value: 200,
+    });
+    Object.defineProperty(container, "clientHeight", {
+      configurable: true,
+      value: 120,
+    });
+
+    vi.spyOn(container, "getBoundingClientRect").mockReturnValue({
+      top: 50,
+      left: 20,
+      right: 220,
+      bottom: 170,
+      width: 200,
+      height: 120,
+      x: 20,
+      y: 50,
+      toJSON() {},
+    } as DOMRect);
+
+    const line = container.querySelector('[data-mrsf-line="1"]') as HTMLElement;
+    const range = document.createRange();
+    range.selectNodeContents(line);
+
+    Object.defineProperty(range, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({
+        top: 54,
+        left: 210,
+        right: 260,
+        bottom: 74,
+        width: 50,
+        height: 20,
+        x: 210,
+        y: 54,
+        toJSON() {},
+      } as DOMRect),
+    });
+
+    vi.spyOn(document, "getSelection").mockReturnValue({
+      isCollapsed: false,
+      rangeCount: 1,
+      toString: () => "Line 1 content",
+      getRangeAt: () => range,
+    } as unknown as Selection);
+
+    document.dispatchEvent(new Event("selectionchange"));
+
+    const button = container.querySelector(".mrsf-add-inline-button") as HTMLButtonElement;
+    expect(button).not.toBeNull();
+
+    Object.defineProperty(button, "offsetWidth", {
+      configurable: true,
+      value: 80,
+    });
+    Object.defineProperty(button, "offsetHeight", {
+      configurable: true,
+      value: 24,
+    });
+
+    document.dispatchEvent(new Event("selectionchange"));
+
+    expect(button.style.left).toBe("120px");
+    expect(button.style.top).toBe("30px");
+  });
+});
+
 // ── autoInit ─────────────────────────────────────────────
 
 describe("autoInit", () => {

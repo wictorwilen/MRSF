@@ -1,4 +1,4 @@
-"""MRSF Re-anchor Engine — §7.4 Anchoring Resolution Procedure.
+"""MRSF Re-anchor Engine - §7.4 Anchoring Resolution Procedure.
 
 Implements a four-step algorithm to re-locate each comment's
 anchor within the current document revision:
@@ -196,13 +196,13 @@ def reanchor_comment(
 
     # Step 2: Line/column fallback
     if comment.line is not None:
-        line_idx = comment.line - 1
-        if 0 <= line_idx < len(document_lines):
+        line_idx = comment.line
+        if 0 < line_idx < len(document_lines):
             qualifier = " (commit is stale — line may have shifted)" if commit_is_stale else ""
 
             if selected_text:
                 line_text = document_lines[line_idx]
-                candidates = fuzzy_search([line_text], selected_text, DEFAULT_THRESHOLD)
+                candidates = fuzzy_search(["", line_text], selected_text, DEFAULT_THRESHOLD)
                 if candidates:
                     return ReanchorResult(
                         comment_id=comment_id,
