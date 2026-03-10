@@ -10,6 +10,7 @@ import { FileWatcher } from "./store/FileWatcher.js";
 import { GutterDecorationProvider } from "./decorations/GutterDecorationProvider.js";
 import { InlineDecorationProvider } from "./decorations/InlineDecorationProvider.js";
 import { MrsfHoverProvider } from "./providers/HoverProvider.js";
+import { SelectionCommentCodeLensProvider } from "./providers/SelectionCommentCodeLensProvider.js";
 import { SidebarViewProvider } from "./sidebar/SidebarViewProvider.js";
 import {
   registerAddLineComment,
@@ -183,6 +184,9 @@ export function activate(context: vscode.ExtensionContext) {
   // ── Hover provider ────────────────────────────────────────
   const hoverProvider = new MrsfHoverProvider(store);
   context.subscriptions.push(hoverProvider);
+
+  const selectionCommentCodeLensProvider = new SelectionCommentCodeLensProvider();
+  context.subscriptions.push(selectionCommentCodeLensProvider);
 
   // ── Sidebar webview ───────────────────────────────────────
   const sidebarProvider = new SidebarViewProvider(store, context.extensionUri, context.workspaceState);

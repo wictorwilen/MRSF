@@ -21,6 +21,7 @@
   const EXTENSION_URI_BASE = "vscode://wictor.mrsf-vscode";
   const GUTTER_CLASS = "mrsf-preview-gutter";
   const GUTTER_ITEM_CLASS = "mrsf-preview-gutter-item";
+  let renderQueued = false;
 
   function getPreviewConfig() {
     const el = document.getElementById("mrsf-comment-data");
@@ -358,9 +359,9 @@
       .map((c) => c.severity)
       .filter(Boolean);
     if (severities.includes("high")) {
-      badge.style.borderLeftColor = severityColor("high");
+      badge.style.setProperty("--mrsf-badge-accent", severityColor("high"));
     } else if (severities.includes("medium")) {
-      badge.style.borderLeftColor = severityColor("medium");
+      badge.style.setProperty("--mrsf-badge-accent", severityColor("medium"));
     }
 
     return badge;
@@ -521,6 +522,22 @@
     return el;
   }
 
+  function closeAllTooltips() {
+    document
+      .querySelectorAll(`.${TOOLTIP_VISIBLE_CLASS}`)
+      .forEach((el) => el.classList.remove(TOOLTIP_VISIBLE_CLASS));
+  }
+
+  function scheduleRender() {
+    if (renderQueued) return;
+    renderQueued = true;
+
+    requestAnimationFrame(() => {
+      renderQueued = false;
+      render();
+    });
+  }
+
   // ── Main ───────────────────────────────────────────────
 
   function render() {
@@ -611,12 +628,6 @@
     }
 
     // Close tooltips when clicking outside
-    document.addEventListener("click", () => {
-      document
-        .querySelectorAll(`.${TOOLTIP_VISIBLE_CLASS}`)
-        .forEach((el) => el.classList.remove(TOOLTIP_VISIBLE_CLASS));
-    });
-
     // ── Click-on-highlight to open tooltip ────────────────────
     // Inline <mark> elements with data-comment-id should also
     // toggle the tooltip for their line when clicked.
@@ -676,5 +687,11 @@
     document.addEventListener("DOMContentLoaded", render);
   } else {
     render();
+  }
+
+  document.addEventListener("click", closeAllTooltips);
+  window.addEventListener("resize", scheduleRender);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", scheduleRender);
   }
 })();

@@ -2,7 +2,7 @@
   "name": "mrsf-vscode",
   "displayName": "Sidemark – MRSF Review Comments",
   "description": "Display, create, and manage Markdown Review Sidecar Format (MRSF) comments directly in VS Code",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "publisher": "wictor",
   "license": "MIT",
   "author": "Wictor Wilén (https://github.com/wictorwilen)",
@@ -225,10 +225,14 @@
     }
   },
   "scripts": {
+    "build:deps": "npm --prefix ../plugins/monaco run build",
+    "prebuild": "npm run build:deps",
     "build": "node esbuild.config.mjs",
+    "prewatch": "npm run build:deps",
     "watch": "node esbuild.config.mjs --watch",
     "test": "vitest run",
     "test:watch": "vitest",
+    "prelint": "npm run build:deps",
     "lint": "tsc --noEmit",
     "package": "vsce package",
     "publish": "vsce publish",

@@ -146,6 +146,18 @@ export class Hover {
   constructor(public readonly contents: MarkdownString) {}
 }
 
+export class CodeLens {
+  constructor(
+    public readonly range: Range,
+    public command?: {
+      title: string;
+      tooltip?: string;
+      command: string;
+      arguments?: unknown[];
+    },
+  ) {}
+}
+
 type StatusBarItem = {
   text: string;
   tooltip?: string;
@@ -188,6 +200,11 @@ type UriHandlerRegistration = {
 };
 
 type HoverRegistration = {
+  selector: unknown;
+  provider: unknown;
+};
+
+type CodeLensRegistration = {
   selector: unknown;
   provider: unknown;
 };
@@ -256,6 +273,7 @@ const onDidChangeTextDocumentEmitter = new EventEmitter<unknown>();
 const onDidSaveTextDocumentEmitter = new EventEmitter<unknown>();
 const onDidChangeActiveTextEditorEmitter = new EventEmitter<TextEditor | undefined>();
 const onDidChangeVisibleTextEditorsEmitter = new EventEmitter<TextEditor[]>();
+const onDidChangeTextEditorSelectionEmitter = new EventEmitter<unknown>();
 
 function getConfiguration(section?: string) {
   return {
@@ -381,6 +399,7 @@ export const window = {
   },
   onDidChangeActiveTextEditor: onDidChangeActiveTextEditorEmitter.event,
   onDidChangeVisibleTextEditors: onDidChangeVisibleTextEditorsEmitter.event,
+  onDidChangeTextEditorSelection: onDidChangeTextEditorSelectionEmitter.event,
 };
 
 export const commands = {
@@ -403,6 +422,10 @@ export const languages = {
     __mock.hoverRegistrations.push({ selector, provider });
     return new Disposable();
   },
+  registerCodeLensProvider: (selector: unknown, provider: unknown) => {
+    __mock.codeLensRegistrations.push({ selector, provider });
+    return new Disposable();
+  },
 };
 
 export const __mock = {
@@ -416,6 +439,7 @@ export const __mock = {
   webviewRegistrations: [] as WebviewRegistration[],
   uriHandlerRegistrations: [] as UriHandlerRegistration[],
   hoverRegistrations: [] as HoverRegistration[],
+  codeLensRegistrations: [] as CodeLensRegistration[],
   warningMessages: [] as string[],
   warningMessageCalls: [] as Array<{ message: string; items: unknown[] }>,
   warningMessageResult: undefined as string | undefined,
@@ -440,6 +464,7 @@ export const __mock = {
     this.webviewRegistrations.length = 0;
     this.uriHandlerRegistrations.length = 0;
     this.hoverRegistrations.length = 0;
+    this.codeLensRegistrations.length = 0;
     this.warningMessages.length = 0;
     this.warningMessageCalls.length = 0;
     this.warningMessageResult = undefined;
@@ -466,6 +491,9 @@ export const __mock = {
   emitVisibleTextEditors(editors: TextEditor[]): void {
     window.visibleTextEditors = editors;
     onDidChangeVisibleTextEditorsEmitter.fire(editors);
+  },
+  emitTextEditorSelectionChange(event: unknown): void {
+    onDidChangeTextEditorSelectionEmitter.fire(event);
   },
   emitDidChangeTextDocument(event: unknown): void {
     onDidChangeTextDocumentEmitter.fire(event);

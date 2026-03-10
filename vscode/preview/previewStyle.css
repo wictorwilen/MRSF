@@ -68,6 +68,8 @@ th.mrsf-line-highlight {
 /* ── Badge ──────────────────────────────────────────────── */
 
 .mrsf-badge {
+  --mrsf-badge-bg: var(--vscode-badge-background, #007acc);
+  --mrsf-badge-accent: transparent;
   position: absolute;
   right: calc(100% + 4px);
   top: 2px;
@@ -77,7 +79,7 @@ th.mrsf-line-highlight {
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  padding: 2px 6px;
+  padding: 2px 6px 2px 8px;
   border-radius: 10px;
   cursor: pointer;
   user-select: none;
@@ -85,8 +87,12 @@ th.mrsf-line-highlight {
   z-index: 10;
 
   color: var(--vscode-badge-foreground, #fff);
-  background: var(--vscode-badge-background, #007acc);
-  border-left: 3px solid transparent;
+  background: linear-gradient(
+    90deg,
+    var(--mrsf-badge-accent) 0 4px,
+    var(--mrsf-badge-bg) 4px 100%
+  );
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
 
   transition: opacity 0.15s ease, transform 0.1s ease;
 }
@@ -154,7 +160,7 @@ th.mrsf-line-highlight {
 }
 
 .mrsf-badge-resolved {
-  background: var(--vscode-testing-iconPassed, #388a34);
+  --mrsf-badge-bg: var(--vscode-testing-iconPassed, #388a34);
   opacity: 0.7;
 }
 
