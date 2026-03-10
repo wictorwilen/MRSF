@@ -1,4 +1,4 @@
-import type { Comment, MrsfDocument } from "@mrsf/cli";
+import type { Comment, MrsfDocument } from "@mrsf/cli/browser";
 import type {
   DecorationSnapshot,
   GutterMarkSnapshot,

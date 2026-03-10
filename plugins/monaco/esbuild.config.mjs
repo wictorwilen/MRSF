@@ -16,6 +16,7 @@ const shared = {
   treeShaking: true,
   external: [
     "@mrsf/cli",
+    "@mrsf/cli/browser",
     "monaco-editor",
   ],
 };

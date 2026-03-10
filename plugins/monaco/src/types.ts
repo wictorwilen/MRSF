@@ -1,5 +1,4 @@
-import type { Comment, MrsfDocument } from "@mrsf/cli";
-import type { ReanchorResult } from "@mrsf/cli";
+import type { Comment, MrsfDocument, ReanchorResult } from "@mrsf/cli/browser";
 
 export interface EditorPoint {
   lineIndex: number;
@@ -140,6 +139,33 @@ export interface ReviewThread {
 export interface ReviewLoadOptions {
   geometry?: DocumentGeometry;
   documentText?: string;
+}
+
+export type MonacoMrsfStateChangeSource =
+  | "load"
+  | "external"
+  | "refresh"
+  | "content"
+  | "save"
+  | "reanchor";
+
+export interface MonacoMrsfStateChangeEvent {
+  resourceId: string;
+  state: ReviewState;
+  dirty: boolean;
+  hasPendingShifts: boolean;
+  source: MonacoMrsfStateChangeSource;
+}
+
+export interface MonacoMrsfPluginSaveOptions {
+  reason?: string;
+}
+
+export interface MonacoMrsfPluginSaveRequest {
+  resourceId: string;
+  state: ReviewState;
+  reason: string;
+  defaultSave: () => Promise<void>;
 }
 
 export interface MonacoDecorationClasses {

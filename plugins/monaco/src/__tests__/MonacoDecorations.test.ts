@@ -69,6 +69,7 @@ describe("MonacoDecorations", () => {
     expect(set.gutter[0].options.glyphMarginClassName).toContain("mrsf-monaco-gutter-high");
     expect(set.inline[0].options.className).toContain("mrsf-monaco-inline");
     expect(set.inline[0].options.className).toContain("mrsf-monaco-inline-high");
+    expect(set.inline[0].options.hoverMessage).toBeUndefined();
   });
 
   it("can disable gutter or inline decorations independently", () => {

@@ -1,5 +1,6 @@
 export type {
 	AnchorFields,
+	CommentDraft,
 	DecorationSnapshot,
 	DocumentGeometry,
 	EditorContentChange,
@@ -10,6 +11,10 @@ export type {
 	HoverTargetSnapshot,
 	InlineDecorationSnapshot,
 	LineThreadSnapshot,
+	MonacoMrsfPluginSaveOptions,
+	MonacoMrsfPluginSaveRequest,
+	MonacoMrsfStateChangeEvent,
+	MonacoMrsfStateChangeSource,
 	MonacoDecorationClasses,
 	MonacoDecorationOptions,
 	MonacoDecorationSet,
@@ -18,6 +23,8 @@ export type {
 	ReviewThread,
 	ThreadProjectionOptions,
 } from "./types.js";
+
+export type { MonacoMrsfPluginControllerOptions } from "./MonacoMrsfPlugin.js";
 
 export type {
 	HostDisposer,
@@ -44,6 +51,7 @@ export {
 
 export { splitDocumentLines } from "./host/HostAdapter.js";
 export { MemoryHostAdapter } from "./host/MemoryHostAdapter.js";
+export { MemoryHostSession } from "./host/MemoryHostSession.js";
 
 export {
 	comparePoints,
@@ -66,6 +74,8 @@ export {
 export { MonacoThreadOverlay } from "./MonacoThreadOverlay.js";
 
 export { MonacoViewAdapter } from "./MonacoViewAdapter.js";
+
+export { MonacoMrsfPlugin } from "./MonacoMrsfPlugin.js";
 
 export {
 	buildHoverContents,

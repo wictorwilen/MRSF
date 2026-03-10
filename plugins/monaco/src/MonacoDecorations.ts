@@ -101,9 +101,6 @@ export function createMonacoDecorationSet(
           range: toMonacoRange(inlineRange.range),
           options: {
             className: classNames.join(" "),
-            hoverMessage: options.hover === false
-              ? undefined
-              : [{ value: inlineRange.selectedText ?? "MRSF comment" }],
             zIndex: options.decorationZIndex,
           },
         } satisfies monaco.editor.IModelDeltaDecoration;
@@ -135,12 +132,13 @@ export function injectDefaultMonacoDecorationStyles(
   const style = resolvedDocument.createElement("style");
   style.id = styleId;
   style.textContent = `
-.${classes.lineOpen} { background: linear-gradient(180deg, #d97706 0%, #b45309 100%); border-radius: 999px; width: 10px; height: 10px; margin-left: 4px; margin-top: 4px; }
-.${classes.lineResolved} { background: linear-gradient(180deg, #16a34a 0%, #15803d 100%); border-radius: 999px; width: 10px; height: 10px; margin-left: 4px; margin-top: 4px; }
-.${classes.lineMixed} { background: linear-gradient(90deg, #d97706 0%, #16a34a 100%); border-radius: 999px; width: 10px; height: 10px; margin-left: 4px; margin-top: 4px; }
-.${classes.lineHigh} { box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.35); }
-.${classes.lineMedium} { box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.3); }
-.${classes.lineLow} { box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2); }
+.${classes.lineOpen}, .${classes.lineResolved}, .${classes.lineMixed} { width: 7px; height: 16px; margin-left: 6px; margin-top: 1px; border-radius: 4px; box-shadow: 0 1px 6px rgba(15, 23, 42, 0.16); border: 1px solid rgba(255, 255, 255, 0.72); }
+.${classes.lineOpen} { background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%); }
+.${classes.lineResolved} { background: linear-gradient(180deg, #16a34a 0%, #15803d 100%); }
+.${classes.lineMixed} { background: linear-gradient(180deg, #2563eb 0%, #2563eb 52%, #16a34a 52%, #16a34a 100%); }
+.${classes.lineHigh} { box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.28), 0 1px 6px rgba(15, 23, 42, 0.16); }
+.${classes.lineMedium} { box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.22), 0 1px 6px rgba(15, 23, 42, 0.16); }
+.${classes.lineLow} { box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18), 0 1px 6px rgba(15, 23, 42, 0.16); }
 .${classes.inlineBase} { background: rgba(245, 158, 11, 0.16); border-bottom: 1px solid rgba(217, 119, 6, 0.6); }
 .${classes.inlineResolved} { background: rgba(34, 197, 94, 0.14); border-bottom-color: rgba(22, 163, 74, 0.55); }
 .${classes.inlineHigh} { background: rgba(239, 68, 68, 0.16); border-bottom-color: rgba(220, 38, 38, 0.7); }

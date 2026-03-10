@@ -167,6 +167,55 @@ function makeState(): ReviewState {
   };
 }
 
+function makeMultiThreadState(): ReviewState {
+  const state = makeState();
+  state.document.comments.push(
+    {
+      id: "c2",
+      author: "Bob",
+      timestamp: "2026-03-07T13:00:00.000Z",
+      text: "Second thread",
+      resolved: false,
+      line: 2,
+      type: "question",
+    } as ReviewState["document"]["comments"][number],
+    {
+      id: "c3",
+      author: "Carol",
+      timestamp: "2026-03-07T13:05:00.000Z",
+      text: "Reply",
+      resolved: false,
+      reply_to: "c2",
+    } as ReviewState["document"]["comments"][number],
+  );
+  state.snapshot.threadsByLine = [
+    {
+      line: 2,
+      threads: [
+        state.snapshot.threadsByLine[0].threads[0],
+        {
+          line: 2,
+          rootCommentId: "c2",
+          commentIds: ["c2", "c3"],
+          replyCount: 1,
+          resolved: false,
+          highestSeverity: null,
+        },
+      ],
+    },
+  ];
+  state.snapshot.gutterMarks = [
+    {
+      line: 2,
+      threadCount: 2,
+      commentCount: 3,
+      resolvedState: "open",
+      highestSeverity: null,
+    },
+  ];
+  return state;
+}
+
 describe("MonacoThreadOverlay", () => {
   it("renders add buttons for visible empty lines and calls onAddLine", () => {
     const dom = new JSDOM("<div id=editor></div>");
@@ -249,6 +298,49 @@ describe("MonacoThreadOverlay", () => {
 
     editor.triggerMouseDown();
     expect(panel.hidden).toBe(true);
+
+    overlay.dispose();
+  });
+
+  it("renders multi-thread tabs and filters to a selected thread", () => {
+    const dom = new JSDOM("<div id=editor></div>");
+    const container = dom.window.document.getElementById("editor") as HTMLDivElement;
+    container.getBoundingClientRect = () => ({
+      top: 0,
+      left: 0,
+      right: 900,
+      bottom: 600,
+      width: 900,
+      height: 600,
+      x: 0,
+      y: 0,
+      toJSON() { return {}; },
+    });
+    const editor = new FakeEditor(container);
+    const state = makeMultiThreadState();
+
+    const overlay = new MonacoThreadOverlay(editor as unknown as monaco.editor.IStandaloneCodeEditor, {
+      targetDocument: dom.window.document,
+      getState: () => state,
+      getThreadsAtLine: () => [
+        { line: 2, rootComment: state.document.comments[0] as any, replies: [] },
+        { line: 2, rootComment: state.document.comments[1] as any, replies: [state.document.comments[2] as any] },
+      ],
+    });
+
+    overlay.update(state);
+    const badge = container.querySelector('[data-line="2"]') as HTMLButtonElement;
+    badge.click();
+
+    const tabs = container.querySelectorAll('.mrsf-monaco-thread-tab');
+    expect(tabs).toHaveLength(3);
+
+    const secondTab = tabs[2] as HTMLButtonElement;
+    secondTab.click();
+
+    const panel = container.querySelector('.mrsf-monaco-panel') as HTMLDivElement;
+    expect(panel.innerHTML).toContain('Second thread');
+    expect(panel.innerHTML).not.toContain('Inline comment');
 
     overlay.dispose();
   });

@@ -16,6 +16,10 @@ export type {
   MonacoDecorationClasses,
   MonacoDecorationOptions,
   MonacoDecorationSet,
+  MonacoMrsfPluginSaveOptions,
+  MonacoMrsfPluginSaveRequest,
+  MonacoMrsfStateChangeEvent,
+  MonacoMrsfStateChangeSource,
   MonacoMrsfPluginOptions,
   RenderedThreadSnapshot,
   ReviewActionRequest,
@@ -37,6 +41,8 @@ export { splitDocumentLines } from "./host/HostAdapter.js";
 export {
   MemoryHostAdapter,
 } from "./host/MemoryHostAdapter.js";
+
+export { MemoryHostSession } from "./host/MemoryHostSession.js";
 
 export {
   comparePoints,
@@ -86,4 +92,5 @@ export {
 
 export {
   MonacoMrsfPlugin,
+  type MonacoMrsfPluginControllerOptions,
 } from "./MonacoMrsfPlugin.js";

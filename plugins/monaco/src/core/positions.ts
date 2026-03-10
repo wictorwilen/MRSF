@@ -1,4 +1,4 @@
-import type { Comment } from "@mrsf/cli";
+import type { Comment } from "@mrsf/cli/browser";
 import type {
   AnchorFields,
   DocumentGeometry,

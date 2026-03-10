@@ -6,7 +6,7 @@
   "scripts": {
     "demo:monaco": "vite monaco-demo",
     "demo:monaco:build": "vite build monaco-demo",
-    "test:monaco-demo": "vitest run monaco-demo/__tests__"
+    "test:monaco-demo": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
     "@mrsf/monaco-mrsf": "file:../plugins/monaco",

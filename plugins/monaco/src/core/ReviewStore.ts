@@ -1,13 +1,8 @@
 import {
-  addComment as cliAddComment,
   applyReanchorResults,
-  populateSelectedText,
-  reanchorDocument,
-  removeComment,
-  resolveComment,
-  unresolveComment,
-} from "@mrsf/cli";
-import type { Comment, MrsfDocument } from "@mrsf/cli";
+  reanchorDocumentLines,
+} from "@mrsf/cli/browser";
+import type { Comment, MrsfDocument } from "@mrsf/cli/browser";
 import type { MonacoMrsfHostAdapter } from "../host/HostAdapter.js";
 import { splitDocumentLines } from "../host/HostAdapter.js";
 import type {
@@ -19,6 +14,14 @@ import type {
   ReviewState,
   ReviewThread,
 } from "../types.js";
+import {
+  addComment as addBrowserComment,
+  populateSelectedText,
+  removeComment,
+  resolveComment,
+  setSelectedText,
+  unresolveComment,
+} from "./browserComments.js";
 import { applyLineShifts } from "./liveLineTracker.js";
 import { projectDecorationSnapshot } from "./threadProjection.js";
 
@@ -27,18 +30,6 @@ function geometryFromLines(lines: string[]): DocumentGeometry {
     lineCount: lines.length,
     getLineLength: (lineIndex: number) => lines[lineIndex]?.length ?? 0,
   };
-}
-
-function toReanchorLines(lines: string[]): string[] {
-  return ["", ...lines];
-}
-
-function parentDirectory(filePath: string | null): string | undefined {
-  if (!filePath) return undefined;
-  const normalized = filePath.replace(/\\/g, "/");
-  const lastSlash = normalized.lastIndexOf("/");
-  if (lastSlash <= 0) return undefined;
-  return normalized.slice(0, lastSlash);
 }
 
 function createEmptyDocument(documentPath: string | null, resourceId: string): MrsfDocument {
@@ -161,7 +152,7 @@ export class ReviewStore {
 
   async addComment(resourceId: string, draft: CommentDraft): Promise<Comment> {
     const state = this.requireState(resourceId);
-    const comment = await cliAddComment(state.document, {
+    const comment = await addBrowserComment(state.document, {
       text: draft.text,
       author: draft.author ?? "Unknown",
       line: draft.line,
@@ -173,9 +164,9 @@ export class ReviewStore {
     });
 
     if (!draft.selected_text) {
-      populateSelectedText(comment, state.documentLines);
+      await populateSelectedText(comment, state.documentLines);
     } else {
-      comment.selected_text = draft.selected_text;
+      await setSelectedText(comment, draft.selected_text);
     }
 
     this.recomputeState(state);
@@ -189,7 +180,7 @@ export class ReviewStore {
       throw new Error(`Unknown parent comment '${parentId}'.`);
     }
 
-    const comment = await cliAddComment(state.document, {
+    const comment = await addBrowserComment(state.document, {
       text: draft.text,
       author: draft.author ?? "Unknown",
       reply_to: parentId,
@@ -202,9 +193,9 @@ export class ReviewStore {
     });
 
     if (draft.selected_text) {
-      comment.selected_text = draft.selected_text;
+      await setSelectedText(comment, draft.selected_text);
     } else if (parent.selected_text) {
-      comment.selected_text = parent.selected_text;
+      await setSelectedText(comment, parent.selected_text);
     }
 
     this.recomputeState(state);
@@ -268,12 +259,8 @@ export class ReviewStore {
 
   async reanchor(resourceId: string, options: ReviewReanchorOptions = {}): Promise<ReviewState> {
     const state = this.requireState(resourceId);
-    const results = await reanchorDocument(state.document, toReanchorLines(state.documentLines), {
+    const results = reanchorDocumentLines(state.document, ["", ...state.documentLines], {
       threshold: options.threshold,
-      documentPath: state.documentPath ?? undefined,
-      cwd: parentDirectory(state.documentPath),
-      updateText: options.updateText,
-      force: options.force,
     });
 
     applyReanchorResults(state.document, results, {

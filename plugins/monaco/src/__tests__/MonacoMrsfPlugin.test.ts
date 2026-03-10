@@ -82,4 +82,55 @@ describe("MonacoMrsfPlugin", () => {
 
     plugin.dispose();
   });
+
+  it("emits state changes and routes save through the host save hook", async () => {
+    const resourceId = "file:///doc.md";
+    const host = new MemoryHostAdapter({
+      resources: {
+        [resourceId]: {
+          documentText: "alpha\nbeta",
+          documentPath: "/tmp/doc.md",
+          sidecarPath: "/tmp/doc.md.review.yaml",
+          sidecar: {
+            mrsf_version: "1.0",
+            document: "doc.md",
+            comments: [],
+          },
+        },
+      },
+    });
+
+    const sources: string[] = [];
+    const reasons: string[] = [];
+    const plugin = new MonacoMrsfPlugin(
+      createFakeEditor(resourceId, "alpha\nbeta"),
+      host,
+      {
+        autoLoad: false,
+        registerActions: false,
+        watchHostChanges: false,
+        onStateChange: ({ source }) => {
+          sources.push(source);
+        },
+        onSaveRequest: async ({ reason, defaultSave }) => {
+          reasons.push(reason);
+          await defaultSave();
+        },
+      },
+    );
+
+    await plugin.loadCurrent();
+    await plugin.addComment({
+      text: "Comment",
+      author: "Tester",
+      line: 2,
+    });
+    await plugin.save({ reason: "toolbar" });
+
+    expect(sources).toContain("load");
+    expect(sources).toContain("save");
+    expect(reasons).toEqual(["toolbar"]);
+
+    plugin.dispose();
+  });
 });

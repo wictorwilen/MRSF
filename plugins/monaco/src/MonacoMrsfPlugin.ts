@@ -1,5 +1,5 @@
 import type * as monaco from "monaco-editor";
-import type { Comment } from "@mrsf/cli";
+import type { Comment } from "@mrsf/cli/browser";
 import type { MonacoMrsfHostAdapter } from "./host/HostAdapter.js";
 import { MonacoViewAdapter, type MonacoViewAdapterOptions } from "./MonacoViewAdapter.js";
 import { registerMonacoActions } from "./MonacoActions.js";
@@ -11,6 +11,10 @@ import type {
   CommentDraft,
   MonacoActionContext,
   MonacoActionHandlers,
+  MonacoMrsfPluginSaveOptions,
+  MonacoMrsfPluginSaveRequest,
+  MonacoMrsfStateChangeEvent,
+  MonacoMrsfStateChangeSource,
   ReviewReanchorOptions,
   ReviewState,
   ReviewThread,
@@ -24,6 +28,8 @@ export interface MonacoMrsfPluginControllerOptions extends MonacoViewAdapterOpti
   autoSaveAfterReanchor?: boolean;
   watchHostChanges?: boolean;
   reloadOnExternalChanges?: boolean;
+  onStateChange?: (event: MonacoMrsfStateChangeEvent) => void;
+  onSaveRequest?: (request: MonacoMrsfPluginSaveRequest) => void | Promise<void>;
 }
 
 export class MonacoMrsfPlugin {
@@ -38,6 +44,7 @@ export class MonacoMrsfPlugin {
   private documentWatchDisposer: (() => void | Promise<void>) | null = null;
   private sidecarWatchDisposer: (() => void | Promise<void>) | null = null;
   private readonly options: MonacoMrsfPluginControllerOptions;
+  private pendingStateSource: MonacoMrsfStateChangeSource = "load";
 
   constructor(
     editor: monaco.editor.IStandaloneCodeEditor,
@@ -57,11 +64,19 @@ export class MonacoMrsfPlugin {
         this.view.applySnapshot(state.snapshot);
         this.overlay?.update(state);
       }
+      this.options.onStateChange?.({
+        resourceId: state.resourceId,
+        state,
+        dirty: state.dirty,
+        hasPendingShifts: state.hasPendingShifts,
+        source: this.pendingStateSource,
+      });
+      this.pendingStateSource = "external";
     });
 
     this.disposables.push(
       this.view.onDidChangeModel(() => {
-        void this.loadCurrent();
+        void this.loadCurrent("load");
         this.bindContentListener();
       }),
     );
@@ -72,13 +87,15 @@ export class MonacoMrsfPlugin {
     this.bindHoverProvider();
 
     if (options.autoLoad !== false) {
-      void this.loadCurrent();
+      void this.loadCurrent("load");
     }
   }
 
-  async loadCurrent(): Promise<ReviewState | null> {
+  async loadCurrent(source: MonacoMrsfStateChangeSource = "load"): Promise<ReviewState | null> {
     const resourceId = this.view.getResourceId();
     if (!resourceId) return null;
+
+    this.pendingStateSource = source;
 
     const state = await this.store.load(resourceId, {
       geometry: this.view.getGeometry() ?? undefined,
@@ -90,12 +107,13 @@ export class MonacoMrsfPlugin {
   }
 
   async reloadFromHost(): Promise<ReviewState | null> {
-    return this.loadCurrent();
+    return this.loadCurrent("external");
   }
 
   refresh(): ReviewState | null {
     const resourceId = this.view.getResourceId();
     if (!resourceId) return null;
+    this.pendingStateSource = "refresh";
     return this.store.refresh(
       resourceId,
       this.view.getText(),
@@ -158,17 +176,39 @@ export class MonacoMrsfPlugin {
     return this.store.remove(this.requireResourceId(), commentId);
   }
 
-  async save(): Promise<void> {
-    return this.store.save(this.requireResourceId());
+  async save(options: MonacoMrsfPluginSaveOptions = {}): Promise<void> {
+    const resourceId = this.requireResourceId();
+    const state = this.store.getState(resourceId);
+    if (!state) {
+      return;
+    }
+
+    const defaultSave = async (): Promise<void> => {
+      this.pendingStateSource = "save";
+      await this.store.save(resourceId);
+    };
+
+    if (this.options.onSaveRequest) {
+      await this.options.onSaveRequest({
+        resourceId,
+        state,
+        reason: options.reason ?? "manual",
+        defaultSave,
+      });
+      return;
+    }
+
+    await defaultSave();
   }
 
   async reanchor(options: ReviewReanchorOptions = {}): Promise<ReviewState> {
+    this.pendingStateSource = "reanchor";
     return this.store.reanchor(this.requireResourceId(), options);
   }
 
   async saveAndReanchor(options: ReviewReanchorOptions = {}): Promise<ReviewState> {
     const state = await this.reanchor({ ...options, autoSave: false });
-    await this.save();
+    await this.save({ reason: "reanchor" });
     return state;
   }
 
@@ -197,6 +237,7 @@ export class MonacoMrsfPlugin {
     this.contentListener = this.view.onDidChangeContent((changes) => {
       const resourceId = this.view.getResourceId();
       if (!resourceId || !this.store.getState(resourceId)) return;
+      this.pendingStateSource = "content";
       this.store.applyLiveEdits(
         resourceId,
         changes,

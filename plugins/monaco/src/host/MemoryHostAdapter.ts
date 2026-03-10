@@ -1,4 +1,4 @@
-import type { MrsfDocument } from "@mrsf/cli";
+import type { MrsfDocument } from "@mrsf/cli/browser";
 import type { HostDisposer, MonacoMrsfHostAdapter } from "./HostAdapter.js";
 
 export interface MemoryHostResource {
@@ -27,7 +27,7 @@ export class MemoryHostAdapter implements MonacoMrsfHostAdapter {
         documentPath: resource.documentPath ?? null,
         sidecarPath: resource.sidecarPath ?? null,
         sidecar: resource.sidecar ?? null,
-        persistedSidecar: structuredClone(resource.sidecar ?? null),
+        persistedSidecar: structuredClone(resource.persistedSidecar ?? resource.sidecar ?? null),
       });
     }
   }

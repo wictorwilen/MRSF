@@ -1,4 +1,4 @@
-import type { MrsfDocument } from "@mrsf/cli";
+import type { MrsfDocument } from "@mrsf/cli/browser";
 
 export type HostDisposer = () => void | Promise<void>;
 
