@@ -46,6 +46,12 @@ jobs:
           npm ci
           npm run build
 
+      - name: Build Marked plugin
+        run: |
+          cd plugins/marked
+          npm ci
+          npm run build
+
       - name: Build docs
         run: |
           cd docs
