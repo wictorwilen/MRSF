@@ -20,7 +20,7 @@ const HTML_TAGS = new Set([
 ]);
 
 // Known Vue component names used in docs (not escaped by escapeNonHtmlTags)
-const VUE_COMPONENTS = new Set(["MrsfDemo", "MrsfRehypeDemo"]);
+const VUE_COMPONENTS = new Set(["MrsfDemo", "MrsfRehypeDemo", "MrsfMarkedDemo"]);
 
 /**
  * markdown-it plugin: escape `<word>` patterns that are NOT real HTML tags.
@@ -58,7 +58,7 @@ export default withMermaid(defineConfig({
 
   vite: {
     ssr: {
-      noExternal: ["@mrsf/markdown-it-mrsf"],
+      noExternal: ["@mrsf/markdown-it-mrsf", "@mrsf/marked-mrsf"],
     },
   },
 
@@ -125,6 +125,7 @@ export default withMermaid(defineConfig({
             { text: "Agent Skill", link: "/guide/agent-skill" },
             { text: "Python CLI & SDK", link: "/guide/python" },
             { text: "Monaco Plugin", link: "/guide/monaco" },
+            { text: "Marked Plugin", link: "/guide/marked" },
             { text: "markdown-it Plugin", link: "/guide/markdown-it" },
             { text: "rehype Plugin", link: "/guide/rehype" },
             { text: "CI/CD Integration", link: "/guide/ci-integration" },

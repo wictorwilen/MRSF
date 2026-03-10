@@ -34,6 +34,13 @@ export default defineConfig({
       },
       {
         test: {
+          name: "@mrsf/marked-mrsf",
+          root: "./plugins/marked/src",
+          globals: true,
+        },
+      },
+      {
+        test: {
           name: "@mrsf/monaco-mrsf",
           root: "./plugins/monaco/src",
           globals: true,

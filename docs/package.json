@@ -8,8 +8,10 @@
     "docs:preview": "vitepress preview"
   },
   "devDependencies": {
+    "@mrsf/marked-mrsf": "file:../plugins/marked",
     "@mrsf/markdown-it-mrsf": "file:../plugins/markdown-it",
     "@mrsf/rehype-mrsf": "file:../plugins/rehype",
+    "marked": "^16.4.2",
     "markdown-it": "^14.1.1",
     "mermaid": "^11.12.3",
     "rehype-stringify": "^10.0.0",

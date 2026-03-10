@@ -66,6 +66,11 @@ features:
     details: "Render review comments as badges, line highlights, and tooltips with @mrsf/markdown-it-mrsf — works with VitePress and any markdown-it project."
     link: https://www.npmjs.com/package/@mrsf/markdown-it-mrsf
     linkText: "@mrsf/markdown-it-mrsf on npm"
+  - icon: 🏷️
+    title: Marked Plugin
+    details: "Use @mrsf/marked-mrsf to render review comments in Marked pipelines and browser-based Markdown renderers with the same shared controller and CSS."
+    link: https://www.npmjs.com/package/@mrsf/marked-mrsf
+    linkText: "@mrsf/marked-mrsf on npm"
   - icon: 🔌
     title: rehype Plugin
     details: "Use @mrsf/rehype-mrsf to render comments in the unified ecosystem — Astro, Next.js MDX, Docusaurus, and more."

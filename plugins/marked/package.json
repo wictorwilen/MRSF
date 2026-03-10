@@ -1,0 +1,81 @@
+{
+  "name": "@mrsf/marked-mrsf",
+  "version": "0.4.7",
+  "description": "Marked plugin for rendering Sidemark/MRSF review comments",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "browser": {
+        "import": "./dist/browser.js",
+        "types": "./dist/browser.d.ts"
+      },
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./browser": {
+      "import": "./dist/browser.js",
+      "types": "./dist/browser.d.ts"
+    },
+    "./style.css": "./dist/style.css",
+    "./controller": {
+      "import": "./dist/controller.js",
+      "types": "./dist/controller.d.ts"
+    }
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node ../sync-types.mjs && node esbuild.config.mjs",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "cp ../../LICENSE . && npm run build && npm test",
+    "postpublish": "rm -f LICENSE"
+  },
+  "keywords": [
+    "marked",
+    "marked-plugin",
+    "markdown",
+    "review",
+    "sidecar",
+    "mrsf",
+    "sidemark",
+    "comments",
+    "annotation",
+    "rendering"
+  ],
+  "license": "MIT",
+  "author": "Wictor Wilén (https://github.com/wictorwilen)",
+  "homepage": "https://github.com/wictorwilen/MRSF/tree/main/plugins/marked#readme",
+  "bugs": {
+    "url": "https://github.com/wictorwilen/MRSF/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wictorwilen/MRSF.git",
+    "directory": "plugins/marked"
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.js.map",
+    "dist/**/*.d.ts",
+    "dist/style.css",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "@mrsf/cli": "^0.3.0",
+    "marked": "^16.4.2"
+  },
+  "devDependencies": {
+    "@mrsf/plugin-shared": "file:../shared",
+    "@types/node": "^22.13.10",
+    "esbuild": "^0.27.3",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.9"
+  }
+}

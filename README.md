@@ -14,6 +14,7 @@
 [![VS Code Installs](https://img.shields.io/visual-studio-marketplace/i/wictor.mrsf-vscode?label=VS%20Code%20installs)](https://marketplace.visualstudio.com/items?itemName=wictor.mrsf-vscode)
 [![mrsf on PyPI](https://img.shields.io/pypi/v/mrsf?label=mrsf%20on%20PyPI)](https://pypi.org/project/mrsf/)
 [![@mrsf/markdown-it-mrsf on npm](https://img.shields.io/npm/v/@mrsf/markdown-it-mrsf?label=%40mrsf%2Fmarkdown-it-mrsf)](https://www.npmjs.com/package/@mrsf/markdown-it-mrsf)
+[![@mrsf/marked-mrsf on npm](https://img.shields.io/npm/v/@mrsf/marked-mrsf?label=%40mrsf%2Fmarked-mrsf)](https://www.npmjs.com/package/@mrsf/marked-mrsf)
 [![@mrsf/rehype-mrsf on npm](https://img.shields.io/npm/v/@mrsf/rehype-mrsf?label=%40mrsf%2Frehype-mrsf)](https://www.npmjs.com/package/@mrsf/rehype-mrsf)
 [![MCP Compatible](https://img.shields.io/badge/MCP-compatible-blueviolet?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyem0wIDE4Yy00LjQyIDAtOC0zLjU4LTgtOHMzLjU4LTggOC04IDggMy41OCA4IDgtMy41OCA4LTggOHoiLz48L3N2Zz4=)](https://modelcontextprotocol.io)
 
@@ -45,7 +46,7 @@ MRSF solves this with **sidecar files** that hold review metadata separate from 
 - CLI tools for validation, re-anchoring, status checks  
 - MCP server for integrations with LLMs and assistant clients
 - Python CLI & SDK (`pip install mrsf`) — 1:1 port of the Node.js CLI
-- Rendering plugins for markdown-it and rehype/unified ecosystems
+- Rendering plugins for Marked, markdown-it, and rehype/unified ecosystems
 
 ## 📄 Specification
 
@@ -245,6 +246,24 @@ md.use(mrsfPlugin, { sidecarPath: "doc.md.review.yaml" });
 ```
 
 See [`plugins/markdown-it/README.md`](plugins/markdown-it/README.md).
+
+### Marked Plugin
+
+For Marked-based renderers in Node.js or the browser:
+
+```bash
+npm install marked @mrsf/marked-mrsf
+```
+
+```js
+import { Marked } from "marked";
+import { markedMrsf } from "@mrsf/marked-mrsf";
+
+const parser = new Marked();
+parser.use(markedMrsf({ sidecarPath: "doc.md.review.yaml" }));
+```
+
+See [`plugins/marked/README.md`](plugins/marked/README.md).
 
 ### rehype Plugin
 
