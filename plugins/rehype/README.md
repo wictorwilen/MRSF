@@ -141,6 +141,30 @@ Set `window.mrsfDisableBuiltinUi = true` before loading the controller if you wa
 
 The controller also auto-refreshes gutter positions on DOM mutations inside the rendered container, which covers common async renderers such as Mermaid. Call `refreshAll()` after third-party rendering when you need a deterministic reposition step.
 
+### Shared Gutter Render Hooks
+
+The controller accepts `gutterRenderers` so hosts can override the shared badge and add-button presentation without diverging from the common MRSF UX contract:
+
+```ts
+import { MrsfController } from "@mrsf/rehype-mrsf/controller";
+
+new MrsfController(document.querySelector(".markdown-body")!, {
+  interactive: true,
+  gutterRenderers: {
+    badge: ({ defaultPresentation }) => ({
+      label: `🗨 ${defaultPresentation.countText}`,
+      icon: "🗨",
+      countText: defaultPresentation.countText,
+    }),
+    addButton: () => ({
+      label: "New",
+    }),
+  },
+});
+```
+
+The same shared renderer contract also drives the Monaco gutter badges, including the default `9+` count cap and default add-button labels.
+
 ## CSS Customization
 
 Override CSS custom properties:

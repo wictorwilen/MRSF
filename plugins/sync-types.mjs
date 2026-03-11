@@ -19,7 +19,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const sharedSrc = resolve(__dirname, "shared", "src");
 
 const plugins = ["rehype", "markdown-it", "marked"];
-const files = ["types.ts", "html.ts", "controller.ts"];
+const files = ["types.ts", "html.ts", "gutter.ts", "controller.ts"];
 
 for (const file of files) {
   const source = readFileSync(resolve(sharedSrc, file), "utf-8");

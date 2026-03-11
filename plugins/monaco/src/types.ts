@@ -57,6 +57,53 @@ export interface GutterMarkSnapshot {
   highestSeverity: string | null;
 }
 
+export interface MonacoGutterBadgeRenderResult {
+  icon?: string;
+  countText?: string;
+  label?: string;
+  title?: string;
+  className?: string;
+  ariaLabel?: string;
+  attributes?: Record<string, string>;
+}
+
+export interface MonacoGutterBadgeRenderContext {
+  line: number;
+  mark: GutterMarkSnapshot;
+  threads: ReviewThread[];
+  isActive: boolean;
+  defaultPresentation: Required<Pick<MonacoGutterBadgeRenderResult, "icon" | "countText" | "label" | "title" | "ariaLabel">>;
+}
+
+export interface MonacoGutterAddButtonRenderResult {
+  label?: string;
+  title?: string;
+  className?: string;
+  ariaLabel?: string;
+  attributes?: Record<string, string>;
+}
+
+export interface MonacoGutterAddButtonRenderContext {
+  line: number;
+  isActive: boolean;
+  defaultPresentation: Required<Pick<MonacoGutterAddButtonRenderResult, "label" | "title" | "ariaLabel">>;
+}
+
+export interface MonacoGutterRenderers {
+  badge?: (
+    context: MonacoGutterBadgeRenderContext,
+  ) => MonacoGutterBadgeRenderResult | null | undefined;
+  addButton?: (
+    context: MonacoGutterAddButtonRenderContext,
+  ) => MonacoGutterAddButtonRenderResult | null | undefined;
+}
+
+export interface MonacoThreadOverlayDisplayOptions {
+  threadFilters?: boolean;
+  stickyInlinePopup?: boolean;
+  gutterRenderers?: MonacoGutterRenderers;
+}
+
 export interface InlineDecorationSnapshot {
   commentId: string;
   line: number;

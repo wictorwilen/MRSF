@@ -1,5 +1,13 @@
 import type * as monaco from "monaco-editor";
-import type { ReviewState, ReviewThread } from "./types.js";
+import {
+  resolveMrsfGutterAddButtonPresentation,
+  resolveMrsfGutterBadgePresentation,
+} from "@mrsf/plugin-shared";
+import type {
+  MonacoThreadOverlayDisplayOptions,
+  ReviewState,
+  ReviewThread,
+} from "./types.js";
 import { renderReviewThreadHtml } from "./ui/threadHtml.js";
 
 export interface MonacoThreadOverlayActionRequest {
@@ -11,6 +19,7 @@ export interface MonacoThreadOverlayActionRequest {
 export interface MonacoThreadOverlayOptions {
   targetDocument?: Document;
   interactive?: boolean;
+  display?: MonacoThreadOverlayDisplayOptions;
   getState: () => ReviewState | null;
   getThreadsAtLine: (line: number) => ReviewThread[];
   onAction?: (request: MonacoThreadOverlayActionRequest) => void | Promise<void>;
@@ -31,8 +40,10 @@ function injectOverlayStyles(targetDocument: Document): void {
 .mrsf-monaco-overlay-root { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 8; }
 .mrsf-monaco-overlay-gutter { position: absolute; inset: 0 auto 0 0; width: 88px; pointer-events: none; }
 .mrsf-monaco-gutter-item { position: absolute; left: 0; display: flex; align-items: center; pointer-events: auto; }
-.mrsf-monaco-badge { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 22px; padding: 3px 9px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--mrsf-badge-bg, #2563eb) 22%, white); font-family: var(--mrsf-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif); font-size: 11px; font-weight: 700; line-height: 1; color: var(--mrsf-badge-fg, #f8fbff); background: linear-gradient(180deg, color-mix(in srgb, var(--mrsf-badge-bg, #2563eb) 88%, white), var(--mrsf-badge-bg-strong, #1d4ed8)); white-space: nowrap; cursor: pointer; box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12); }
-.mrsf-monaco-gutter-add { display: inline-flex; align-items: center; justify-content: center; min-height: 20px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--mrsf-add-border, rgba(0, 122, 204, 0.28)); font-family: var(--mrsf-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif); font-size: 11px; font-weight: 600; line-height: 1; color: var(--mrsf-add-fg, #007acc); background: var(--mrsf-add-bg, rgba(0, 122, 204, 0.12)); cursor: pointer; opacity: 0; transform: translateX(-4px); transition: opacity 0.15s ease, transform 0.15s ease, background 0.15s ease, border-color 0.15s ease; }
+.mrsf-monaco-badge { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 18px; min-width: 18px; padding: 2px 7px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--mrsf-badge-bg, #2563eb) 22%, white); font-family: var(--mrsf-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif); font-size: 10px; font-weight: 700; line-height: 1; color: var(--mrsf-badge-fg, #f8fbff); background: linear-gradient(180deg, color-mix(in srgb, var(--mrsf-badge-bg, #2563eb) 88%, white), var(--mrsf-badge-bg-strong, #1d4ed8)); white-space: nowrap; cursor: pointer; box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12); }
+.mrsf-monaco-badge-icon { font-size: 10px; line-height: 1; }
+.mrsf-monaco-badge-count { letter-spacing: 0.02em; }
+.mrsf-monaco-gutter-add { display: inline-flex; align-items: center; justify-content: center; min-height: 18px; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--mrsf-add-border, rgba(0, 122, 204, 0.28)); font-family: var(--mrsf-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif); font-size: 10px; font-weight: 600; line-height: 1; color: var(--mrsf-add-fg, #007acc); background: var(--mrsf-add-bg, rgba(0, 122, 204, 0.12)); cursor: pointer; opacity: 0; transform: translateX(-3px); transition: opacity 0.15s ease, transform 0.15s ease, background 0.15s ease, border-color 0.15s ease; }
 .mrsf-monaco-overlay-root:hover .mrsf-monaco-gutter-add,
 .mrsf-monaco-gutter-item:hover .mrsf-monaco-gutter-add,
 .mrsf-monaco-gutter-add:focus-visible { opacity: 0.88; transform: translateX(0); }
@@ -41,17 +52,18 @@ function injectOverlayStyles(targetDocument: Document): void {
 .mrsf-monaco-badge.mrsf-badge-resolved { background: var(--mrsf-badge-resolved-bg, #388a34); opacity: 0.74; }
 .mrsf-monaco-badge.mrsf-badge-severity-high { border-left: 3px solid var(--mrsf-severity-high, #e74c3c); }
 .mrsf-monaco-badge.mrsf-badge-severity-medium { border-left: 3px solid var(--mrsf-severity-medium, #f39c12); }
-.mrsf-monaco-panel { position: absolute; width: min(420px, calc(100% - 112px)); max-height: min(420px, calc(100% - 16px)); overflow: auto; pointer-events: auto; background: var(--mrsf-tooltip-bg, #252526); color: var(--mrsf-tooltip-fg, #cccccc); border: 1px solid var(--mrsf-tooltip-border, #454545); border-radius: 8px; box-shadow: 0 18px 44px rgba(15, 23, 42, 0.24); padding: 8px; }
+.mrsf-monaco-panel { position: absolute; width: min(420px, calc(100% - 112px)); max-height: min(420px, calc(100% - 16px)); overflow: auto; pointer-events: auto; background: var(--mrsf-tooltip-bg, #252526); color: var(--mrsf-tooltip-fg, #cccccc); border: 1px solid var(--mrsf-tooltip-border, #454545); border-radius: 6px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3); padding: 8px; font-family: var(--mrsf-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif); font-size: 13px; line-height: 1.5; }
 .mrsf-monaco-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid color-mix(in srgb, var(--mrsf-tooltip-border, #454545) 84%, transparent); }
 .mrsf-monaco-panel-title { display: flex; flex-direction: column; gap: 2px; }
 .mrsf-monaco-panel-title strong { font-size: 12px; }
 .mrsf-monaco-panel-meta { font-size: 11px; opacity: 0.72; }
 .mrsf-monaco-panel-actions { display: flex; align-items: center; gap: 6px; }
-.mrsf-monaco-panel-btn { padding: 4px 8px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--mrsf-tooltip-border, #454545) 76%, transparent); background: color-mix(in srgb, var(--mrsf-tooltip-bg, #252526) 86%, white); color: inherit; cursor: pointer; font: inherit; font-size: 11px; }
+.mrsf-monaco-panel-btn { padding: 4px 8px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--mrsf-tooltip-border, #454545) 76%, transparent); background: transparent; color: inherit; cursor: pointer; font: inherit; font-size: 11px; }
+.mrsf-monaco-panel-btn:hover, .mrsf-monaco-panel-btn:focus-visible { background: color-mix(in srgb, var(--mrsf-tooltip-fg, #cccccc) 10%, transparent); border-color: color-mix(in srgb, var(--mrsf-tooltip-border, #454545) 92%, transparent); }
 .mrsf-monaco-thread-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .mrsf-monaco-thread-tab { padding: 4px 8px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--mrsf-tooltip-border, #454545) 76%, transparent); background: transparent; color: inherit; cursor: pointer; font: inherit; font-size: 11px; opacity: 0.82; }
-.mrsf-monaco-thread-tab.is-active { background: color-mix(in srgb, var(--mrsf-badge-bg, #2563eb) 22%, transparent); border-color: color-mix(in srgb, var(--mrsf-badge-bg, #2563eb) 48%, transparent); opacity: 1; }
-.mrsf-monaco-thread-count { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.16); font-size: 10px; }
+.mrsf-monaco-thread-tab:hover, .mrsf-monaco-thread-tab:focus-visible { background: color-mix(in srgb, var(--mrsf-tooltip-fg, #cccccc) 10%, transparent); border-color: color-mix(in srgb, var(--mrsf-tooltip-border, #454545) 92%, transparent); opacity: 1; }
+.mrsf-monaco-thread-tab.is-active { background: color-mix(in srgb, var(--mrsf-tooltip-fg, #cccccc) 12%, transparent); border-color: var(--mrsf-accent, #3794ff); opacity: 1; }
 .mrsf-thread + .mrsf-thread { border-top: 1px solid var(--mrsf-tooltip-border, #454545); margin-top: 6px; padding-top: 8px; }
 .mrsf-comment { padding: 4px 0; }
 .mrsf-comment.mrsf-resolved { border-left: 2px solid var(--mrsf-badge-resolved-bg, #388a34); padding-left: 6px; }
@@ -125,6 +137,20 @@ function positionInRange(
   return true;
 }
 
+function applyAttributes(element: HTMLElement, attributes: Record<string, string> | undefined): void {
+  for (const [name, value] of Object.entries(attributes ?? {})) {
+    element.setAttribute(name, value);
+  }
+}
+
+function applyClassName(element: HTMLElement, className: string | undefined): void {
+  if (!className) {
+    return;
+  }
+
+  element.classList.add(...className.split(/\s+/).filter(Boolean));
+}
+
 export class MonacoThreadOverlay {
   private readonly targetDocument: Document | null;
   private readonly root: HTMLDivElement | null;
@@ -177,6 +203,16 @@ export class MonacoThreadOverlay {
         return;
       }
 
+      if (
+        this.options.display?.stickyInlinePopup !== false
+        && this.activeCommentId === inlineCommentId
+        && this.activeLine === event.target.position.lineNumber
+        && this.panel
+        && !this.panel.hidden
+      ) {
+        return;
+      }
+
       const domNode = editor.getContainerDomNode?.();
       const rootRect = domNode?.getBoundingClientRect();
       const browserEvent = event.event.browserEvent;
@@ -213,17 +249,60 @@ export class MonacoThreadOverlay {
       const mark = marksByLine.get(line);
 
       if (!mark) {
+        const presentation = resolveMrsfGutterAddButtonPresentation(
+          {
+            line,
+            isActive: this.activeLine === line,
+          },
+          (context) => this.options.display?.gutterRenderers?.addButton?.({
+            line,
+            isActive: context.isActive,
+            defaultPresentation: {
+              label: context.defaultPresentation.label,
+              title: context.defaultPresentation.title,
+              ariaLabel: context.defaultPresentation.ariaLabel,
+            },
+          }),
+        );
         const addButton = this.targetDocument!.createElement("button");
         addButton.type = "button";
         addButton.className = "mrsf-monaco-gutter-add";
         addButton.dataset.line = String(line);
         addButton.dataset.addLine = "true";
-        addButton.textContent = "Add";
+        applyClassName(addButton, presentation.className);
+        addButton.title = presentation.title;
+        addButton.setAttribute("aria-label", presentation.ariaLabel);
+        addButton.textContent = presentation.label;
+        applyAttributes(addButton, presentation.attributes);
         item.appendChild(addButton);
         this.gutter.appendChild(item);
         continue;
       }
 
+      const threads = this.options.getThreadsAtLine(line);
+      const presentation = resolveMrsfGutterBadgePresentation(
+        {
+          line,
+          commentCount: mark.commentCount,
+          threadCount: mark.threadCount,
+          resolvedState: mark.resolvedState,
+          highestSeverity: mark.highestSeverity,
+          isActive: this.activeLine === line && this.panel != null && !this.panel.hidden,
+        },
+        (context) => this.options.display?.gutterRenderers?.badge?.({
+          line,
+          mark,
+          threads,
+          isActive: context.isActive,
+          defaultPresentation: {
+            icon: context.defaultPresentation.icon,
+            countText: context.defaultPresentation.countText,
+            label: context.defaultPresentation.label,
+            title: context.defaultPresentation.title,
+            ariaLabel: context.defaultPresentation.ariaLabel,
+          },
+        }),
+      );
       const badge = this.targetDocument!.createElement("button");
       badge.type = "button";
       badge.className = [
@@ -233,8 +312,18 @@ export class MonacoThreadOverlay {
         mark.highestSeverity === "medium" ? "mrsf-badge-severity-medium" : "",
       ].filter(Boolean).join(" ");
       badge.dataset.line = String(mark.line);
-      const threadCount = this.options.getThreadsAtLine(line).length;
-      badge.innerHTML = `<span>${mark.commentCount}</span><span class="mrsf-monaco-thread-count">${threadCount}T</span>`;
+      badge.title = presentation.title;
+      badge.setAttribute("aria-label", presentation.ariaLabel);
+      applyClassName(badge, presentation.className);
+      applyAttributes(badge, presentation.attributes);
+
+      const icon = this.targetDocument!.createElement("span");
+      icon.className = "mrsf-monaco-badge-icon";
+      icon.textContent = presentation.icon;
+      const count = this.targetDocument!.createElement("span");
+      count.className = "mrsf-monaco-badge-count";
+      count.textContent = presentation.countText;
+      badge.append(icon, this.targetDocument!.createTextNode(" "), count);
       item.appendChild(badge);
       this.gutter.appendChild(item);
     }
@@ -255,13 +344,14 @@ export class MonacoThreadOverlay {
 
   private readonly handleGutterClick = (event: MouseEvent): void => {
     const target = event.target as HTMLElement | null;
-    const line = Number(target?.dataset.line ?? "");
-    if (!target || Number.isNaN(line)) return;
+    const button = target?.closest<HTMLElement>("[data-line]");
+    const line = Number(button?.dataset.line ?? "");
+    if (!button || Number.isNaN(line)) return;
 
     event.preventDefault();
     event.stopPropagation();
 
-    if (target.dataset.addLine === "true") {
+    if (button.dataset.addLine === "true") {
       void this.options.onAddLine?.(line);
       return;
     }
@@ -323,10 +413,10 @@ export class MonacoThreadOverlay {
         )
       : null;
 
-    if (this.activeLine !== line) {
+    if (this.activeLine !== line && this.options.display?.threadFilters === true) {
       this.activeThreadId = null;
     }
-    if (matchingThread) {
+    if (matchingThread && this.options.display?.threadFilters === true) {
       this.activeThreadId = matchingThread.rootComment.id;
     }
 
@@ -382,6 +472,10 @@ export class MonacoThreadOverlay {
 
   private getThreadsForDisplay(line: number, commentId?: string): ReviewThread[] {
     const threads = this.options.getThreadsAtLine(line);
+    if (this.options.display?.threadFilters !== true) {
+      return threads;
+    }
+
     if (!commentId) {
       if (!this.activeThreadId) {
         return threads;
@@ -409,7 +503,7 @@ export class MonacoThreadOverlay {
       </div>
     `;
 
-    const tabs = allThreads.length > 1
+    const tabs = this.options.display?.threadFilters === true && allThreads.length > 1
       ? `<div class="mrsf-monaco-thread-tabs">
           <button type="button" class="mrsf-monaco-thread-tab ${this.activeThreadId == null ? "is-active" : ""}" data-mrsf-thread-filter="all">All threads</button>
           ${allThreads.map((thread, index) => {

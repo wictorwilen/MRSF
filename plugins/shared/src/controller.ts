@@ -28,6 +28,11 @@
  */
 
 import type { CommentThread, SlimComment } from "./types.js";
+import type { MrsfGutterRenderers } from "./gutter.js";
+import {
+  resolveMrsfGutterAddButtonPresentation,
+  resolveMrsfGutterBadgePresentation,
+} from "./gutter.js";
 import { renderThreadHtml, escapeHtml } from "./html.js";
 
 // ── Types ───────────────────────────────────────────────────
@@ -71,6 +76,7 @@ export interface MrsfControllerOptions {
    * Default: true.
    */
   inlineHighlights?: boolean;
+  gutterRenderers?: MrsfGutterRenderers;
 }
 
 // ── MrsfController ──────────────────────────────────────────
@@ -105,6 +111,7 @@ export class MrsfController {
       interactive: options.interactive ?? false,
       comments: options.comments ?? [],
       inlineHighlights: options.inlineHighlights ?? true,
+      gutterRenderers: options.gutterRenderers ?? {},
     };
 
     this.loadCommentData();
@@ -360,14 +367,32 @@ export class MrsfController {
       classes.push(`mrsf-badge-severity-${highestSeverity}`);
     }
 
-    const icon = allResolved ? "✓" : "💬";
+    const presentation = resolveMrsfGutterBadgePresentation(
+      {
+        line,
+        commentCount: total,
+        threadCount: threads.length,
+        resolvedState: allResolved ? "resolved" : threads.some((thread) => thread.comment.resolved) ? "mixed" : "open",
+        highestSeverity,
+        isActive: this.activeTooltip?.parentElement === item,
+      },
+      this.opts.gutterRenderers.badge,
+    );
     const badge = document.createElement("span");
     badge.className = classes.join(" ");
+    if (presentation.className) {
+      badge.classList.add(...presentation.className.split(/\s+/).filter(Boolean));
+    }
     badge.dataset.mrsfLine = String(line);
     badge.dataset.mrsfAction = "navigate";
     badge.dataset.mrsfCommentId = displayThreads[0].comment.id;
     badge.tabIndex = 0;
-    badge.textContent = `${icon} ${total}`;
+    badge.textContent = presentation.label;
+    badge.title = presentation.title;
+    badge.setAttribute("aria-label", presentation.ariaLabel);
+    for (const [name, value] of Object.entries(presentation.attributes ?? {})) {
+      badge.setAttribute(name, value);
+    }
     badge.addEventListener("click", (e) => {
       e.stopPropagation();
       this.toggleTooltip(item, line, displayThreads);
@@ -389,15 +414,29 @@ export class MrsfController {
   }
 
   private createAddButton(line: number): HTMLButtonElement {
+    const presentation = resolveMrsfGutterAddButtonPresentation(
+      {
+        line,
+        isActive: false,
+      },
+      this.opts.gutterRenderers.addButton,
+    );
     const btn = document.createElement("button");
     btn.className = "mrsf-gutter-add";
+    if (presentation.className) {
+      btn.classList.add(...presentation.className.split(/\s+/).filter(Boolean));
+    }
     btn.type = "button";
     btn.dataset.mrsfAction = "add";
     btn.dataset.mrsfLine = String(line);
     btn.dataset.mrsfStartLine = String(line);
     btn.dataset.mrsfEndLine = String(line);
-    btn.setAttribute("aria-label", "Add comment");
-    btn.textContent = "Add";
+    btn.title = presentation.title;
+    btn.setAttribute("aria-label", presentation.ariaLabel);
+    btn.textContent = presentation.label;
+    for (const [name, value] of Object.entries(presentation.attributes ?? {})) {
+      btn.setAttribute(name, value);
+    }
     return btn;
   }
 

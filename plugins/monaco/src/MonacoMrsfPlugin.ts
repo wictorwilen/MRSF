@@ -11,6 +11,7 @@ import type {
   CommentDraft,
   MonacoActionContext,
   MonacoActionHandlers,
+  MonacoThreadOverlayDisplayOptions,
   MonacoMrsfPluginSaveOptions,
   MonacoMrsfPluginSaveRequest,
   MonacoMrsfStateChangeEvent,
@@ -28,6 +29,7 @@ export interface MonacoMrsfPluginControllerOptions extends MonacoViewAdapterOpti
   autoSaveAfterReanchor?: boolean;
   watchHostChanges?: boolean;
   reloadOnExternalChanges?: boolean;
+  threadOverlay?: MonacoThreadOverlayDisplayOptions;
   onStateChange?: (event: MonacoMrsfStateChangeEvent) => void;
   onSaveRequest?: (request: MonacoMrsfPluginSaveRequest) => void | Promise<void>;
 }
@@ -292,6 +294,7 @@ export class MonacoMrsfPlugin {
     this.overlay = new MonacoThreadOverlay(editor, {
       targetDocument,
       interactive: true,
+      display: this.options.threadOverlay,
       getState: () => this.getState(),
       getThreadsAtLine: (line) => this.getThreadsAtLine(line),
       onAddLine: async (line) => {

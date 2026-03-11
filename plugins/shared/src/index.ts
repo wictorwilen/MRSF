@@ -10,6 +10,18 @@ export type {
   CommentLoader,
 } from "./types.js";
 
+export type {
+  MrsfBadgeSource,
+  MrsfGutterAddButtonContext,
+  MrsfGutterAddButtonPresentation,
+  MrsfGutterAddButtonRenderContext,
+  MrsfGutterBadgeContext,
+  MrsfGutterBadgePresentation,
+  MrsfGutterBadgeRenderContext,
+  MrsfGutterRenderers,
+  MrsfResolvedState,
+} from "./gutter.js";
+
 export {
   toSlimComments,
   groupByLine,
@@ -22,3 +34,11 @@ export {
   renderCommentHtml,
   renderThreadHtml,
 } from "./html.js";
+
+export {
+  createMrsfGutterAddButtonPresentation,
+  createMrsfGutterBadgePresentation,
+  formatMrsfCount,
+  resolveMrsfGutterAddButtonPresentation,
+  resolveMrsfGutterBadgePresentation,
+} from "./gutter.js";

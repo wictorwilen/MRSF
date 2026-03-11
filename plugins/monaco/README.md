@@ -14,6 +14,7 @@ Current scope:
 - hover summaries and editor action registration for add, reply, resolve, and reanchor workflows
 - multi-thread overlay controls with per-line thread switching and add-thread actions
 - explicit save hooks for host applications via `onSaveRequest`
+- shared-style gutter renderer hooks for badge and add-button overrides via `threadOverlay.gutterRenderers`
 
 The package is intended to work in both browser and desktop hosts by taking host-provided document and sidecar I/O adapters.
 
@@ -62,6 +63,17 @@ const session = new MemoryHostSession(host, resourceId);
 const plugin = new MonacoMrsfPlugin(editor, host, {
 	monacoApi: monaco,
 	watchHostChanges: false,
+	threadOverlay: {
+		threadFilters: false,
+		gutterRenderers: {
+			badge: ({ mark, defaultPresentation }) => ({
+				label: `🗨 ${defaultPresentation.countText}`,
+				icon: "🗨",
+				countText: defaultPresentation.countText,
+				title: `${mark.threadCount} threads, ${mark.commentCount} comments`,
+			}),
+		},
+	},
 	onStateChange: ({ state }) => {
 		void session.replaceSidecar(structuredClone(state.document));
 	},
@@ -90,3 +102,5 @@ await plugin.save({ reason: "toolbar" });
 ```
 
 For real browser apps, replace `MemoryHostAdapter` with a host adapter that reads and writes sidecars through your backend or workspace service.
+
+`threadOverlay.gutterRenderers` follows the same shared gutter presentation contract used by the HTML-based plugins, so badge labels, count capping, and add-button overrides can stay consistent across hosts.

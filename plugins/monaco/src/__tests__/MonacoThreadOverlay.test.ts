@@ -302,6 +302,55 @@ describe("MonacoThreadOverlay", () => {
     overlay.dispose();
   });
 
+  it("keeps inline popup position stable while hovering the same comment", () => {
+    const dom = new JSDOM("<div id=editor></div>");
+    const container = dom.window.document.getElementById("editor") as HTMLDivElement;
+    container.getBoundingClientRect = () => ({
+      top: 0,
+      left: 0,
+      right: 900,
+      bottom: 600,
+      width: 900,
+      height: 600,
+      x: 0,
+      y: 0,
+      toJSON() { return {}; },
+    });
+    const editor = new FakeEditor(container);
+    const state = makeState();
+
+    const overlay = new MonacoThreadOverlay(editor as unknown as monaco.editor.IStandaloneCodeEditor, {
+      targetDocument: dom.window.document,
+      getState: () => state,
+      getThreadsAtLine: () => [{ line: 2, rootComment: state.document.comments[0] as any, replies: [] }],
+    });
+
+    overlay.update(state);
+    const root = container.querySelector('.mrsf-monaco-overlay-root') as HTMLDivElement;
+    root.getBoundingClientRect = () => ({
+      top: 0,
+      left: 0,
+      right: 900,
+      bottom: 600,
+      width: 900,
+      height: 600,
+      x: 0,
+      y: 0,
+      toJSON() { return {}; },
+    });
+
+    editor.triggerMouseMove(2, 3, 180, 120);
+    const panel = container.querySelector('.mrsf-monaco-panel') as HTMLDivElement;
+    expect(panel.style.left).toBe('194px');
+    expect(panel.style.top).toBe('134px');
+
+    editor.triggerMouseMove(2, 4, 240, 180);
+    expect(panel.style.left).toBe('194px');
+    expect(panel.style.top).toBe('134px');
+
+    overlay.dispose();
+  });
+
   it("renders multi-thread tabs and filters to a selected thread", () => {
     const dom = new JSDOM("<div id=editor></div>");
     const container = dom.window.document.getElementById("editor") as HTMLDivElement;
@@ -321,6 +370,7 @@ describe("MonacoThreadOverlay", () => {
 
     const overlay = new MonacoThreadOverlay(editor as unknown as monaco.editor.IStandaloneCodeEditor, {
       targetDocument: dom.window.document,
+      display: { threadFilters: true },
       getState: () => state,
       getThreadsAtLine: () => [
         { line: 2, rootComment: state.document.comments[0] as any, replies: [] },
@@ -341,6 +391,98 @@ describe("MonacoThreadOverlay", () => {
     const panel = container.querySelector('.mrsf-monaco-panel') as HTMLDivElement;
     expect(panel.innerHTML).toContain('Second thread');
     expect(panel.innerHTML).not.toContain('Inline comment');
+
+    overlay.dispose();
+  });
+
+  it("applies gutter renderer overrides to badges and add buttons", () => {
+    const dom = new JSDOM("<div id=editor></div>");
+    const container = dom.window.document.getElementById("editor") as HTMLDivElement;
+    container.getBoundingClientRect = () => ({
+      top: 0,
+      left: 0,
+      right: 900,
+      bottom: 600,
+      width: 900,
+      height: 600,
+      x: 0,
+      y: 0,
+      toJSON() { return {}; },
+    });
+    const editor = new FakeEditor(container);
+    const state = makeMultiThreadState();
+
+    const overlay = new MonacoThreadOverlay(editor as unknown as monaco.editor.IStandaloneCodeEditor, {
+      targetDocument: dom.window.document,
+      display: {
+        gutterRenderers: {
+          badge: ({ mark, defaultPresentation }) => ({
+            label: `🗨 ${defaultPresentation.countText}`,
+            icon: "🗨",
+            countText: defaultPresentation.countText,
+            className: mark.highestSeverity == null ? "is-custom" : undefined,
+            attributes: { "data-custom-badge": "true" },
+          }),
+          addButton: () => ({
+            label: "New",
+            attributes: { "data-custom-add": "true" },
+          }),
+        },
+      },
+      getState: () => state,
+      getThreadsAtLine: (line) => line === 2
+        ? [
+            { line: 2, rootComment: state.document.comments[0] as any, replies: [] },
+            { line: 2, rootComment: state.document.comments[1] as any, replies: [state.document.comments[2] as any] },
+          ]
+        : [],
+    });
+
+    overlay.update(state);
+
+    const badge = container.querySelector('.mrsf-monaco-badge[data-line="2"]') as HTMLButtonElement;
+    expect(badge.textContent).toBe('🗨 3');
+    expect(badge.classList.contains('is-custom')).toBe(true);
+    expect(badge.getAttribute('data-custom-badge')).toBe('true');
+
+    const addButton = container.querySelector('.mrsf-monaco-gutter-add[data-line="1"]') as HTMLButtonElement;
+    expect(addButton.textContent).toBe('New');
+    expect(addButton.getAttribute('data-custom-add')).toBe('true');
+
+    overlay.dispose();
+  });
+
+  it("opens the panel when clicking the badge icon content", () => {
+    const dom = new JSDOM("<div id=editor></div>");
+    const container = dom.window.document.getElementById("editor") as HTMLDivElement;
+    container.getBoundingClientRect = () => ({
+      top: 0,
+      left: 0,
+      right: 900,
+      bottom: 600,
+      width: 900,
+      height: 600,
+      x: 0,
+      y: 0,
+      toJSON() { return {}; },
+    });
+    const editor = new FakeEditor(container);
+    const state = makeState();
+
+    const overlay = new MonacoThreadOverlay(editor as unknown as monaco.editor.IStandaloneCodeEditor, {
+      targetDocument: dom.window.document,
+      getState: () => state,
+      getThreadsAtLine: () => [{ line: 2, rootComment: state.document.comments[0] as any, replies: [] }],
+    });
+
+    overlay.update(state);
+
+    const icon = container.querySelector('.mrsf-monaco-badge[data-line="2"] .mrsf-monaco-badge-icon') as HTMLSpanElement;
+    icon.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+
+    const panel = container.querySelector('.mrsf-monaco-panel') as HTMLDivElement;
+    expect(panel.hidden).toBe(false);
+    expect(panel.innerHTML).toContain("Inline comment");
 
     overlay.dispose();
   });
