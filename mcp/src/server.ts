@@ -8,6 +8,7 @@
  */
 
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import path from "node:path";
 import fs from "node:fs/promises";
@@ -78,7 +79,11 @@ export function createMrsfServer(): McpServer {
   const server = new McpServer({
     name: "sidemark-mrsf",
     version: typeof PKG_VERSION !== "undefined" ? PKG_VERSION : "0.0.0",
-    description: "MCP server exposing tools for managing Markdown Review Sidecar Format (MRSF)/Sidemark files",
+    description:
+      "MCP server for reviewing Markdown documents with Sidemark and MRSF " +
+      "(Markdown Review Sidecar Format). Use these tools to discover sidecars, " +
+      "list comments, add review feedback, resolve threads, validate sidecars, " +
+      "and re-anchor comments after Markdown edits.",
     websiteUrl: "https://sidemark.org",
     title: "Sidemark (MRSF) MCP Server",
   }, {
@@ -119,6 +124,22 @@ const addCommentInputSchema = {
   extensions: commentExtensionsInputSchema.optional(),
 } as const;
 
+function toolAnnotations(options: {
+  title: string;
+  readOnlyHint: boolean;
+  destructiveHint?: boolean;
+  idempotentHint?: boolean;
+  openWorldHint?: boolean;
+}): ToolAnnotations {
+  return {
+    title: options.title,
+    readOnlyHint: options.readOnlyHint,
+    destructiveHint: options.destructiveHint ?? false,
+    idempotentHint: options.idempotentHint ?? options.readOnlyHint,
+    openWorldHint: options.openWorldHint ?? false,
+  };
+}
+
 /**
  * Run `fn` while holding an exclusive lock for `filePath`.
  * Concurrent callers targeting the same path are queued in order.
@@ -151,8 +172,10 @@ function registerTools(server: McpServer): void {
     {
       title: "Discover Sidecar",
       description:
-        "Find the Sidemark (MRSF) sidecar for a given Markdown document. " +
+        "Find the Sidemark (MRSF) review sidecar for a Markdown document before " +
+        "listing comments, adding review feedback, or validating anchors. " +
         "Returns the absolute path to the sidecar, or an error if none exists.",
+      annotations: toolAnnotations({ title: "Discover Markdown Sidecar", readOnlyHint: true }),
       inputSchema: {
         document: z.string().describe("Path to the Markdown document"),
         cwd: z.string().optional().describe("Working directory (defaults to process.cwd())"),
@@ -189,8 +212,10 @@ function registerTools(server: McpServer): void {
     {
       title: "Validate Sidecars",
       description:
-        "Validate one or more Sidemark (MRSF) sidecars against the schema and " +
-        "specification rules. Returns validation diagnostics.",
+        "Validate one or more Sidemark (MRSF) sidecars for Markdown review workflows " +
+        "against the schema and specification rules. Returns validation diagnostics " +
+        "before you trust or edit review comments.",
+      annotations: toolAnnotations({ title: "Validate Markdown Review Sidecars", readOnlyHint: true }),
       inputSchema: {
         files: z.array(z.string()).optional().describe(
           "Sidecar or Markdown file paths. If omitted, discovers all sidecars in the workspace.",
@@ -235,9 +260,10 @@ function registerTools(server: McpServer): void {
     {
       title: "Re-anchor Comments",
       description:
-        "Re-anchor comments in Sidemark (MRSF) sidecars after the document has been " +
-        "edited. Updates line numbers and populates anchored_text when the text " +
-        "at the new position differs from selected_text.",
+        "Re-anchor Markdown review comments in Sidemark (MRSF) sidecars after a " +
+        "Markdown document has been edited. Updates line numbers and populates " +
+        "anchored_text when the text at the new position differs from selected_text.",
+      annotations: toolAnnotations({ title: "Re-anchor Markdown Review Comments", readOnlyHint: false }),
       inputSchema: {
         files: z.array(z.string()).optional().describe(
           "Sidecar or Markdown file paths. If omitted, discovers all sidecars.",
@@ -298,9 +324,10 @@ function registerTools(server: McpServer): void {
     {
       title: "Add Comment",
       description:
-        "Add a review comment to a Sidemark (MRSF) sidecar. Creates the sidecar " +
-        "if it does not exist. Automatically populates selected_text from the " +
-        "document and the current git commit.",
+        "Add a review comment to a Markdown document's Sidemark (MRSF) sidecar. " +
+        "Creates the sidecar if it does not exist. Automatically populates " +
+        "selected_text from the document and the current git commit.",
+      annotations: toolAnnotations({ title: "Add Markdown Review Comment", readOnlyHint: false }),
       inputSchema: {
         document: z.string().describe("Path to the Markdown document"),
         ...addCommentInputSchema,
@@ -383,9 +410,10 @@ function registerTools(server: McpServer): void {
     {
       title: "Add Multiple Comments",
       description:
-        "Add multiple review comments to a Sidemark (MRSF) sidecar in a single " +
-        "atomic operation. Prefer this over calling mrsf_add multiple times to " +
-        "avoid race conditions when adding comments in parallel.",
+        "Add multiple review comments to a Markdown document's Sidemark (MRSF) " +
+        "sidecar in a single atomic operation. Prefer this over calling mrsf_add " +
+        "multiple times to avoid race conditions when adding comments in parallel.",
+      annotations: toolAnnotations({ title: "Add Multiple Markdown Review Comments", readOnlyHint: false }),
       inputSchema: {
         document: z.string().describe("Path to the Markdown document"),
         comments: z.array(z.object(addCommentInputSchema)).describe("Array of comments to add"),
@@ -472,8 +500,9 @@ function registerTools(server: McpServer): void {
     {
       title: "Update Comment",
       description:
-        "Update fields of an existing comment by ID. Only the supplied fields " +
-        "are changed; omitted fields are left as-is.",
+        "Update fields of an existing Markdown review comment by ID in a Sidemark " +
+        "(MRSF) sidecar. Only the supplied fields are changed; omitted fields are left as-is.",
+      annotations: toolAnnotations({ title: "Update Markdown Review Comment", readOnlyHint: false }),
       inputSchema: {
         document: z.string().describe("Path to the Markdown document or its sidecar"),
         id: z.string().describe("Comment ID to update"),
@@ -557,9 +586,10 @@ function registerTools(server: McpServer): void {
     {
       title: "Resolve/Unresolve Comments",
       description:
-        "Resolve or unresolve one or more comments in a Sidemark (MRSF) sidecar. " +
-        "Supply a single id, an array of ids, or use filter fields (author, type, severity) " +
-        "to bulk-resolve matching comments.",
+        "Resolve or unresolve one or more Markdown review comments in a Sidemark " +
+        "(MRSF) sidecar. Supply a single id, an array of ids, or use filter fields " +
+        "(author, type, severity) to bulk-resolve matching comments.",
+      annotations: toolAnnotations({ title: "Resolve Markdown Review Comments", readOnlyHint: false, idempotentHint: false }),
       inputSchema: {
         document: z.string().describe("Path to the Markdown document or its sidecar"),
         id: z.string().optional().describe("Single comment ID to resolve/unresolve"),
@@ -637,8 +667,11 @@ function registerTools(server: McpServer): void {
     {
       title: "List Comments",
       description:
-        "List and filter review comments across one or more Sidemark (MRSF) sidecars. " +
-        "Supports filtering by status, author, type, and severity.",
+        "List and filter Markdown review comments across one or more Sidemark " +
+        "(MRSF) sidecars. Use this when an LLM needs to inspect existing review " +
+        "threads before adding or resolving comments. Supports filtering by status, " +
+        "author, type, and severity.",
+      annotations: toolAnnotations({ title: "List Markdown Review Comments", readOnlyHint: true }),
       inputSchema: {
         files: z.array(z.string()).optional().describe(
           "Sidecar or Markdown file paths. If omitted, discovers all sidecars.",
@@ -729,8 +762,9 @@ function registerTools(server: McpServer): void {
     {
       title: "Anchor Status",
       description:
-        "Check the anchor health of all comments in one or more Sidemark (MRSF) sidecars. " +
-        "Reports whether each comment is fresh, stale, or orphaned.",
+        "Check the anchor health of Markdown review comments in one or more Sidemark " +
+        "(MRSF) sidecars. Reports whether each comment is fresh, stale, or orphaned.",
+      annotations: toolAnnotations({ title: "Check Markdown Comment Anchor Health", readOnlyHint: true }),
       inputSchema: {
         files: z.array(z.string()).optional().describe(
           "Sidecar or Markdown file paths. If omitted, discovers all sidecars.",
@@ -798,8 +832,9 @@ function registerTools(server: McpServer): void {
     {
       title: "Rename Document",
       description:
-        "Update a Sidemark (MRSF) sidecar after its Markdown document has been renamed or moved. " +
-        "Moves the sidecar file and updates the document reference inside it.",
+        "Update a Sidemark (MRSF) sidecar after its Markdown document has been renamed " +
+        "or moved. Moves the sidecar file and updates the document reference inside it.",
+      annotations: toolAnnotations({ title: "Rename Markdown Review Document", readOnlyHint: false }),
       inputSchema: {
         oldDocument: z.string().describe("Old path to the Markdown document"),
         newDocument: z.string().describe("New path to the Markdown document"),
@@ -855,10 +890,11 @@ function registerTools(server: McpServer): void {
     {
       title: "Delete Comment",
       description:
-        "Delete a comment by ID from a Sidemark (MRSF) sidecar. By default, " +
-        "direct replies are promoted: they inherit the parent's anchor and their " +
-        "reply_to is re-pointed to the grandparent. Use cascade to delete " +
+        "Delete a Markdown review comment by ID from a Sidemark (MRSF) sidecar. " +
+        "By default, direct replies are promoted: they inherit the parent's anchor " +
+        "and their reply_to is re-pointed to the grandparent. Use cascade to delete " +
         "direct replies along with the parent instead.",
+      annotations: toolAnnotations({ title: "Delete Markdown Review Comment", readOnlyHint: false, destructiveHint: true }),
       inputSchema: {
         document: z.string().describe("Path to the Markdown document or its sidecar"),
         id: z.string().describe("Comment ID to delete"),
@@ -914,10 +950,11 @@ function registerTools(server: McpServer): void {
     {
       title: "Repair Sidecar",
       description:
-        "Repair or reset a corrupted Sidemark (MRSF) sidecar. Use 'salvage' strategy " +
-        "to attempt to recover parseable comments from a corrupted sidecar (rewrites " +
-        "it cleanly). Use 'reset' strategy to delete the sidecar and start " +
-        "fresh with an empty comment list.",
+        "Repair or reset a corrupted Sidemark (MRSF) sidecar for a Markdown review " +
+        "workflow. Use 'salvage' strategy to attempt to recover parseable comments " +
+        "from a corrupted sidecar (rewrites it cleanly). Use 'reset' strategy to " +
+        "delete the sidecar and start fresh with an empty comment list.",
+      annotations: toolAnnotations({ title: "Repair Markdown Review Sidecar", readOnlyHint: false, destructiveHint: true }),
       inputSchema: {
         document: z.string().describe("Path to the Markdown document or its sidecar"),
         strategy: z.enum(["salvage", "reset"]).optional().describe(
@@ -1013,9 +1050,10 @@ function registerTools(server: McpServer): void {
     {
       title: "Help / Tool Schema",
       description:
-        "List all available Sidemark (MRSF) MCP tools with their parameter schemas. " +
-        "Optionally filter to a specific tool for detailed parameter info. " +
-        "Useful for discovering the API and understanding required/optional parameters.",
+        "List all available Sidemark (MRSF) MCP tools for reviewing and commenting on " +
+        "Markdown documents, together with their parameter schemas. Optionally filter " +
+        "to a specific tool for detailed parameter info.",
+      annotations: toolAnnotations({ title: "Help For Markdown Review Tools", readOnlyHint: true }),
       inputSchema: {
         tool: z.string().optional().describe(
           "Tool name to get detailed help for (e.g. 'mrsf_add'). "

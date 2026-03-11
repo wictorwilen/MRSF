@@ -1,6 +1,6 @@
 {
   "name": "@mrsf/mcp",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "MCP server for the Markdown Review Sidecar Format (MRSF)",
   "type": "module",
   "main": "./dist/server.js",

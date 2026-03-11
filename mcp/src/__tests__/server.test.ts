@@ -126,9 +126,11 @@ describe("tool registration", () => {
   ];
 
   let toolNames: string[];
+  let tools: Awaited<ReturnType<typeof client.listTools>>["tools"];
 
   beforeAll(async () => {
     const result = await client.listTools();
+    tools = result.tools;
     toolNames = result.tools.map((t) => t.name);
   });
 
@@ -146,6 +148,33 @@ describe("tool registration", () => {
 
   it(`has ${EXPECTED_TOOLS.length} tools total`, () => {
     expect(toolNames).toHaveLength(EXPECTED_TOOLS.length);
+  });
+
+  it("describes the server as a Markdown review/comment toolset", () => {
+    const addTool = tools.find((tool) => tool.name === "mrsf_add");
+    const listTool = tools.find((tool) => tool.name === "mrsf_list");
+
+    expect(addTool?.description).toContain("Markdown");
+    expect(addTool?.description).toContain("Sidemark");
+    expect(addTool?.description).toContain("MRSF");
+    expect(listTool?.description).toContain("review comments");
+  });
+
+  it("publishes useful tool annotations for read and write review workflows", () => {
+    const discoverTool = tools.find((tool) => tool.name === "mrsf_discover");
+    const addTool = tools.find((tool) => tool.name === "mrsf_add");
+    const deleteTool = tools.find((tool) => tool.name === "mrsf_delete");
+
+    expect(discoverTool?.annotations?.title).toBe("Discover Markdown Sidecar");
+    expect(discoverTool?.annotations?.readOnlyHint).toBe(true);
+    expect(discoverTool?.annotations?.idempotentHint).toBe(true);
+
+    expect(addTool?.annotations?.title).toBe("Add Markdown Review Comment");
+    expect(addTool?.annotations?.readOnlyHint).toBe(false);
+    expect(addTool?.annotations?.destructiveHint).toBe(false);
+
+    expect(deleteTool?.annotations?.title).toBe("Delete Markdown Review Comment");
+    expect(deleteTool?.annotations?.destructiveHint).toBe(true);
   });
 });
 

@@ -8,7 +8,7 @@ Model Context Protocol (MCP) server for **Sidemark** — the **Markdown Review S
 [![npm downloads (mcp)](https://img.shields.io/npm/dm/@mrsf/mcp?label=mcp%20downloads)](https://www.npmjs.com/package/@mrsf/mcp)
 [![MCP Compatible](https://img.shields.io/badge/MCP-compatible-blueviolet?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyem0wIDE4Yy00LjQyIDAtOC0zLjU4LTgtOHMzLjU4LTggOC04IDggMy41OCA4IDgtMy41OCA4LTggOHoiLz48L3N2Zz4=)](https://modelcontextprotocol.io)
 
-Exposes Sidemark (MRSF) operations as MCP tools and resources so that AI assistants (Claude Desktop, Cursor, VS Code Copilot, etc.) can discover, validate, and manage review sidecars through the standard [MCP protocol](https://modelcontextprotocol.io/).
+Exposes Sidemark and MRSF (Markdown Review Sidecar Format) operations as MCP tools and resources so that AI assistants (Claude Desktop, Cursor, VS Code Copilot, etc.) can review Markdown documents, inspect existing comment threads, add review feedback, resolve comments, validate sidecars, and re-anchor comments through the standard [MCP protocol](https://modelcontextprotocol.io/).
 
 ## Installation
 
