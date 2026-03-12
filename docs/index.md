@@ -1,11 +1,11 @@
 ---
 layout: home
-description: "Sidemark (MRSF) — portable, version-controlled, machine-actionable review comments stored outside your Markdown files. CLI, MCP server, VS Code extension, and rendering plugins."
+description: "Add Markdown comments and review threads with Sidemark (MRSF) — portable, version-controlled comments in Markdown workflows without polluting your Markdown files."
 
 hero:
   name: Sidemark
   text: Markdown Review Sidecar Format (MRSF)
-  tagline: Portable, version-controlled, machine-actionable review comments — outside your Markdown files.
+  tagline: Add portable Markdown comments and review threads without embedding comments in Markdown files.
   image:
     src: /android-chrome-512x512.png
     alt: Sidemark logo
@@ -77,3 +77,13 @@ features:
     link: https://www.npmjs.com/package/@mrsf/rehype-mrsf
     linkText: "@mrsf/rehype-mrsf on npm"
 ---
+
+## Markdown Comments Without Polluting Markdown
+
+If you're searching for **markdown comments**, **comments in Markdown**, or a way to leave review feedback on Markdown documents without stuffing HTML comments into the file, Sidemark is built for that exact workflow.
+
+Sidemark, also known as **MRSF** (Markdown Review Sidecar Format), stores comments in a sidecar file next to the Markdown document. That gives you durable anchors, threaded review comments, Git-friendly history, and tooling for CLIs, editors, AI agents, and rendering pipelines.
+
+## How Sidemark Handles Comments In Markdown Workflows
+
+Traditional comments in Markdown are fragile because Markdown has no standard native comment system. Sidemark solves that by keeping review comments outside the Markdown content itself while still anchoring them to exact lines, ranges, and selected text inside the document.

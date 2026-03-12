@@ -121,6 +121,10 @@ function getPreviewOptions(): {
   };
 }
 
+function areCommentsEnabled(): boolean {
+  return vscode.workspace.getConfiguration("sidemark").get<boolean>("commentsEnabled", true);
+}
+
 async function handleExtensionUri(uri: vscode.Uri): Promise<void> {
   const action = uri.path.replace(/^\/+/, "");
   const params = new URLSearchParams(uri.query);
@@ -316,6 +320,19 @@ export function activate(context: vscode.ExtensionContext) {
     }),
   );
 
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (!event.affectsConfiguration("sidemark")) {
+        return;
+      }
+
+      gutterProvider.updateActiveEditor();
+      inlineProvider.updateActiveEditor();
+      sidebarProvider.refresh();
+      vscode.commands.executeCommand("markdown.preview.refresh");
+    }),
+  );
+
   // ── Live line tracking + reanchor on save ──────────────────
   // Track documents with unsaved line changes — anchors may be drifted.
   // Comment positions are adjusted in memory immediately so decorations
@@ -440,7 +457,7 @@ export function activate(context: vscode.ExtensionContext) {
         env: any,
       ) => {
         const config = vscode.workspace.getConfiguration("sidemark");
-        if (!config.get<boolean>("previewComments", true)) {
+        if (!areCommentsEnabled() || !config.get<boolean>("previewComments", true)) {
           return "";
         }
 

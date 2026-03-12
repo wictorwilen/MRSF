@@ -271,6 +271,7 @@ function createTextEditorDecorationType(options: Record<string, unknown>): Decor
 
 const onDidChangeTextDocumentEmitter = new EventEmitter<unknown>();
 const onDidSaveTextDocumentEmitter = new EventEmitter<unknown>();
+const onDidChangeConfigurationEmitter = new EventEmitter<{ affectsConfiguration: (section: string) => boolean }>();
 const onDidChangeActiveTextEditorEmitter = new EventEmitter<TextEditor | undefined>();
 const onDidChangeVisibleTextEditorsEmitter = new EventEmitter<TextEditor[]>();
 const onDidChangeTextEditorSelectionEmitter = new EventEmitter<unknown>();
@@ -313,6 +314,7 @@ export const workspace = {
   textDocuments: [] as Array<{ uri: Uri; languageId: string; lineCount?: number; lineAt?: (line: number) => { text: string } }>,
   createFileSystemWatcher,
   getConfiguration,
+  onDidChangeConfiguration: onDidChangeConfigurationEmitter.event,
   onDidChangeTextDocument: onDidChangeTextDocumentEmitter.event,
   onDidSaveTextDocument: onDidSaveTextDocumentEmitter.event,
   openTextDocument: async (uri: Uri) => {
@@ -500,6 +502,11 @@ export const __mock = {
   },
   emitDidSaveTextDocument(event: unknown): void {
     onDidSaveTextDocumentEmitter.fire(event);
+  },
+  emitDidChangeConfiguration(section: string): void {
+    onDidChangeConfigurationEmitter.fire({
+      affectsConfiguration: (candidate: string) => candidate === section || section.startsWith(`${candidate}.`),
+    });
   },
 };
 

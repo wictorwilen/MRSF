@@ -27,6 +27,10 @@ export class MrsfHoverProvider implements vscode.HoverProvider, vscode.Disposabl
     if (!mrsfDoc) return null;
 
     const config = vscode.workspace.getConfiguration("sidemark");
+    if (!config.get<boolean>("commentsEnabled", true)) {
+      return null;
+    }
+
     const showResolved = config.get<boolean>("showResolved", true);
     const snapshot = buildReviewSnapshot(document, mrsfDoc, showResolved);
     const commentsById = toCommentMap(mrsfDoc);

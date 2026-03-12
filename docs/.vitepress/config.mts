@@ -1,6 +1,21 @@
 import { defineConfig } from "vitepress";
 import { withMermaid } from "vitepress-plugin-mermaid";
 
+const SITE_URL = "https://sidemark.org";
+const SITE_NAME = "Sidemark (MRSF)";
+const DEFAULT_DESCRIPTION =
+  "Sidemark and MRSF (Markdown Review Sidecar Format) add portable Markdown comments and review threads without polluting Markdown files.";
+const DEFAULT_KEYWORDS = [
+  "markdown comments",
+  "comments in markdown",
+  "markdown review comments",
+  "markdown annotations",
+  "review comments for markdown",
+  "markdown review sidecar format",
+  "MRSF",
+  "Sidemark",
+];
+
 // Known HTML element names (subset that might appear in docs)
 const HTML_TAGS = new Set([
   "a", "abbr", "address", "area", "article", "aside", "audio",
@@ -47,13 +62,39 @@ function escapeNonHtmlTags(md: any) {
   };
 }
 
+function normalizeDocPath(relativePath?: string): string {
+  if (!relativePath || relativePath === "index.md") {
+    return "/";
+  }
+
+  const withoutExtension = relativePath.replace(/\.md$/u, "");
+  const withoutIndex = withoutExtension.replace(/\/index$/u, "/");
+  const withLeadingSlash = withoutIndex.startsWith("/") ? withoutIndex : `/${withoutIndex}`;
+  return withLeadingSlash.endsWith("/") ? withLeadingSlash : `${withLeadingSlash}`;
+}
+
+function canonicalUrl(relativePath?: string): string {
+  const normalizedPath = normalizeDocPath(relativePath);
+  return normalizedPath === "/" ? SITE_URL : `${SITE_URL}${normalizedPath}`;
+}
+
+function pageDescription(frontmatter: Record<string, unknown> | undefined): string {
+  const description = typeof frontmatter?.description === "string"
+    ? frontmatter.description
+    : DEFAULT_DESCRIPTION;
+  return description;
+}
+
+function pageTitle(title: string | undefined): string {
+  return title ? `${title} | ${SITE_NAME}` : SITE_NAME;
+}
+
 export default withMermaid(defineConfig({
-  title: "Sidemark (MRSF)",
-  description:
-    "Sidemark — Markdown Review Sidecar Format. Portable, version-controlled review comments for Markdown.",
+  title: SITE_NAME,
+  description: DEFAULT_DESCRIPTION,
 
   sitemap: {
-    hostname: "https://sidemark.org",
+    hostname: SITE_URL,
   },
 
   vite: {
@@ -82,16 +123,71 @@ export default withMermaid(defineConfig({
     ["link", { rel: "icon", href: "/favicon.ico" }],
     ["link", { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" }],
     ["link", { rel: "manifest", href: "/site.webmanifest" }],
-    ["meta", { property: "og:title", content: "Sidemark — Markdown Review Sidecar Format" }],
-    ["meta", { property: "og:description", content: "Portable, version-controlled review comments for Markdown" }],
-    ["meta", { property: "og:image", content: "https://sidemark.org/og-image.png" }],
-    ["meta", { property: "og:url", content: "https://sidemark.org" }],
+    ["meta", { name: "application-name", content: SITE_NAME }],
+    ["meta", { name: "robots", content: "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" }],
+    ["meta", { name: "keywords", content: DEFAULT_KEYWORDS.join(", ") }],
+    ["meta", { name: "theme-color", content: "#007acc" }],
+    ["meta", { property: "og:site_name", content: SITE_NAME }],
+    ["meta", { property: "og:title", content: "Sidemark — Markdown Comments and Review Threads" }],
+    ["meta", { property: "og:description", content: DEFAULT_DESCRIPTION }],
+    ["meta", { property: "og:image", content: `${SITE_URL}/og-image.png` }],
+    ["meta", { property: "og:url", content: SITE_URL }],
     ["meta", { property: "og:type", content: "website" }],
     ["meta", { name: "twitter:card", content: "summary_large_image" }],
-    ["meta", { name: "twitter:title", content: "Sidemark — MRSF" }],
-    ["meta", { name: "twitter:description", content: "Portable, version-controlled review comments for Markdown" }],
-    ["meta", { name: "twitter:image", content: "https://sidemark.org/og-image.png" }],
+    ["meta", { name: "twitter:title", content: "Sidemark — Markdown Comments and Review Threads" }],
+    ["meta", { name: "twitter:description", content: DEFAULT_DESCRIPTION }],
+    ["meta", { name: "twitter:image", content: `${SITE_URL}/og-image.png` }],
+    [
+      "script",
+      { type: "application/ld+json" },
+      JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        name: SITE_NAME,
+        url: SITE_URL,
+        description: DEFAULT_DESCRIPTION,
+        keywords: DEFAULT_KEYWORDS,
+      }),
+    ],
   ],
+
+  transformHead: ({ pageData }) => {
+    const description = pageDescription(pageData.frontmatter);
+    const url = canonicalUrl(pageData.relativePath);
+    const title = pageTitle(pageData.title);
+    const isHome = normalizeDocPath(pageData.relativePath) === "/";
+
+    return [
+      ["link", { rel: "canonical", href: url }],
+      ["meta", { property: "og:title", content: title }],
+      ["meta", { property: "og:description", content: description }],
+      ["meta", { property: "og:url", content: url }],
+      ["meta", { property: "og:type", content: isHome ? "website" : "article" }],
+      ["meta", { name: "twitter:title", content: title }],
+      ["meta", { name: "twitter:description", content: description }],
+      [
+        "script",
+        { type: "application/ld+json" },
+        JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": isHome ? "SoftwareApplication" : "TechArticle",
+          name: title,
+          headline: title,
+          description,
+          url,
+          applicationCategory: isHome ? "DeveloperApplication" : undefined,
+          operatingSystem: isHome ? "Windows, macOS, Linux" : undefined,
+          keywords: DEFAULT_KEYWORDS,
+          about: [
+            "Markdown comments",
+            "Comments in Markdown",
+            "Sidemark",
+            "MRSF",
+          ],
+        }),
+      ],
+    ];
+  },
 
   themeConfig: {
     logo: "/android-chrome-192x192.png",

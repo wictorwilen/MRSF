@@ -2,7 +2,7 @@
   "name": "mrsf-vscode",
   "displayName": "Sidemark – MRSF Review Comments",
   "description": "Display, create, and manage Markdown Review Sidecar Format (MRSF) comments directly in VS Code",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "publisher": "wictor",
   "license": "MIT",
   "author": "Wictor Wilén (https://github.com/wictorwilen)",
@@ -163,6 +163,11 @@
           "default": true,
           "description": "Show resolved comments in editor decorations and sidebar"
         },
+        "sidemark.commentsEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Master toggle for showing review comments in the editor and Markdown preview"
+        },
         "sidemark.gutterIcons": {
           "type": "boolean",
           "default": true,
@@ -195,7 +200,7 @@
         "sidemark.previewComments": {
           "type": "boolean",
           "default": true,
-          "description": "Show review comment badges and tooltips in the Markdown preview"
+          "description": "Show review comment badges and tooltips in the Markdown preview when comments are enabled"
         },
         "sidemark.previewGutterPosition": {
           "type": "string",

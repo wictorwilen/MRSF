@@ -167,6 +167,7 @@ describe("extension activate", () => {
     mockStore.applyReanchors.mockResolvedValue(1);
     mockStore.findComment.mockReturnValue({ id: "c1", line: 2 });
     mockStoreChangeEmitter.dispose();
+    __mock.configuration.set("sidemark.commentsEnabled", true);
     __mock.configuration.set("sidemark.previewComments", true);
     __mock.configuration.set("sidemark.previewGutterPosition", "left");
     __mock.configuration.set("sidemark.previewGutterForInline", true);
@@ -350,6 +351,40 @@ describe("extension activate", () => {
     expect(mockStatusBar.setCommentCount).toHaveBeenCalledWith(1);
   });
 
+  it("refreshes editor and preview surfaces when sidemark settings change", async () => {
+    const uri = Uri.file("/workspace/doc.md");
+    const context = {
+      extensionUri: Uri.file("/workspace/ext"),
+      subscriptions: [] as Array<{ dispose?: () => void }>,
+      workspaceState: {
+        get: vi.fn(),
+        update: vi.fn(),
+      },
+    };
+
+    __mock.emitActiveTextEditor({
+      document: {
+        uri,
+        languageId: "markdown",
+        lineCount: 3,
+        lineAt: () => ({ text: "line" }),
+      },
+      selection: { isEmpty: true },
+      setDecorations: vi.fn(),
+      revealRange: vi.fn(),
+    } as never);
+
+    activate(context as never);
+    __mock.executedCommands.length = 0;
+
+    __mock.emitDidChangeConfiguration("sidemark.commentsEnabled");
+
+    expect(mockGutterProvider.updateActiveEditor).toHaveBeenCalled();
+    expect(mockInlineProvider.updateActiveEditor).toHaveBeenCalled();
+    expect(mockSidebarProvider.refresh).toHaveBeenCalled();
+    expect(__mock.executedCommands).toContainEqual({ id: "markdown.preview.refresh", args: [] });
+  });
+
   it("tracks live edits, reanchors on save, and clears markdown state when leaving markdown", async () => {
     const uri = Uri.file("/workspace/doc.md");
     const context = {
@@ -424,6 +459,9 @@ describe("extension activate", () => {
     expect(fromStringUri).toContain("data-comments");
     expect(fromObjectUri).toContain("disk");
 
+    __mock.configuration.set("sidemark.commentsEnabled", false);
+    expect(md.renderer.rules["mrsf_comment_data"]([], 0, {}, { currentDocument: uri }) as string).toBe("");
+    __mock.configuration.set("sidemark.commentsEnabled", true);
     __mock.configuration.set("sidemark.previewComments", false);
     expect(md.renderer.rules["mrsf_comment_data"]([], 0, {}, { currentDocument: uri }) as string).toBe("");
     __mock.configuration.set("sidemark.previewComments", true);

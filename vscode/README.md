@@ -92,12 +92,18 @@ All settings are under the **Sidemark** section in VS Code Settings.
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `sidemark.author` | `string` | `""` | Default author name for new comments |
+| `sidemark.commentsEnabled` | `boolean` | `true` | Master toggle for showing comments in the editor and Markdown preview |
 | `sidemark.showResolved` | `boolean` | `true` | Show resolved comments in decorations and sidebar |
 | `sidemark.gutterIcons` | `boolean` | `true` | Show gutter icons for commented lines |
 | `sidemark.inlineHighlights` | `boolean` | `true` | Show inline background highlights for text-specific comments |
 | `sidemark.reanchorOnSave` | `boolean` | `true` | Automatically reanchor comments when a Markdown file is saved |
 | `sidemark.reanchorThreshold` | `number` | `0.6` | Fuzzy match threshold for reanchoring (0.0–1.0) |
 | `sidemark.reanchorAutoAcceptScore` | `number` | `1.0` | Auto-accept reanchor results at or above this confidence score |
+| `sidemark.previewComments` | `boolean` | `true` | Show preview comment badges and tooltips when comments are enabled |
+| `sidemark.previewGutterPosition` | `"left" \| "right"` | `"left"` | Position preview comment badges in the left gutter or floated on the right |
+| `sidemark.previewGutterForInline` | `boolean` | `true` | Show preview gutter badges for comments that also have inline highlights |
+| `sidemark.previewInlineHighlights` | `boolean` | `true` | Render inline text highlights for selection-based comments in the preview |
+| `sidemark.previewLineHighlight` | `boolean` | `true` | Add background tint to commented lines in the preview |
 
 ## How It Works
 

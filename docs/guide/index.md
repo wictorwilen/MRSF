@@ -1,10 +1,12 @@
 ---
-description: "Learn what Sidemark / MRSF is, the problems it solves, and how sidecar files enable durable, portable review comments for Markdown documents."
+description: "Learn how Sidemark / MRSF adds Markdown comments and comments in Markdown workflows through portable sidecar review files for Markdown documents."
 ---
 
 # What is Sidemark / MRSF?
 
 **Markdown Review Sidecar Format (MRSF)**, also known as **Sidemark**, is a portable, version-controlled, and machine-actionable way to store review comments *outside* Markdown files.
+
+If you need a way to add **Markdown comments** or manage **comments in Markdown** documents without cluttering the actual file, Sidemark is the model and tooling layer for that.
 
 ## The Problem
 
@@ -13,6 +15,10 @@ Markdown workflows today struggle with durable, context-aware review comments:
 - **Inline comments can't move with the text** — edit the document and your annotations break.
 - **GitHub / GitLab reviews vanish with edits** — PR review comments are tied to diffs, not the living document.
 - **Automated agents have no structured API** — LLMs and bots can't read or write review feedback in a standard way.
+
+## How Do You Add Comments To Markdown?
+
+Markdown itself does not provide a durable, universal review-comment system. Sidemark adds that missing layer by storing comments in `.review.yaml` sidecar files, then exposing those comments through the CLI, MCP server, VS Code extension, and rendering plugins.
 
 ## The Solution
 

@@ -1,10 +1,12 @@
 ---
-description: "Install the Sidemark (MRSF) CLI and create your first sidecar review file in under 2 minutes."
+description: "Install the Sidemark (MRSF) CLI and add your first Markdown comments in under 2 minutes with sidecar review files."
 ---
 
 # Quick Start
 
 Get up and running with MRSF in under 2 minutes.
+
+This is the fastest way to start adding **Markdown comments** in a durable way, without embedding brittle comments directly in Markdown.
 
 ## Install the CLI
 

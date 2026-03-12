@@ -74,6 +74,11 @@ export class GutterDecorationProvider implements vscode.Disposable {
    */
   update(editor: vscode.TextEditor): void {
     const config = vscode.workspace.getConfiguration("sidemark");
+    if (!config.get<boolean>("commentsEnabled", true)) {
+      this.clearAll(editor);
+      return;
+    }
+
     if (!config.get<boolean>("gutterIcons", true)) {
       this.clearAll(editor);
       return;

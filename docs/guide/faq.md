@@ -1,8 +1,14 @@
 ---
-description: "Frequently asked questions about MRSF / Sidemark — why sidecar files, re-anchoring, Git workflows, AI integration, and more."
+description: "Frequently asked questions about Markdown comments, comments in Markdown, and MRSF / Sidemark sidecar review workflows."
 ---
 
 # Frequently Asked Questions
+
+## How do I add comments to Markdown?
+
+If by "comments in Markdown" you mean review comments, feedback threads, or annotations that should stay attached to a Markdown document over time, Sidemark is the recommended approach in this project.
+
+Instead of embedding fragile inline comments inside the Markdown itself, you create a `.review.yaml` sidecar file and store each review comment there with anchors back to the Markdown content. That gives you portable Markdown comments, durable re-anchoring, Git history, and support from the CLI, MCP server, VS Code extension, and rendering plugins.
 
 ## Why sidecar files instead of inline comments?
 
