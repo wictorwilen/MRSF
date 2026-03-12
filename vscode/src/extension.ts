@@ -494,13 +494,18 @@ export function activate(context: vscode.ExtensionContext) {
         _options: any,
         _env: any,
       ) => {
+        const config = vscode.workspace.getConfiguration("sidemark");
         let scrollAttr = "";
         if (_previewScrollTargetLine != null) {
           scrollAttr = ` data-scroll-to-line="${_previewScrollTargetLine}"`;
           _previewScrollTargetLine = null;
         }
 
-        return `<div id="mrsf-preview-meta"${scrollAttr} aria-hidden="true"></div>`;
+        return `<div id="mrsf-preview-meta"
+          data-comments-enabled="${areCommentsEnabled()}"
+          data-preview-comments="${config.get<boolean>("previewComments", true)}"
+          ${scrollAttr}
+          aria-hidden="true"></div>`;
       };
 
       return md;

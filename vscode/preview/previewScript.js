@@ -25,8 +25,11 @@
 
   function getPreviewConfig() {
     const el = document.getElementById("mrsf-comment-data");
+    const metaEl = document.getElementById("mrsf-preview-meta");
     return {
       documentUri: el?.getAttribute("data-document-uri") || "",
+      commentsEnabled: metaEl?.getAttribute("data-comments-enabled") !== "false",
+      previewComments: metaEl?.getAttribute("data-preview-comments") !== "false",
       gutterPosition: el?.getAttribute("data-gutter-position") === "left" ? "left" : "right",
       gutterForInline: el?.getAttribute("data-gutter-for-inline") !== "false",
       inlineHighlights: el?.getAttribute("data-inline-highlights") !== "false",
@@ -543,8 +546,12 @@
   function render() {
     clearPreviousAnnotations();
 
-    const comments = getCommentData();
     const previewConfig = getPreviewConfig();
+    if (!previewConfig.commentsEnabled || !previewConfig.previewComments) {
+      return;
+    }
+
+    const comments = getCommentData();
     const commentedLines = new Set((comments || []).filter((comment) => !comment.reply_to && comment.line != null).map((comment) => comment.line));
 
     const lineTargets = new Map();

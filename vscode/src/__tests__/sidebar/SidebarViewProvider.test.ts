@@ -84,6 +84,7 @@ describe("SidebarViewProvider", () => {
     vi.clearAllMocks();
     mockRelativeTime.mockReturnValue("just now");
     mockMrsfToVscodeRange.mockReturnValue(new vscode.Range(3, 0, 3, 5));
+    __mock.configuration.set("sidemark.commentsEnabled", true);
     __mock.configuration.set("sidemark.showResolved", true);
     __mock.configuration.set("sidemark.author", "Tester");
   });
@@ -132,7 +133,7 @@ describe("SidebarViewProvider", () => {
     expect(workspaceState.update).toHaveBeenCalledWith("mrsf.lastDocUri", uri.toString());
   });
 
-  it("handles sidebar messages for reply, delete, sorting, and resolved visibility", async () => {
+  it("handles sidebar messages for reply, delete, sorting, and visibility toggles", async () => {
     const uri = Uri.file("/workspace/doc.md");
     const editor = makeMarkdownEditor(uri);
     vscode.window.activeTextEditor = editor as never;
@@ -176,14 +177,17 @@ describe("SidebarViewProvider", () => {
     await view.emitMessage({ type: "delete", commentId: "c1" });
     await view.emitMessage({ type: "sort", sortMode: "date" });
     await view.emitMessage({ type: "toggleResolved" });
+    await view.emitMessage({ type: "toggleCommentsEnabled" });
 
     expect(store.replyToComment).toHaveBeenCalledWith(uri, "c1", "New reply", "Tester");
     expect(store.deleteComment).toHaveBeenCalledWith(uri, "c1");
     expect(__mock.warningMessages).toContain("Delete this comment?");
     expect(__mock.configuration.get("sidemark.showResolved")).toBe(false);
+    expect(__mock.configuration.get("sidemark.commentsEnabled")).toBe(false);
 
     const html = view.webviewView.webview.html;
     expect(html).toContain("sort-btn active");
+    expect(html).toContain("Comments are hidden in the editor and Markdown preview.");
     expect(html).not.toContain("Second");
   });
 
@@ -449,5 +453,36 @@ describe("SidebarViewProvider", () => {
     expect(html).toContain("badge type\">nit</span>");
     expect(html).toContain("severity-high\">high</span>");
     expect(html).toContain("title=\"Reanchor to fix orphaned anchor\"");
+  });
+
+  it("shows the sidebar comments toggle state in the header", async () => {
+    const uri = Uri.file("/workspace/doc.md");
+    const editor = makeMarkdownEditor(uri);
+    vscode.window.activeTextEditor = editor as never;
+    __mock.configuration.set("sidemark.commentsEnabled", false);
+
+    const store = createStore({
+      get: vi.fn().mockReturnValue({
+        comments: [
+          {
+            id: "c1",
+            author: "Alice",
+            text: "Visible in sidebar",
+            timestamp: "2026-03-09T12:00:00Z",
+            line: 3,
+          },
+        ],
+      }),
+    });
+
+    const provider = new SidebarViewProvider(store as never, Uri.file("/workspace/ext"));
+    const view = createWebviewView();
+
+    provider.resolveWebviewView(view.webviewView as never, {} as never, {} as never);
+    await Promise.resolve();
+
+    const html = view.webviewView.webview.html;
+    expect(html).toContain('title="Show comments in editor and preview"');
+    expect(html).toContain("Comments are hidden in the editor and Markdown preview.");
   });
 });

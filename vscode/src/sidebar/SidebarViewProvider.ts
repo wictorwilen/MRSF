@@ -243,6 +243,13 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
         this.refresh();
         break;
       }
+      case "toggleCommentsEnabled": {
+        const config = vscode.workspace.getConfiguration("sidemark");
+        const current = config.get<boolean>("commentsEnabled", true);
+        await config.update("commentsEnabled", !current, vscode.ConfigurationTarget.Workspace);
+        this.refresh();
+        break;
+      }
     }
   }
 
@@ -325,6 +332,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
 
   private getCommentsHtml(comments: Comment[], docLineCount?: number): string {
     const config = vscode.workspace.getConfiguration("sidemark");
+    const commentsEnabled = config.get<boolean>("commentsEnabled", true);
     const showResolved = config.get<boolean>("showResolved", true);
 
     const threads = this.buildThreads(comments);
@@ -356,6 +364,13 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
 
     const lineActive = this.sortMode === "line" ? " active" : "";
     const dateActive = this.sortMode === "date" ? " active" : "";
+    const commentsIcon = commentsEnabled ? "💬" : "🚫";
+    const commentsTitle = commentsEnabled
+      ? "Hide comments in editor and preview"
+      : "Show comments in editor and preview";
+    const commentsStatus = commentsEnabled
+      ? ""
+      : '<div class="info-banner">Comments are hidden in the editor and Markdown preview.</div>';
     const filterIcon = showResolved ? "👁" : "👁‍🗨";
     const filterTitle = showResolved ? "Hide resolved" : "Show resolved";
     const initialHighlightCommentId = this.pendingHighlightCommentId
@@ -374,11 +389,13 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
   <div class="header">
     <span class="summary">${summary.open} open · ${summary.resolved} resolved${summary.orphaned > 0 ? ` · <span class="orphan-count">${summary.orphaned} orphaned</span>` : ""}</span>
     <div class="header-actions">
+      <button class="btn-icon" onclick="postMessage({type:'toggleCommentsEnabled'})" title="${commentsTitle}">${commentsIcon}</button>
       <button class="btn-icon" onclick="postMessage({type:'toggleResolved'})" title="${filterTitle}">${filterIcon}</button>
       <button class="btn-icon" onclick="postMessage({type:'reanchor'})" title="Reanchor Comments">⚓</button>
       <button class="btn-icon" onclick="postMessage({type:'addComment'})" title="Add Comment">+</button>
     </div>
   </div>
+  ${commentsStatus}
   <div class="sort-bar">
     <span class="sort-label">Sort:</span>
     <button class="sort-btn${lineActive}" onclick="postMessage({type:'sort',sortMode:'line'})" title="Sort by line number">Line</button>
@@ -575,6 +592,14 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
         gap: 4px;
         padding: 4px 0 6px;
         margin-bottom: 4px;
+      }
+      .info-banner {
+        margin: 0 0 8px;
+        padding: 6px 8px;
+        border-radius: 4px;
+        background: var(--vscode-editorInfo-background, rgba(0, 122, 204, 0.12));
+        color: var(--vscode-editorInfo-foreground, var(--vscode-foreground));
+        font-size: 0.8em;
       }
       .sort-label {
         font-size: 0.8em;
