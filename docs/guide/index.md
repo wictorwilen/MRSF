@@ -136,4 +136,5 @@ Each step is **machine-readable**. The agent never modifies the Markdown directl
 - [Examples](./examples) — worked examples for every re-anchoring strategy
 - [Python CLI & SDK](./python) — same CLI and library in Python
 - [Monaco Plugin](./monaco) — embed Sidemark in Monaco-based editors
+- [Tiptap Plugin](./tiptap) — experimental; help needed for the Tiptap rich-text editor integration
 - [Marked Plugin](./marked) — integrate MRSF into Marked pipelines and browser renderers

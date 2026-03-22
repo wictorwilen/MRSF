@@ -61,6 +61,11 @@ features:
     details: "Embed Sidemark directly into Monaco-based editors with @mrsf/monaco-mrsf — gutter annotations, inline highlights, hover summaries, and host-driven comment workflows."
     link: https://www.npmjs.com/package/@mrsf/monaco-mrsf
     linkText: "@mrsf/monaco-mrsf on npm"
+  - icon: ✍️
+    title: Tiptap Plugin (Experimental)
+    details: "Bring Sidemark into Tiptap-based rich-text editors with @mrsf/tiptap-mrsf. Experimental package; help needed to harden anchor behavior, gutter parity, and editor workflows."
+    link: https://www.npmjs.com/package/@mrsf/tiptap-mrsf
+    linkText: "@mrsf/tiptap-mrsf on npm"
   - icon: 🎨
     title: markdown-it Plugin
     details: "Render review comments as badges, line highlights, and tooltips with @mrsf/markdown-it-mrsf — works with VitePress and any markdown-it project."

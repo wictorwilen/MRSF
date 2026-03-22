@@ -53,6 +53,27 @@ npm run demo:monaco
 Then open the printed local Vite URL and navigate to `/` to try the interactive Monaco editor demo.
 The toolbar now includes `Reanchor Saved Snapshot`, which restores the last host-written sidecar and runs the browser-safe MRSF re-anchoring algorithm against the current document so you can compare persisted anchors with the live revision.
 
+There is also a browser demo for the Tiptap integration:
+
+```bash
+cd examples
+npm install
+npm run demo:tiptap
+```
+
+Then open the printed local Vite URL and navigate to `/` to try the interactive Tiptap editor demo.
+The demo keeps the review state live in memory while you edit, opens the default thread popover when you click highlights, and writes the current sidecar back to the host only when you choose `Write Host Snapshot`. This integration is currently experimental and help is needed to harden it.
+
+There is also a browser comparison rig for the Rehype and Tiptap integrations:
+
+```bash
+cd examples
+npm install
+npm run demo:compare
+```
+
+Then open the printed local Vite URL and navigate to `/` to compare the same Markdown and sidecar rendered by both plugins side by side. The rig starts with `ex.md` and `ex.md.review.yaml`, and also lets you upload a Markdown/sidecar pair for direct visual comparison.
+
 ## Trying the Examples
 
 If you have the MRSF CLI installed (`npm install -g @mrsf/cli` or via `npx`), you
