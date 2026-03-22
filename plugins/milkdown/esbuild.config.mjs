@@ -1,5 +1,5 @@
 import * as esbuild from "esbuild";
-import { copyFileSync, mkdirSync, rmSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execSync } from "node:child_process";
@@ -17,7 +17,6 @@ const shared = {
   external: [
     "@mrsf/cli",
     "@mrsf/cli/browser",
-    "@mrsf/plugin-shared",
     "@milkdown/ctx",
     "@milkdown/core",
     "@milkdown/crepe",
@@ -48,7 +47,9 @@ await esbuild.build({
 });
 
 mkdirSync(resolve(__dirname, "dist"), { recursive: true });
-copyFileSync(resolve(__dirname, "style.css"), resolve(__dirname, "dist", "style.css"));
+const sharedStyle = readFileSync(resolve(__dirname, "..", "shared", "src", "style.css"), "utf8");
+const localStyle = readFileSync(resolve(__dirname, "style.css"), "utf8");
+writeFileSync(resolve(__dirname, "dist", "style.css"), `${sharedStyle}\n\n${localStyle}`);
 execSync("npx tsc --emitDeclarationOnly", { stdio: "inherit" });
 
 console.log("Build complete.");

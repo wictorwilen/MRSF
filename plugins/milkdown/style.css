@@ -1,5 +1,3 @@
-@import "@mrsf/plugin-shared/style.css";
-
 .mrsf-inline-highlight[data-mrsf-resolved="true"] {
    opacity: 0.72;
 }
