@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MRSF Tiptap Demo</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">@mrsf/tiptap-mrsf</p>
+          <h1>Interactive Tiptap Demo</h1>
+          <p class="lede">
+            Edit a rich-text document, keep comment anchors aligned in memory,
+            and write the sidecar back to the host only when you decide to save.
+          </p>
+          <div class="hero-meta" aria-live="polite">
+            <span id="save-indicator" class="meta-pill meta-pill-clean">Saved</span>
+            <span id="anchor-indicator" class="meta-pill meta-pill-clean">Anchors in sync</span>
+            <span id="last-saved" class="meta-text">No host write yet</span>
+          </div>
+        </div>
+        <div class="hero-actions">
+          <button id="add-comment" type="button">Add Comment</button>
+          <button id="save-sidecar" type="button">Write Host Snapshot</button>
+          <button id="reload-sidecar" type="button">Reload Sidecar</button>
+          <button id="reanchor-sidecar" type="button">Reanchor Current Sidecar</button>
+          <button id="external-sidecar" type="button">External Sidecar Change</button>
+        </div>
+      </header>
+
+      <section class="upload-card">
+        <div class="panel-header">
+          <span>Load Your Own Files</span>
+        </div>
+        <div class="upload-grid">
+          <label class="upload-field" for="markdown-upload">
+            <span class="upload-label">Markdown Document</span>
+            <input id="markdown-upload" type="file" accept=".md,.markdown,text/markdown" />
+          </label>
+          <label class="upload-field" for="sidecar-upload">
+            <span class="upload-label">MRSF Sidecar</span>
+            <input id="sidecar-upload" type="file" accept=".yaml,.yml,.json,.review.yaml,.review.yml,.review.json,application/json" />
+          </label>
+          <button id="load-uploads" type="button">Load Uploaded Files</button>
+          <div id="upload-status" class="upload-status">
+            Choose a Markdown file and an optional sidecar to replace the baked-in demo.
+          </div>
+        </div>
+      </section>
+
+      <main class="layout">
+        <section class="editor-card">
+          <div class="panel-header">
+            <span>Rich Text Editor</span>
+            <span id="status-pill" class="status-pill">Idle</span>
+          </div>
+          <div id="editor-summary" class="editor-summary">
+            Select text and click Add Comment to create a new review thread. Click a highlighted range to open the default thread popover, and use the left gutter markers plus the shared line tint for comments that are attached to a line without an inline text span.
+          </div>
+          <div id="editor-toolbar" class="editor-toolbar">
+            <button data-command="bold" type="button">Bold</button>
+            <button data-command="italic" type="button">Italic</button>
+            <button data-command="bulletList" type="button">Bullet List</button>
+            <button data-command="heading" data-level="2" type="button">H2</button>
+          </div>
+          <div class="editor-stage">
+            <div id="selection-action" class="selection-action is-hidden">
+              <button id="selection-add-comment" type="button">Add Comment</button>
+            </div>
+            <div id="editor" class="editor-host"></div>
+          </div>
+        </section>
+
+        <aside class="side-panel">
+          <section class="panel-card">
+            <div class="panel-header">
+              <span>Demo Status</span>
+            </div>
+            <div id="status-panel" class="status-panel"></div>
+          </section>
+          <section class="panel-card">
+            <div class="panel-header">
+              <span>Current Review State</span>
+            </div>
+            <pre id="state-output" class="code-panel"></pre>
+          </section>
+          <section class="panel-card">
+            <div class="panel-header">
+              <span>Host Snapshot</span>
+            </div>
+            <pre id="host-output" class="code-panel"></pre>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+  </html>

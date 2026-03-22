@@ -221,6 +221,7 @@ export default withMermaid(defineConfig({
             { text: "Agent Skill", link: "/guide/agent-skill" },
             { text: "Python CLI & SDK", link: "/guide/python" },
             { text: "Monaco Plugin", link: "/guide/monaco" },
+            { text: "Tiptap Plugin", link: "/guide/tiptap" },
             { text: "Marked Plugin", link: "/guide/marked" },
             { text: "markdown-it Plugin", link: "/guide/markdown-it" },
             { text: "rehype Plugin", link: "/guide/rehype" },

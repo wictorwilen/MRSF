@@ -1,0 +1,85 @@
+{
+  "name": "@mrsf/tiptap-mrsf",
+  "version": "0.3.0",
+  "description": "Experimental Tiptap editor plugin for MRSF review comments — help needed",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "browser": {
+        "import": "./dist/browser.js",
+        "types": "./dist/browser.d.ts"
+      },
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./browser": {
+      "import": "./dist/browser.js",
+      "types": "./dist/browser.d.ts"
+    },
+    "./style.css": "./dist/style.css"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "cp ../../LICENSE . && npm run build && npm test",
+    "postpublish": "rm -f LICENSE"
+  },
+  "keywords": [
+    "tiptap",
+    "prosemirror",
+    "markdown",
+    "review",
+    "sidecar",
+    "mrsf",
+    "sidemark",
+    "comments",
+    "annotation",
+    "editor-plugin",
+    "experimental",
+    "help-wanted"
+  ],
+  "license": "MIT",
+  "author": "Wictor Wilen (https://github.com/wictorwilen)",
+  "homepage": "https://github.com/wictorwilen/MRSF/tree/main/plugins/tiptap#readme",
+  "bugs": {
+    "url": "https://github.com/wictorwilen/MRSF/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wictorwilen/MRSF.git",
+    "directory": "plugins/tiptap"
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.js.map",
+    "dist/**/*.d.ts",
+    "dist/style.css",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "@mrsf/cli": "file:../../cli"
+  },
+  "peerDependencies": {
+    "@tiptap/core": ">=2 <4",
+    "@tiptap/pm": ">=2 <4"
+  },
+  "devDependencies": {
+    "@tiptap/core": "^2.22.3",
+    "@tiptap/pm": "^2.22.3",
+    "@tiptap/starter-kit": "^2.22.3",
+    "@types/node": "^22.13.10",
+    "esbuild": "^0.27.3",
+    "jsdom": "^26.1.0",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.9"
+  }
+}

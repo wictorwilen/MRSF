@@ -82,6 +82,8 @@ The config schema (`mrsf-config.schema.json`) is separate and covers `.mrsf.yaml
 - **ESM only**: All packages use `"type": "module"` with `NodeNext` module resolution. Use `.js` extensions in TypeScript import paths.
 - **Strict TypeScript**: `strict: true` in all tsconfig files. Target is ES2022.
 - **Sidecar discovery**: Sidecar files are named `<document>.review.yaml` (or `.review.json`), co-located by default. Alternate locations via `.mrsf.yaml` config with `sidecar_root`.
+- **Plugin parity is mandatory**: All rendering plugins MUST preserve the same look and feel, the same comment/gutter/inline rendering logic, and the same end-user functionality unless a package is explicitly documented as editor-only behavior. Shared rendering behavior, styling, and interaction rules should live in shared code rather than being reimplemented divergently per plugin.
+- **Editor integrations extend parity, not replace it**: Interactive editors such as Tiptap may add live editing and sidecar-maintenance behavior, but their rendered gutters, inline highlights, line highlighting, tooltip behavior, and thread semantics SHOULD match the static rendering plugins as closely as the host DOM allows.
 
 ## CLI Library Exports
 
