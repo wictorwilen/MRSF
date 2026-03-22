@@ -1,0 +1,17 @@
+@import "@mrsf/plugin-shared/style.css";
+
+.mrsf-inline-highlight[data-mrsf-resolved="true"] {
+   opacity: 0.72;
+}
+
+.mrsf-gutter-left {
+   left: 0;
+}
+
+.mrsf-gutter-right {
+   right: 0;
+}
+
+.mrsf-overlay-root .ProseMirror {
+   position: relative;
+}

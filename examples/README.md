@@ -64,6 +64,17 @@ npm run demo:tiptap
 Then open the printed local Vite URL and navigate to `/` to try the interactive Tiptap editor demo.
 The demo keeps the review state live in memory while you edit, opens the default thread popover when you click highlights, and writes the current sidecar back to the host only when you choose `Write Host Snapshot`. This integration is currently experimental and help is needed to harden it.
 
+There is also a browser demo for the Milkdown and Crepe integration:
+
+```bash
+cd examples
+npm install
+npm run demo:milkdown
+```
+
+Then open the printed local Vite URL and navigate to `/` to try the interactive Milkdown demo.
+The page lets you switch between a direct Milkdown editor and Crepe, both backed by the same MRSF runtime. You can add comments from a selection, reply, edit, resolve, delete, save the in-memory sidecar, reload host state, and simulate external sidecar changes.
+
 There is also a browser comparison rig for the Rehype and Tiptap integrations:
 
 ```bash

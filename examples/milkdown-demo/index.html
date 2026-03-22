@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MRSF Milkdown Demo</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">@mrsf/milkdown-mrsf</p>
+          <h1>Milkdown and Crepe Demo</h1>
+          <p class="lede">
+            Compare the direct Milkdown editor and Crepe shell while they share
+            the same live MRSF review controller, sidecar workflow, and inline anchors.
+          </p>
+          <div class="hero-meta">
+            <span id="mode-pill" class="meta-pill meta-pill-accent">Milkdown</span>
+            <span id="save-indicator" class="meta-pill meta-pill-clean">Saved</span>
+            <span id="anchor-indicator" class="meta-pill meta-pill-clean">Anchors in sync</span>
+            <span id="last-saved" class="meta-text">No host write yet</span>
+          </div>
+        </div>
+
+        <div class="hero-actions">
+          <div class="mode-toggle" role="tablist" aria-label="Editor mode">
+            <button id="mode-milkdown" type="button" class="is-active">Milkdown</button>
+            <button id="mode-crepe" type="button">Crepe</button>
+          </div>
+          <div class="action-grid">
+            <button id="add-comment" type="button">Add Comment</button>
+            <button id="reply-comment" type="button">Reply</button>
+            <button id="edit-comment" type="button">Edit</button>
+            <button id="toggle-resolved" type="button">Toggle Resolved</button>
+            <button id="delete-comment" type="button">Delete</button>
+            <button id="save-sidecar" type="button">Write Host Snapshot</button>
+            <button id="reload-sidecar" type="button">Reload Sidecar</button>
+            <button id="reanchor-sidecar" type="button">Reanchor Current Sidecar</button>
+            <button id="external-sidecar" type="button">External Sidecar Change</button>
+            <button id="reset-demo" type="button">Reset Demo</button>
+          </div>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="editor-card">
+          <div class="panel-header">
+            <span>Editor Surface</span>
+            <span id="status-pill" class="status-pill">Starting</span>
+          </div>
+          <div id="editor-summary" class="editor-summary">
+            Selecting text enables Add Comment. Clicking a highlighted span or a thread card selects the comment thread for reply, edit, resolve, and delete actions. Switching editor mode reloads the baked-in demo document.
+          </div>
+          <div id="selection-panel" class="selection-panel">
+            <div>
+              <span class="selection-label">Current selection</span>
+              <div id="selection-output" class="selection-output">No active text selection.</div>
+            </div>
+            <div id="flash-message" class="flash-message" aria-live="polite"></div>
+          </div>
+          <div class="editor-stage">
+            <div id="editor-host" class="editor-host"></div>
+          </div>
+        </section>
+
+        <aside class="side-panel">
+          <section class="panel-card">
+            <div class="panel-header">
+              <span>Threads</span>
+              <span id="thread-count" class="thread-count">0</span>
+            </div>
+            <div id="thread-list" class="thread-list"></div>
+          </section>
+
+          <section class="panel-card">
+            <div class="panel-header">
+              <span>Demo Status</span>
+            </div>
+            <div id="status-panel" class="status-panel"></div>
+          </section>
+
+          <section class="panel-card">
+            <div class="panel-header">
+              <span>Current Review State</span>
+            </div>
+            <pre id="state-output" class="code-panel"></pre>
+          </section>
+
+          <section class="panel-card">
+            <div class="panel-header">
+              <span>Host Snapshot</span>
+            </div>
+            <pre id="host-output" class="code-panel"></pre>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+  </html>

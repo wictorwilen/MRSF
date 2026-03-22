@@ -52,6 +52,18 @@ jobs:
           npm ci
           npm run build
 
+      - name: Build Milkdown plugin
+        run: |
+          cd plugins/milkdown
+          npm ci
+          npm run build
+
+      - name: Build Milkdown example demo
+        run: |
+          cd examples
+          npm ci
+          npm run demo:milkdown:build
+
       - name: Build docs
         run: |
           cd docs

@@ -107,4 +107,5 @@ mrsf list --author "Jane Doe"
 - [Full CLI Reference](/cli/) — all commands and options
 - [Python CLI & SDK](./python) — use MRSF from Python
 - [MCP Server](/mcp/) — expose MRSF to AI assistants
+- [Milkdown + Crepe Plugin](./milkdown) — editor-native review flows for Milkdown and Crepe
 - [Specification](/specification) — the complete MRSF v1.0 spec

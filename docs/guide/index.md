@@ -93,6 +93,15 @@ cp -r examples/mrsf-review .agent/skills/
 
 See [the skill file](https://github.com/wictorwilen/MRSF/blob/main/examples/mrsf-review/SKILL.md) for details.
 
+## Interactive Editor Integrations
+
+Sidemark is not limited to static rendering or CLI workflows. The repo also includes editor-native integrations when you want the review model to live inside an editing surface:
+
+- [VS Code extension](/vscode/) for a ready-made desktop editor experience
+- [Monaco plugin](./monaco) for custom Monaco hosts
+- [Milkdown + Crepe plugin](./milkdown) for direct Milkdown editors and Crepe shells sharing the same review controller
+- [Tiptap plugin](./tiptap) for experimental rich-text editing workflows
+
 ## Human + Agent Collaboration
 
 Sidemark enables a seamless review loop between human authors and AI agents — all through portable sidecar files.
@@ -136,5 +145,6 @@ Each step is **machine-readable**. The agent never modifies the Markdown directl
 - [Examples](./examples) — worked examples for every re-anchoring strategy
 - [Python CLI & SDK](./python) — same CLI and library in Python
 - [Monaco Plugin](./monaco) — embed Sidemark in Monaco-based editors
+- [Milkdown + Crepe Plugin](./milkdown) — editor-native MRSF for direct Milkdown and Crepe hosts
 - [Tiptap Plugin](./tiptap) — experimental; help needed for the Tiptap rich-text editor integration
 - [Marked Plugin](./marked) — integrate MRSF into Marked pipelines and browser renderers

@@ -61,6 +61,11 @@ features:
     details: "Embed Sidemark directly into Monaco-based editors with @mrsf/monaco-mrsf — gutter annotations, inline highlights, hover summaries, and host-driven comment workflows."
     link: https://www.npmjs.com/package/@mrsf/monaco-mrsf
     linkText: "@mrsf/monaco-mrsf on npm"
+  - icon: 🥛
+    title: Milkdown + Crepe Plugin
+    details: "Run the same Sidemark review runtime in direct Milkdown editors and Crepe shells, with shared sidecar workflows, inline anchors, gutters, tooltips, and host-controlled save and reanchor flows."
+    link: /guide/milkdown
+    linkText: "Milkdown + Crepe guide"
   - icon: ✍️
     title: Tiptap Plugin (Experimental)
     details: "Bring Sidemark into Tiptap-based rich-text editors with @mrsf/tiptap-mrsf. Experimental package; help needed to harden anchor behavior, gutter parity, and editor workflows."
@@ -88,6 +93,15 @@ features:
 If you're searching for **markdown comments**, **comments in Markdown**, or a way to leave review feedback on Markdown documents without stuffing HTML comments into the file, Sidemark is built for that exact workflow.
 
 Sidemark, also known as **MRSF** (Markdown Review Sidecar Format), stores comments in a sidecar file next to the Markdown document. That gives you durable anchors, threaded review comments, Git-friendly history, and tooling for CLIs, editors, AI agents, and rendering pipelines.
+
+## Interactive Editor Integrations
+
+If you want comments inside a live editor instead of rendered HTML, Sidemark also includes interactive editor packages:
+
+- [VS Code extension](/vscode/) for a turnkey desktop workflow
+- [Monaco plugin](/guide/monaco) for custom Monaco-based apps
+- [Milkdown + Crepe guide](/guide/milkdown) for direct Milkdown editors and Crepe hosts sharing the same runtime
+- [Tiptap plugin](/guide/tiptap) for experimental rich-text editor workflows
 
 ## How Sidemark Handles Comments In Markdown Workflows
 

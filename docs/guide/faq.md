@@ -61,6 +61,17 @@ The specification is written for Markdown documents, and all tooling (CLI, VS Co
 
 If you want to experiment with other file types you can create a `.review.yaml` sidecar manually, but be aware that rendering integrations (the markdown-it plugin, VS Code decorations) assume Markdown content. Future spec revisions may formalize support for additional file types.
 
+## Can I use MRSF inside browser editors like Milkdown or Crepe?
+
+Yes. The repo now includes interactive editor packages for browser-hosted editors, including Monaco, Milkdown with Crepe support, and the experimental Tiptap integration.
+
+The Milkdown package exposes the same review runtime in two host styles:
+
+- direct Milkdown editors via `createMilkdownMrsfPlugin`
+- Crepe editors via `createCrepeMrsfFeature`
+
+Both modes share the same host adapter contract for reading document text, discovering sidecars, loading and writing sidecar files, and reanchoring comments against the current editor content. See the [Milkdown + Crepe guide](./milkdown) for examples.
+
 ## Should I commit sidecar files to Git?
 
 **Yes — that's the whole point.** Committing `.review.yaml` files gives you:

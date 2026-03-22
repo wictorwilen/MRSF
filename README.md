@@ -47,6 +47,7 @@ MRSF solves this with **sidecar files** that hold review metadata separate from 
 - MCP server for integrations with LLMs and assistant clients
 - Python CLI & SDK (`pip install mrsf`) — 1:1 port of the Node.js CLI
 - Rendering plugins for Marked, markdown-it, and rehype/unified ecosystems
+- Interactive editor integrations for VS Code, Monaco, Milkdown/Crepe, and experimental Tiptap hosts
 
 ## 📄 Specification
 
@@ -290,6 +291,46 @@ const file = await unified()
 
 See [`plugins/rehype/README.md`](plugins/rehype/README.md).
 
+## ✍️ Interactive Editor Integrations
+
+MRSF also ships editor-native integrations when you want the review workflow inside a live editing surface instead of rendered HTML.
+
+### Monaco Plugin
+
+For Monaco-based editors in browser and desktop apps:
+
+```bash
+npm install @mrsf/monaco-mrsf monaco-editor
+```
+
+See [`plugins/monaco/README.md`](plugins/monaco/README.md).
+
+### Tiptap Plugin (Experimental)
+
+For browser-hosted Tiptap editors with inline highlights, gutters, and an explicit-save review workflow:
+
+```bash
+npm install @mrsf/tiptap-mrsf @tiptap/core @tiptap/starter-kit
+```
+
+See [`plugins/tiptap/README.md`](plugins/tiptap/README.md).
+
+### Milkdown + Crepe Plugin
+
+The `@mrsf/milkdown-mrsf` package runs the same MRSF review controller in both direct Milkdown editors and the higher-level Crepe shell. It covers sidecar load/save/reload/reanchor flows, inline anchors, gutter overlays, thread tooltips, and selection-based comment actions through a browser host adapter.
+
+Try the demo:
+
+```bash
+cd examples
+npm install
+npm run demo:milkdown
+```
+
+Then open the printed local Vite URL and navigate to `/` to switch between direct Milkdown and Crepe while they share the same review runtime.
+
+See [`plugins/milkdown/README.md`](plugins/milkdown/README.md).
+
 ## 🧪 Status
 
 **Draft**: this specification and tooling are open for feedback and improvement.
@@ -309,8 +350,12 @@ We welcome:
 | MCP server | [`mcp/`](mcp/) | `npm install @mrsf/mcp` |
 | VS Code extension | [`vscode/`](vscode/) | [Marketplace](https://marketplace.visualstudio.com/items?itemName=wictor.mrsf-vscode) |
 | Python CLI & SDK | [`python/`](python/) | `pip install mrsf` |
+| Marked plugin | [`plugins/marked/`](plugins/marked/) | `npm install @mrsf/marked-mrsf` |
 | markdown-it plugin | [`plugins/markdown-it/`](plugins/markdown-it/) | `npm install @mrsf/markdown-it-mrsf` |
+| Monaco plugin | [`plugins/monaco/`](plugins/monaco/) | `npm install @mrsf/monaco-mrsf` |
+| Milkdown + Crepe plugin | [`plugins/milkdown/`](plugins/milkdown/) | See package README |
 | rehype plugin | [`plugins/rehype/`](plugins/rehype/) | `npm install @mrsf/rehype-mrsf` |
+| Tiptap plugin (experimental) | [`plugins/tiptap/`](plugins/tiptap/) | `npm install @mrsf/tiptap-mrsf` |
 | Documentation | [`docs/`](docs/) | [sidemark.org](https://sidemark.org) |
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md)

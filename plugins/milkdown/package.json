@@ -1,0 +1,107 @@
+{
+  "name": "@mrsf/milkdown-mrsf",
+  "version": "0.1.0",
+  "description": "Experimental Milkdown editor plugin for MRSF review comments — help needed",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "browser": {
+        "import": "./dist/browser.js",
+        "types": "./dist/browser.d.ts"
+      },
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./browser": {
+      "import": "./dist/browser.js",
+      "types": "./dist/browser.d.ts"
+    },
+    "./style.css": "./dist/style.css"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "cp ../../LICENSE . && npm run build && npm test",
+    "postpublish": "rm -f LICENSE"
+  },
+  "keywords": [
+    "milkdown",
+    "crepe",
+    "prosemirror",
+    "markdown",
+    "review",
+    "sidecar",
+    "mrsf",
+    "sidemark",
+    "comments",
+    "annotation",
+    "editor-plugin",
+    "experimental",
+    "help-wanted"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/wictorwilen/MRSF/tree/main/plugins/milkdown#readme",
+  "bugs": {
+    "url": "https://github.com/wictorwilen/MRSF/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wictorwilen/MRSF.git",
+    "directory": "plugins/milkdown"
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.js.map",
+    "dist/**/*.d.ts",
+    "dist/style.css",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "@mrsf/cli": "file:../../cli",
+    "@mrsf/plugin-shared": "file:../shared"
+  },
+  "peerDependencies": {
+    "@milkdown/ctx": ">=7 <8",
+    "@milkdown/core": ">=7 <8",
+    "@milkdown/crepe": ">=7 <8",
+    "@milkdown/kit": ">=7 <8",
+    "@milkdown/plugin-listener": ">=7 <8",
+    "@milkdown/prose": ">=7 <8"
+  },
+  "peerDependenciesMeta": {
+    "@milkdown/core": {
+      "optional": true
+    },
+    "@milkdown/crepe": {
+      "optional": true
+    },
+    "@milkdown/kit": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^3.2.4",
+    "@milkdown/ctx": "^7.19.1",
+    "@milkdown/core": "^7.19.1",
+    "@milkdown/crepe": "^7.19.1",
+    "@milkdown/kit": "^7.19.1",
+    "@milkdown/plugin-listener": "^7.19.1",
+    "@milkdown/preset-commonmark": "^7.19.1",
+    "@milkdown/prose": "^7.19.1",
+    "@types/node": "^22.13.10",
+    "esbuild": "^0.27.3",
+    "jsdom": "^26.1.0",
+    "typescript": "^5.8.2",
+    "vitest": "^3.2.4"
+  }
+}

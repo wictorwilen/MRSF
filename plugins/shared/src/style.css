@@ -57,12 +57,38 @@
   z-index: 10;
 }
 
+.mrsf-gutter.is-hidden,
+.mrsf-line-highlight-layer.is-hidden {
+  display: none;
+}
+
 .mrsf-gutter-left {
   left: calc(-1 * var(--mrsf-gutter-width) - 8px);
 }
 
 .mrsf-gutter-right {
   right: calc(-1 * var(--mrsf-gutter-width) - 8px);
+}
+
+.mrsf-line-highlight-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.mrsf-line-highlight-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-left: 3px solid var(--mrsf-accent);
+  background: rgba(55, 148, 255, 0.06);
+  border-radius: 2px;
+  transition: background 0.15s ease;
+}
+
+.mrsf-line-highlight-overlay:hover {
+  background: rgba(55, 148, 255, 0.12);
 }
 
 /* ── Line highlight (CSS-only tinting for commented lines) ── */

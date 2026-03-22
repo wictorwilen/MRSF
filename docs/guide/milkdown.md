@@ -1,0 +1,185 @@
+---
+description: "Milkdown and Crepe integration for Sidemark/MRSF, with a shared review runtime, host adapter, and browser demo."
+---
+
+# Milkdown + Crepe Plugin
+
+The `@mrsf/milkdown-mrsf` package brings Sidemark into [Milkdown](https://milkdown.dev/) editors and the higher-level [Crepe](https://milkdown.dev/docs/guide/crepe) shell.
+
+It is built for browser hosts that want editor-native review comments while keeping sidecar persistence and host workflows under application control.
+
+The current package supports both direct Milkdown and Crepe on top of the same review controller, sidecar workflow, overlay UI, and host adapter model.
+
+## Current Scope
+
+- direct Milkdown integration through `createMilkdownMrsfPlugin`
+- Crepe integration through `createCrepeMrsfFeature`
+- shared browser host adapter contract for sidecar I/O
+- inline highlights, gutter overlays, and thread tooltips
+- add, reply, edit, resolve, delete, save, reload, and reanchor flows
+- live line tracking while the editor content changes
+- selection helpers and controller accessors for host-side UI
+
+## Install
+
+Direct Milkdown:
+
+```bash
+npm install @mrsf/milkdown-mrsf @milkdown/core @milkdown/ctx @milkdown/kit @milkdown/plugin-listener @milkdown/prose
+```
+
+For Crepe as well:
+
+```bash
+npm install @mrsf/milkdown-mrsf @milkdown/core @milkdown/crepe @milkdown/ctx @milkdown/kit @milkdown/plugin-listener @milkdown/prose
+```
+
+## Direct Milkdown Quick Start
+
+```ts
+import { Editor, defaultValueCtx, rootCtx } from "@milkdown/kit/core";
+import { commonmark } from "@milkdown/kit/preset/commonmark";
+import { createMilkdownMrsfPlugin } from "@mrsf/milkdown-mrsf";
+import "@mrsf/milkdown-mrsf/style.css";
+
+const host = {
+  async getDocumentText() {
+    return "# Guide\n\nHello world\n";
+  },
+  async getDocumentPath() {
+    return "/docs/guide.md";
+  },
+  async discoverSidecar() {
+    return "/docs/guide.md.review.yaml";
+  },
+  async readSidecar() {
+    return {
+      mrsf_version: "1.0",
+      document: "/docs/guide.md",
+      comments: [],
+    };
+  },
+  async writeSidecar(_path, document) {
+    await saveToBackend(document);
+  },
+};
+
+const editor = Editor.make()
+  .config((ctx) => {
+    ctx.set(rootCtx, document.querySelector("#editor"));
+    ctx.set(defaultValueCtx, "# Guide\n\nHello world\n");
+  })
+  .use(commonmark)
+  .use(createMilkdownMrsfPlugin(host, {
+    resourceId: "guide-doc",
+    defaultAuthor: "Demo User",
+    interactive: true,
+  }));
+
+await editor.create();
+```
+
+## Crepe Quick Start
+
+```ts
+import { Crepe } from "@milkdown/crepe";
+import { createCrepeMrsfFeature } from "@mrsf/milkdown-mrsf";
+import "@milkdown/crepe/theme/common/style.css";
+import "@milkdown/crepe/theme/classic.css";
+import "@mrsf/milkdown-mrsf/style.css";
+
+const crepe = new Crepe({
+  root: document.querySelector("#editor"),
+  defaultValue: "# Guide\n\nHello world\n",
+});
+
+crepe.addFeature(createCrepeMrsfFeature(host, {
+  resourceId: "guide-doc",
+  defaultAuthor: "Demo User",
+  interactive: true,
+}));
+
+await crepe.create();
+```
+
+Direct Milkdown and Crepe can use the same host adapter and the same sidecar source of truth.
+
+## Host Integration Model
+
+The package is intentionally host-driven. Your app owns storage and user workflows; the package owns review state, anchoring, projection, and editor overlays.
+
+Required host methods:
+
+- `getDocumentText(resourceId)`
+- `discoverSidecar(resourceId)`
+- `readSidecar(sidecarPath)`
+- `writeSidecar(sidecarPath, document)`
+
+Optional host methods:
+
+- `getDocumentPath(resourceId)`
+- `watchDocument(resourceId, onChange)`
+- `watchSidecar(sidecarPath, onChange)`
+
+This makes the package a good fit for browser-based editorial tools, documentation platforms, and internal review systems built on Milkdown.
+
+## Controller Helpers
+
+Direct Milkdown helpers:
+
+- `getMilkdownMrsfController(editor)`
+- `getMilkdownMrsfSelection(editor)`
+- `getMilkdownMrsfSelectedText(editor)`
+- `getMilkdownMrsfDecorationState(editor)`
+
+Crepe helpers:
+
+- `getCrepeMrsfController(crepe)`
+- `getCrepeMrsfSelection(crepe)`
+- `getCrepeMrsfSelectedText(crepe)`
+- `getCrepeMrsfDecorationState(crepe)`
+
+Use these to wire host-side buttons, side panels, explicit save controls, or custom dialogs without rebuilding the anchoring and projection logic yourself.
+
+## Visual Behavior
+
+The package uses the same display vocabulary as the other MRSF plugins:
+
+- inline highlights for anchored `selected_text`
+- gutter markers for commented lines
+- line highlight overlays
+- thread tooltips with resolve, unresolve, reply, edit, and delete actions
+
+If you need to disable ProseMirror inline decorations and rely on overlay rendering instead, set `inlineHighlights: false` in the plugin options.
+
+## Demo
+
+The repository includes a runnable browser demo in the examples package:
+
+```bash
+cd examples
+npm install
+npm run demo:milkdown
+```
+
+Open the local Vite URL and navigate to `/` to try the interactive demo. The page lets you switch between direct Milkdown and Crepe while both are backed by the same MRSF runtime and in-memory sidecar workflow.
+
+## When To Use It
+
+Choose `@mrsf/milkdown-mrsf` when you need editor-native MRSF support inside a Milkdown-based surface and want to support either direct Milkdown or Crepe.
+
+| Need | Best fit |
+|------|----------|
+| Direct Milkdown editor with MRSF review state | `@mrsf/milkdown-mrsf` |
+| Crepe shell with the same MRSF runtime | `@mrsf/milkdown-mrsf` |
+| Monaco-based editor surface | `@mrsf/monaco-mrsf` |
+| Tiptap rich-text editor integration | `@mrsf/tiptap-mrsf` |
+| Turnkey desktop editor experience | VS Code extension |
+| Static or rendered HTML output | Marked, markdown-it, or rehype plugins |
+
+## More
+
+- [Package README](https://github.com/wictorwilen/MRSF/tree/main/plugins/milkdown#readme)
+- [Examples overview](/guide/examples)
+- [Monaco plugin](/guide/monaco)
+- [Tiptap plugin](/guide/tiptap)

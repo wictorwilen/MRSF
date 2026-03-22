@@ -4,6 +4,8 @@
   "type": "module",
   "description": "Runnable demo scripts for MRSF rendering plugins",
   "scripts": {
+    "demo:milkdown": "vite milkdown-demo",
+    "demo:milkdown:build": "vite build milkdown-demo",
     "demo:monaco": "vite monaco-demo",
     "demo:monaco:build": "vite build monaco-demo",
     "demo:compare": "vite compare-demo",
@@ -13,11 +15,18 @@
     "test:monaco-demo": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
+    "@milkdown/core": "^7.19.1",
+    "@milkdown/crepe": "^7.19.1",
+    "@milkdown/ctx": "^7.19.1",
+    "@milkdown/kit": "^7.19.1",
+    "@milkdown/plugin-listener": "^7.19.1",
+    "@milkdown/prose": "^7.19.1",
     "@mrsf/cli": "file:../cli",
-    "@mrsf/monaco-mrsf": "file:../plugins/monaco",
     "@mrsf/markdown-it-mrsf": "file:../plugins/markdown-it",
-    "@mrsf/tiptap-mrsf": "file:../plugins/tiptap",
+    "@mrsf/milkdown-mrsf": "file:../plugins/milkdown",
+    "@mrsf/monaco-mrsf": "file:../plugins/monaco",
     "@mrsf/rehype-mrsf": "file:../plugins/rehype",
+    "@mrsf/tiptap-mrsf": "file:../plugins/tiptap",
     "@tiptap/core": "^2.22.3",
     "@tiptap/extension-table": "^2.22.3",
     "@tiptap/extension-table-cell": "^2.22.3",
@@ -26,11 +35,11 @@
     "@tiptap/starter-kit": "^2.22.3",
     "markdown-it": "^14.1.0",
     "monaco-editor": "^0.52.2",
-    "unified": "^11.0.5",
+    "rehype-stringify": "^10.0.1",
     "remark-gfm": "^4.0.1",
     "remark-parse": "^11.0.0",
     "remark-rehype": "^11.1.1",
-    "rehype-stringify": "^10.0.1",
+    "unified": "^11.0.5",
     "yaml": "^2.4.2"
   },
   "devDependencies": {
