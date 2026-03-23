@@ -6,6 +6,7 @@ import "@milkdown/crepe/theme/classic.css";
 import type { Comment, MrsfDocument } from "@mrsf/cli/browser";
 import {
   createCrepeMrsfFeature,
+  createCrepeMrsfToolbarConfig,
   createMilkdownMrsfPlugin,
   getCrepeMrsfController,
   getCrepeMrsfSelectedText,
@@ -13,6 +14,8 @@ import {
   getMilkdownMrsfController,
   getMilkdownMrsfSelectedText,
   getMilkdownMrsfSelection,
+  openMilkdownMrsfConfirmDialog,
+  openMilkdownMrsfFormDialog,
   type EditorSelection,
   type MilkdownMrsfController,
   type MilkdownMrsfHostAdapter,
@@ -364,68 +367,33 @@ async function mountEditor(mode: DemoMode): Promise<void> {
         interactive: true,
         onStateChange: (event) => onStateChange(event.state),
         onCommentSelect: (commentId) => selectComment(commentId),
-        composeReply: ({ comment }) => {
-          const text = window.prompt("Reply text");
-          if (!text?.trim()) {
-            return null;
-          }
-          return {
-            text: text.trim(),
-            severity: comment.severity ?? "low",
-            type: comment.type ?? "note",
-          };
-        },
-        composeEdit: ({ comment }) => {
-          const text = window.prompt("Edit comment text", comment.text);
-          if (!text?.trim()) {
-            return null;
-          }
-          return {
-            text: text.trim(),
-            severity: comment.severity ?? undefined,
-            type: comment.type ?? undefined,
-          };
-        },
-        confirmDelete: ({ comment }) => window.confirm(`Delete comment by ${comment.author || "Unknown"}?`),
+        composeReply: ({ comment }) => composeReplyDraft(comment),
+        composeEdit: ({ comment }) => composeEditDraft(comment),
+        confirmDelete: ({ comment }) => confirmDeleteComment(comment),
       }));
 
     await activeMilkdownEditor.create();
   } else {
-    activeCrepeEditor = new Crepe({
-      root: editorHost,
-      defaultValue: hostState.markdownSource,
-    });
-    activeCrepeEditor.addFeature(createCrepeMrsfFeature(hostAdapter, {
+    const crepeMrsfOptions = {
       resourceId: "demo:crepe",
       defaultAuthor: "Demo User",
       inlineHighlights: false,
       interactive: true,
-      onStateChange: (event) => onStateChange(event.state),
-      onCommentSelect: (commentId) => selectComment(commentId),
-      composeReply: ({ comment }) => {
-        const text = window.prompt("Reply text");
-        if (!text?.trim()) {
-          return null;
-        }
-        return {
-          text: text.trim(),
-          severity: comment.severity ?? "low",
-          type: comment.type ?? "note",
-        };
+      onStateChange: (event: { state: ReviewState }) => onStateChange(event.state),
+      onCommentSelect: (commentId: string) => selectComment(commentId),
+      composeReply: ({ comment }: { comment: Comment }) => composeReplyDraft(comment),
+      composeEdit: ({ comment }: { comment: Comment }) => composeEditDraft(comment),
+      confirmDelete: ({ comment }: { comment: Comment }) => confirmDeleteComment(comment),
+    };
+
+    activeCrepeEditor = new Crepe({
+      root: editorHost,
+      defaultValue: hostState.markdownSource,
+      featureConfigs: {
+        toolbar: createCrepeMrsfToolbarConfig(crepeMrsfOptions),
       },
-      composeEdit: ({ comment }) => {
-        const text = window.prompt("Edit comment text", comment.text);
-        if (!text?.trim()) {
-          return null;
-        }
-        return {
-          text: text.trim(),
-          severity: comment.severity ?? undefined,
-          type: comment.type ?? undefined,
-        };
-      },
-      confirmDelete: ({ comment }) => window.confirm(`Delete comment by ${comment.author || "Unknown"}?`),
-    }));
+    });
+    activeCrepeEditor.addFeature(createCrepeMrsfFeature(hostAdapter, crepeMrsfOptions));
     await activeCrepeEditor.create();
   }
 
@@ -461,6 +429,42 @@ function hasUsableSelection(selection: EditorSelection | null, selectedText: str
   return selection.start.lineIndex !== selection.end.lineIndex || selection.start.column !== selection.end.column;
 }
 
+function getDialogThemeOptions() {
+  return {
+    targetDocument: editorHost.ownerDocument,
+    themeSource: editorHost,
+  };
+}
+
+async function composeReplyDraft(comment: Comment) {
+  return openMilkdownMrsfFormDialog({
+    action: "reply",
+    initialSeverity: comment.severity ?? "low",
+    initialType: comment.type ?? "note",
+    ...getDialogThemeOptions(),
+  });
+}
+
+async function composeEditDraft(comment: Comment) {
+  return openMilkdownMrsfFormDialog({
+    action: "edit",
+    initialText: comment.text,
+    initialSeverity: comment.severity ?? null,
+    initialType: comment.type ?? null,
+    selectionText: comment.selected_text ?? null,
+    ...getDialogThemeOptions(),
+  });
+}
+
+async function confirmDeleteComment(comment: Comment) {
+  return openMilkdownMrsfConfirmDialog({
+    title: "Delete comment",
+    message: `Delete comment by ${comment.author || "Unknown"}?`,
+    confirmLabel: "Delete",
+    ...getDialogThemeOptions(),
+  });
+}
+
 async function handleAddComment(): Promise<void> {
   const controller = getActiveController();
   if (!controller) {
@@ -474,14 +478,20 @@ async function handleAddComment(): Promise<void> {
     return;
   }
 
-  const text = window.prompt("Comment text");
-  if (!text?.trim()) {
+  const draft = await openMilkdownMrsfFormDialog({
+    action: "add",
+    selectionText: selectedText.trim(),
+    initialSeverity: "medium",
+    initialType: "note",
+    ...getDialogThemeOptions(),
+  });
+  if (!draft) {
     return;
   }
 
-  const comment = await controller.addCommentFromSelection(selection!, text.trim(), selectedText.trim(), {
-    severity: "medium",
-    type: "note",
+  const comment = await controller.addCommentFromSelection(selection!, draft.text, selectedText.trim(), {
+    severity: draft.severity ?? "medium",
+    type: draft.type ?? "note",
   });
   selectedCommentId = comment.id;
   flash("Added a new comment from the current selection.");
@@ -498,25 +508,31 @@ async function replyToComment(commentId: string | null): Promise<void> {
     return;
   }
 
-  const text = window.prompt("Reply text");
-  if (!text?.trim()) {
+  const comment = controller.getCommentById(commentId);
+  if (!comment) {
+    flash("The selected comment is no longer available.");
+    return;
+  }
+
+  const draft = await composeReplyDraft(comment);
+  if (!draft) {
     return;
   }
 
   const reply = await controller.reply(commentId, {
-    text: text.trim(),
-    severity: "low",
-    type: "note",
+    text: draft.text,
+    severity: draft.severity ?? "low",
+    type: draft.type ?? "note",
   });
   selectComment(reply.id);
   flash("Added a reply to the selected thread.");
 }
 
 function handleEdit(): void {
-  editComment(selectedCommentId);
+  void editComment(selectedCommentId);
 }
 
-function editComment(commentId: string | null): void {
+async function editComment(commentId: string | null): Promise<void> {
   const controller = getActiveController();
   if (!controller || !commentId) {
     flash("Select a comment before editing.");
@@ -529,15 +545,15 @@ function editComment(commentId: string | null): void {
     return;
   }
 
-  const text = window.prompt("Edit comment text", comment.text);
-  if (!text?.trim()) {
+  const draft = await composeEditDraft(comment);
+  if (!draft) {
     return;
   }
 
   controller.edit(commentId, {
-    text: text.trim(),
-    severity: comment.severity,
-    type: comment.type,
+    text: draft.text,
+    severity: draft.severity ?? comment.severity,
+    type: draft.type ?? comment.type,
     selected_text: comment.selected_text,
   });
   selectComment(commentId);
@@ -561,13 +577,24 @@ function toggleCommentResolved(commentId: string | null): void {
 }
 
 function handleDelete(): void {
-  deleteComment(selectedCommentId);
+  void deleteComment(selectedCommentId);
 }
 
-function deleteComment(commentId: string | null): void {
+async function deleteComment(commentId: string | null): Promise<void> {
   const controller = getActiveController();
   if (!controller || !commentId) {
     flash("Select a comment before deleting it.");
+    return;
+  }
+
+  const comment = controller.getCommentById(commentId);
+  if (!comment) {
+    flash("The selected comment is no longer available.");
+    return;
+  }
+
+  const confirmed = await confirmDeleteComment(comment);
+  if (!confirmed) {
     return;
   }
 

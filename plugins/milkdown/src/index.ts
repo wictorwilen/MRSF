@@ -11,6 +11,7 @@ export type {
   HoverTargetSnapshot,
   InlineDecorationSnapshot,
   LineThreadSnapshot,
+  MilkdownMrsfSelectionActionContext,
   MilkdownMrsfControllerOptions,
   MilkdownMrsfPluginSaveOptions,
   MilkdownMrsfPluginSaveRequest,
@@ -32,6 +33,7 @@ export type { Comment, DiffHunk, MrsfDocument, ReanchorResult, ReanchorStatus } 
 export { MilkdownMrsfController } from "./MilkdownMrsfController.js";
 export {
   createCrepeMrsfFeature,
+  createCrepeMrsfToolbarConfig,
   getCrepeMrsfController,
   getCrepeMrsfDecorationState,
   getCrepeMrsfSelectedText,
@@ -45,6 +47,7 @@ export {
   getMilkdownMrsfSelection,
   milkdownMrsfControllerCtx,
 } from "./milkdown.js";
+export { openMilkdownMrsfConfirmDialog, openMilkdownMrsfFormDialog } from "./ui/dialogs.js";
 export { splitDocumentLines } from "./host/HostAdapter.js";
 export { ReviewStore } from "./core/ReviewStore.js";
 export { addComment, populateSelectedText, removeComment, resolveComment, setSelectedText, unresolveComment } from "./core/browserComments.js";

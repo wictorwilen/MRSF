@@ -138,7 +138,102 @@ function makeState(): { state: ReviewState; root: Comment; reply: Comment; threa
   return { state, root, reply, thread };
 }
 
-function makeView() {
+function makeMixedLineState(): { state: ReviewState; threads: ReviewThread[] } {
+  const inlineRoot = makeComment({ id: "inline-root", text: "Inline root", line: 1, start_column: 0, end_column: 5, selected_text: "alpha" });
+  const lineRoot = makeComment({ id: "line-root", text: "Line root", line: 1, start_column: undefined, end_column: undefined, selected_text: undefined });
+  const lineReply = makeComment({ id: "line-reply", text: "Line reply", line: 1, reply_to: "line-root", start_column: undefined, end_column: undefined, selected_text: undefined });
+
+  const threads = [
+    {
+      line: 1,
+      rootComment: inlineRoot,
+      replies: [],
+    },
+    {
+      line: 1,
+      rootComment: lineRoot,
+      replies: [lineReply],
+    },
+  ] satisfies ReviewThread[];
+
+  const state = {
+    resourceId: "resource",
+    document: {
+      mrsf_version: "1.0",
+      document: "doc.md",
+      comments: [inlineRoot, lineRoot, lineReply],
+    },
+    projectedDocument: {
+      mrsf_version: "1.0",
+      document: "doc.md",
+      comments: [inlineRoot, lineRoot, lineReply],
+    },
+    sidecarPath: "/tmp/doc.md.review.yaml",
+    documentPath: "/tmp/doc.md",
+    documentLines: ["alpha line", "beta line", "gamma line"],
+    snapshot: {
+      threadsByLine: [{
+        line: 1,
+        threads: [
+          {
+            line: 1,
+            rootCommentId: "inline-root",
+            commentIds: ["inline-root"],
+            replyCount: 0,
+            resolved: false,
+            highestSeverity: null,
+            inline: true,
+            range: {
+              start: { lineIndex: 0, column: 0 },
+              end: { lineIndex: 0, column: 5 },
+            },
+          },
+          {
+            line: 1,
+            rootCommentId: "line-root",
+            commentIds: ["line-root", "line-reply"],
+            replyCount: 1,
+            resolved: false,
+            highestSeverity: null,
+            inline: false,
+          },
+        ],
+      }],
+      gutterMarks: [{
+        line: 1,
+        threadCount: 2,
+        commentCount: 3,
+        resolvedState: "open",
+        highestSeverity: null,
+      }],
+      inlineRanges: [{
+        commentId: "inline-root",
+        line: 1,
+        selectedText: "alpha",
+        resolved: false,
+        severity: null,
+        range: {
+          start: { lineIndex: 0, column: 0 },
+          end: { lineIndex: 0, column: 5 },
+        },
+      }],
+      hoverTargets: [{
+        line: 1,
+        commentIds: ["inline-root", "line-root", "line-reply"],
+      }],
+      documentLevelCommentIds: [],
+      orphanedCommentIds: [],
+    },
+    loaded: true,
+    dirty: false,
+    hasPendingShifts: false,
+    lastReanchorResults: [],
+  } satisfies ReviewState;
+
+  return { state, threads };
+}
+
+function makeView(selection: { from: number; to: number; empty: boolean } = { from: 1, to: 1, empty: true }) {
   const container = document.createElement("div");
   container.className = "editor-host";
   const dom = document.createElement("div");
@@ -176,7 +271,7 @@ function makeView() {
   const doc = createDoc(["alpha line", "beta line", "gamma line"]);
   const view = {
     dom,
-    state: { doc },
+    state: { doc, selection },
     coordsAtPos: (pos: number) => ({
       top: 30 + pos * 3,
       bottom: 50 + pos * 3,
@@ -262,6 +357,7 @@ describe("MilkdownMrsfOverlay", () => {
     const { container, view } = makeView();
     const onCommentSelect = vi.fn();
     const controller = {
+      getThreadsAtLine: vi.fn(() => [thread]),
       getThreadForComment: vi.fn((commentId: string) => (commentId === "missing" ? null : thread)),
       getCommentById: vi.fn((commentId: string) => state.projectedDocument.comments.find((comment) => comment.id === commentId) ?? null),
       resolve: vi.fn(() => true),
@@ -320,14 +416,39 @@ describe("MilkdownMrsfOverlay", () => {
     overlay.destroy();
   });
 
-  it("uses prompt and confirm fallbacks and ignores missing tooltip targets", async () => {
+  it("shows all line threads when hovering the gutter badge", () => {
+    const { state, threads } = makeMixedLineState();
+    const { view } = makeView();
+    const controller = {
+      getThreadsAtLine: vi.fn(() => threads),
+      getThreadForComment: vi.fn((commentId: string) => threads.find((thread) => thread.rootComment.id === commentId) ?? null),
+      getCommentById: vi.fn((commentId: string) => state.projectedDocument.comments.find((comment) => comment.id === commentId) ?? null),
+    };
+
+    const overlay = new MilkdownMrsfOverlay(
+      view as never,
+      () => state,
+      () => controller as never,
+      {},
+    );
+
+    overlay.update();
+
+    const badge = document.querySelector<HTMLButtonElement>(".mrsf-badge");
+    expect(badge).not.toBeNull();
+    badge!.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+
+    const tooltip = document.querySelector<HTMLElement>(".mrsf-inline-tooltip");
+    expect(tooltip).not.toBeNull();
+    expect(tooltip!.querySelectorAll(".tooltip-thread")).toHaveLength(2);
+    expect(controller.getThreadsAtLine).toHaveBeenCalledWith(1);
+
+    overlay.destroy();
+  });
+
+  it("uses dialog fallbacks and ignores missing tooltip targets", async () => {
     const { state, thread } = makeState();
     const { view } = makeView();
-    const prompt = vi.spyOn(window, "prompt")
-      .mockReturnValueOnce(" ")
-      .mockReturnValueOnce(" Prompted reply ")
-      .mockReturnValueOnce(" Prompted edit ");
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     const controller = {
       getThreadForComment: vi.fn((commentId: string) => (commentId === "missing" ? null : thread)),
       getCommentById: vi.fn((commentId: string) => state.projectedDocument.comments.find((comment) => comment.id === commentId) ?? null),
@@ -354,19 +475,28 @@ describe("MilkdownMrsfOverlay", () => {
 
     tooltip!.querySelector<HTMLElement>('[data-mrsf-action="reply"]')!.click();
     await vi.runAllTimersAsync();
-    expect(controller.reply).not.toHaveBeenCalled();
-
-    tooltip!.querySelector<HTMLElement>('[data-mrsf-action="reply"]')!.click();
+    const replyDialog = document.querySelector<HTMLFormElement>(".mrsf-overlay form");
+    expect(replyDialog).not.toBeNull();
+    replyDialog!.querySelector<HTMLTextAreaElement>('textarea[name="text"]')!.value = " Prompted reply ";
+    replyDialog!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
     await vi.runAllTimersAsync();
     expect(controller.reply).toHaveBeenCalledOnce();
 
     tooltip!.querySelector<HTMLElement>('[data-mrsf-action="edit"]')!.click();
     await vi.runAllTimersAsync();
+    const editDialog = document.querySelector<HTMLFormElement>(".mrsf-overlay form");
+    expect(editDialog).not.toBeNull();
+    editDialog!.querySelector<HTMLTextAreaElement>('textarea[name="text"]')!.value = " Prompted edit ";
+    editDialog!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await vi.runAllTimersAsync();
     expect(controller.edit).toHaveBeenCalled();
 
     tooltip!.querySelector<HTMLElement>('[data-mrsf-action="delete"]')!.click();
     await vi.runAllTimersAsync();
-    expect(confirm).toHaveBeenCalled();
+    const confirmDialog = document.querySelector<HTMLElement>(".mrsf-overlay");
+    expect(confirmDialog).not.toBeNull();
+    confirmDialog!.querySelector<HTMLButtonElement>(".mrsf-btn")!.click();
+    await vi.runAllTimersAsync();
     expect(controller.remove).not.toHaveBeenCalled();
 
     const orphanAnchor = document.createElement("button");
@@ -375,7 +505,68 @@ describe("MilkdownMrsfOverlay", () => {
     orphanAnchor.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
     await vi.runAllTimersAsync();
 
-    expect(prompt).toHaveBeenCalled();
+    overlay.destroy();
+  });
+
+  it("adds a comment from the current selection through the inline add button", async () => {
+    const { state } = makeState();
+    const { view } = makeView({ from: 1, to: 6, empty: false });
+    const onCommentSelect = vi.fn();
+    const controller = {
+      addCommentFromSelection: vi.fn(async () => ({ ...state.projectedDocument.comments[0]!, id: "new-comment" })),
+      getThreadForComment: vi.fn(() => null),
+      getCommentById: vi.fn(() => null),
+    };
+
+    const overlay = new MilkdownMrsfOverlay(
+      view as never,
+      () => state,
+      () => controller as never,
+      { onCommentSelect },
+    );
+
+    overlay.update();
+    const addButton = document.querySelector<HTMLButtonElement>(".mrsf-add-inline-button");
+    expect(addButton).not.toBeNull();
+    expect(addButton?.style.display).toBe("inline-flex");
+
+    addButton!.click();
+    await vi.runAllTimersAsync();
+
+    const dialog = document.querySelector<HTMLFormElement>(".mrsf-overlay form");
+    expect(dialog).not.toBeNull();
+    expect(dialog!.querySelector("pre")?.textContent).toContain("alpha");
+    dialog!.querySelector<HTMLTextAreaElement>('textarea[name="text"]')!.value = " New comment ";
+    dialog!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await vi.runAllTimersAsync();
+
+    expect(controller.addCommentFromSelection).toHaveBeenCalledWith(
+      expect.objectContaining({ start: expect.any(Object), end: expect.any(Object) }),
+      "New comment",
+      expect.stringContaining("alpha"),
+      expect.objectContaining({ severity: undefined, type: undefined }),
+    );
+    expect(onCommentSelect).toHaveBeenCalledWith("new-comment");
+
+    overlay.destroy();
+  });
+
+  it("suppresses the inline add button when configured off", () => {
+    const { state } = makeState();
+    const { view } = makeView({ from: 1, to: 6, empty: false });
+    const overlay = new MilkdownMrsfOverlay(
+      view as never,
+      () => state,
+      () => ({
+        getThreadForComment: () => null,
+        getCommentById: () => null,
+      }) as never,
+      { showSelectionAddButton: false },
+    );
+
+    overlay.update();
+    expect(document.querySelector<HTMLButtonElement>(".mrsf-add-inline-button")?.style.display).toBe("none");
+
     overlay.destroy();
   });
 });

@@ -155,6 +155,11 @@ export interface MilkdownMrsfComposeResult {
   type?: Comment["type"];
 }
 
+export interface MilkdownMrsfSelectionActionContext {
+  selection: EditorSelection;
+  selectedText: string;
+}
+
 export interface MilkdownMrsfTooltipActionContext {
   comment: Comment;
   thread: ReviewThread;
@@ -164,11 +169,13 @@ export interface MilkdownMrsfControllerOptions {
   resourceId: string;
   showResolved?: boolean;
   inlineHighlights?: boolean;
+  showSelectionAddButton?: boolean;
   defaultAuthor?: string;
   onStateChange?: (event: MilkdownMrsfStateChangeEvent) => void;
   onSaveRequest?: (request: MilkdownMrsfPluginSaveRequest) => void | Promise<void>;
   interactive?: boolean;
   onCommentSelect?: (commentId: string) => void;
+  composeAdd?: (context: MilkdownMrsfSelectionActionContext) => MilkdownMrsfComposeResult | null | Promise<MilkdownMrsfComposeResult | null>;
   composeReply?: (context: MilkdownMrsfTooltipActionContext) => MilkdownMrsfComposeResult | null | Promise<MilkdownMrsfComposeResult | null>;
   composeEdit?: (context: MilkdownMrsfTooltipActionContext) => MilkdownMrsfComposeResult | null | Promise<MilkdownMrsfComposeResult | null>;
   confirmDelete?: (context: MilkdownMrsfTooltipActionContext) => boolean | Promise<boolean>;

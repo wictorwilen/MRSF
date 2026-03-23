@@ -151,7 +151,9 @@ export function createMilkdownMrsfPlugin(
           {
             inlineHighlights: options.inlineHighlights,
             interactive: options.interactive,
+            showSelectionAddButton: options.showSelectionAddButton,
             onCommentSelect: options.onCommentSelect,
+            composeAdd: options.composeAdd,
             composeReply: options.composeReply,
             composeEdit: options.composeEdit,
             confirmDelete: options.confirmDelete,

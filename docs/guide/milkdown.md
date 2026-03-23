@@ -13,9 +13,10 @@ The current package supports both direct Milkdown and Crepe on top of the same r
 ## Current Scope
 
 - direct Milkdown integration through `createMilkdownMrsfPlugin`
-- Crepe integration through `createCrepeMrsfFeature`
+- Crepe integration through `createCrepeMrsfFeature` and `createCrepeMrsfToolbarConfig`
 - shared browser host adapter contract for sidecar I/O
 - inline highlights, gutter overlays, and thread tooltips
+- built-in MRSF dialogs for add, reply, edit, and delete actions
 - add, reply, edit, resolve, delete, save, reload, and reanchor flows
 - live line tracking while the editor content changes
 - selection helpers and controller accessors for host-side UI
@@ -83,26 +84,33 @@ await editor.create();
 
 ```ts
 import { Crepe } from "@milkdown/crepe";
-import { createCrepeMrsfFeature } from "@mrsf/milkdown-mrsf";
+import { createCrepeMrsfFeature, createCrepeMrsfToolbarConfig } from "@mrsf/milkdown-mrsf";
 import "@milkdown/crepe/theme/common/style.css";
 import "@milkdown/crepe/theme/classic.css";
 import "@mrsf/milkdown-mrsf/style.css";
 
-const crepe = new Crepe({
-  root: document.querySelector("#editor"),
-  defaultValue: "# Guide\n\nHello world\n",
-});
-
-crepe.addFeature(createCrepeMrsfFeature(host, {
+const mrsfOptions = {
   resourceId: "guide-doc",
   defaultAuthor: "Demo User",
   interactive: true,
-}));
+};
+
+const crepe = new Crepe({
+  root: document.querySelector("#editor"),
+  defaultValue: "# Guide\n\nHello world\n",
+  featureConfigs: {
+    toolbar: createCrepeMrsfToolbarConfig(mrsfOptions),
+  },
+});
+
+crepe.addFeature(createCrepeMrsfFeature(host, mrsfOptions));
 
 await crepe.create();
 ```
 
 Direct Milkdown and Crepe can use the same host adapter and the same sidecar source of truth.
+
+In direct Milkdown, text selections expose an inline add-comment control. In Crepe, the same action is surfaced through Crepe's native selection toolbar and slash menu, while reply, edit, and delete continue to use the built-in MRSF dialogs.
 
 ## Host Integration Model
 
@@ -149,6 +157,7 @@ The package uses the same display vocabulary as the other MRSF plugins:
 - gutter markers for commented lines
 - line highlight overlays
 - thread tooltips with resolve, unresolve, reply, edit, and delete actions
+- built-in MRSF modal dialogs for add, reply, edit, and delete
 
 If you need to disable ProseMirror inline decorations and rely on overlay rendering instead, set `inlineHighlights: false` in the plugin options.
 

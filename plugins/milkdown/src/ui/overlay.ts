@@ -3,7 +3,14 @@ import type { CommentThread, SlimComment } from "@mrsf/plugin-shared";
 import type { EditorView } from "@milkdown/prose/view";
 import type { MilkdownMrsfController } from "../MilkdownMrsfController.js";
 import type { MilkdownMrsfComposeResult, MilkdownMrsfControllerOptions, ReviewState, ReviewThread } from "../types.js";
-import { createLineIndex, getDocumentText, pointToOffset, textOffsetToPmPos } from "../core/textModel.js";
+import { createLineIndex, getDocumentText, getSelectedText, pointToOffset, selectionToEditorSelection, textOffsetToPmPos } from "../core/textModel.js";
+import { openMilkdownMrsfConfirmDialog, openMilkdownMrsfFormDialog } from "./dialogs.js";
+
+interface DialogComposeResult {
+  text: string;
+  severity?: MilkdownMrsfComposeResult["severity"] | null;
+  type?: MilkdownMrsfComposeResult["type"] | null;
+}
 
 interface OverlayEntry {
   line: number;
@@ -62,17 +69,19 @@ export class MilkdownMrsfOverlay {
   private readonly editorRoot: HTMLElement;
   private readonly highlightLayer: HTMLElement;
   private readonly gutter: HTMLElement;
+  private readonly addButton: HTMLButtonElement;
   private tooltip: HTMLElement | null = null;
   private hideTooltipTimer: number | null = null;
   private cleanupPosition: (() => void) | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private renderScheduled = false;
+  private pendingAddSelection: { selection: ReturnType<typeof selectionToEditorSelection>; selectedText: string } | null = null;
 
   constructor(
     private view: EditorView,
     private readonly getState: () => ReviewState | null,
     private readonly getController: () => MilkdownMrsfController | null,
-    private readonly options: Pick<MilkdownMrsfControllerOptions, "inlineHighlights" | "interactive" | "onCommentSelect" | "composeReply" | "composeEdit" | "confirmDelete">,
+    private readonly options: Pick<MilkdownMrsfControllerOptions, "inlineHighlights" | "interactive" | "showSelectionAddButton" | "onCommentSelect" | "composeAdd" | "composeReply" | "composeEdit" | "confirmDelete">,
   ) {
     this.editorRoot = view.dom;
     this.container = this.resolveContainer(view.dom);
@@ -80,11 +89,22 @@ export class MilkdownMrsfOverlay {
     this.highlightLayer.className = "mrsf-line-highlight-layer is-hidden";
     this.gutter = document.createElement("div");
     this.gutter.className = "mrsf-gutter mrsf-gutter-right is-hidden";
+    this.addButton = document.createElement("button");
+    this.addButton.type = "button";
+    this.addButton.className = "mrsf-add-inline-button";
+    this.addButton.textContent = "Add comment";
+    this.addButton.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+    });
+    this.addButton.addEventListener("click", () => {
+      void this.handleAddComment();
+    });
 
     this.ensureContainerPositioning();
     this.container.classList.add("mrsf-overlay-root");
     this.container.appendChild(this.highlightLayer);
     this.container.appendChild(this.gutter);
+    this.container.appendChild(this.addButton);
     this.container.addEventListener("scroll", this.handleScroll, { passive: true });
     this.container.addEventListener("mouseover", this.handlePointerEnter);
     this.container.addEventListener("mouseout", this.handlePointerLeave);
@@ -119,6 +139,8 @@ export class MilkdownMrsfOverlay {
     this.container.removeEventListener("focusout", this.handleFocusOut);
     window.removeEventListener("resize", this.handleResize);
     this.clearTooltip();
+    this.hideAddButton();
+    this.addButton.remove();
     this.highlightLayer.remove();
     this.gutter.remove();
     this.editorRoot.style.removeProperty("padding-right");
@@ -138,6 +160,12 @@ export class MilkdownMrsfOverlay {
   private readonly handlePointerEnter = (event: Event): void => {
     const target = event.target instanceof HTMLElement ? event.target.closest<HTMLElement>("[data-mrsf-comment-id]") : null;
     if (!target || !this.container.contains(target)) {
+      return;
+    }
+
+    const gutterLine = Number(target.dataset.mrsfGutterLine ?? target.closest<HTMLElement>("[data-mrsf-gutter-line]")?.dataset.mrsfGutterLine ?? "");
+    if (Number.isFinite(gutterLine) && gutterLine > 0) {
+      this.showLineTooltip(gutterLine, target);
       return;
     }
 
@@ -210,6 +238,7 @@ export class MilkdownMrsfOverlay {
     if (!state) {
       this.hide();
       this.clearTooltip();
+      this.hideAddButton();
       return;
     }
 
@@ -243,23 +272,24 @@ export class MilkdownMrsfOverlay {
 
     if (entries.length === 0) {
       this.hide();
-      return;
+    } else {
+      this.highlightLayer.className = "mrsf-line-highlight-layer";
+      this.highlightLayer.style.height = `${Math.max(this.container.scrollHeight, this.editorRoot.scrollHeight)}px`;
+      const children = [
+        ...entries.map((entry) => this.renderLineHighlight(entry)),
+        ...(this.options.inlineHighlights === false
+          ? state.snapshot.inlineRanges.flatMap((inlineRange) => this.renderInlineHighlights(context, inlineRange))
+          : []),
+      ];
+      this.highlightLayer.replaceChildren(...children);
+
+      this.gutter.className = "mrsf-gutter mrsf-gutter-right";
+      this.gutter.style.height = `${Math.max(this.container.scrollHeight, this.editorRoot.scrollHeight)}px`;
+      this.gutter.replaceChildren(...entries.map((entry) => this.renderGutterItem(entry)));
+      this.editorRoot.style.paddingRight = "calc(var(--mrsf-gutter-width, 36px) + 1.3rem)";
     }
 
-    this.highlightLayer.className = "mrsf-line-highlight-layer";
-    this.highlightLayer.style.height = `${Math.max(this.container.scrollHeight, this.editorRoot.scrollHeight)}px`;
-    const children = [
-      ...entries.map((entry) => this.renderLineHighlight(entry)),
-      ...(this.options.inlineHighlights === false
-        ? state.snapshot.inlineRanges.flatMap((inlineRange) => this.renderInlineHighlights(context, inlineRange))
-        : []),
-    ];
-    this.highlightLayer.replaceChildren(...children);
-
-    this.gutter.className = "mrsf-gutter mrsf-gutter-right";
-    this.gutter.style.height = `${Math.max(this.container.scrollHeight, this.editorRoot.scrollHeight)}px`;
-    this.gutter.replaceChildren(...entries.map((entry) => this.renderGutterItem(entry)));
-    this.editorRoot.style.paddingRight = "calc(var(--mrsf-gutter-width, 36px) + 1.3rem)";
+    this.updateAddButton();
   }
 
   private hide(): void {
@@ -299,6 +329,10 @@ export class MilkdownMrsfOverlay {
     return this.getController()?.getThreadForComment(commentId) ?? null;
   }
 
+  private getThreadsAtLine(line: number): ReviewThread[] {
+    return this.getController()?.getThreadsAtLine(line) ?? [];
+  }
+
   private getThreadHtml(commentId: string): string | null {
     const thread = this.getThread(commentId);
     if (!thread) {
@@ -306,6 +340,17 @@ export class MilkdownMrsfOverlay {
     }
 
     return renderThreadHtml(this.toSharedThread(thread), this.options.interactive !== false);
+  }
+
+  private getLineThreadHtml(line: number): string | null {
+    const threads = this.getThreadsAtLine(line);
+    if (threads.length === 0) {
+      return null;
+    }
+
+    return threads
+      .map((thread) => renderThreadHtml(this.toSharedThread(thread), this.options.interactive !== false))
+      .join("");
   }
 
   private showTooltip(commentId: string, anchor: HTMLElement): void {
@@ -322,6 +367,39 @@ export class MilkdownMrsfOverlay {
 
     this.cancelTooltipHide();
     this.options.onCommentSelect?.(commentId);
+
+    if (!this.tooltip) {
+      this.tooltip = document.createElement("div");
+      this.tooltip.className = this.options.interactive === false ? "mrsf-inline-tooltip" : "mrsf-inline-tooltip mrsf-interactive";
+      this.tooltip.addEventListener("mouseenter", this.cancelTooltipHide);
+      this.tooltip.addEventListener("mouseleave", this.scheduleTooltipHide);
+      this.tooltip.addEventListener("click", (event) => {
+        void this.handleTooltipClick(event);
+      });
+      document.body.appendChild(this.tooltip);
+    }
+
+    this.tooltip.innerHTML = html;
+    this.positionTooltip(anchor);
+  }
+
+  private showLineTooltip(line: number, anchor: HTMLElement): void {
+    if (!line) {
+      this.clearTooltip();
+      return;
+    }
+
+    const threads = this.getThreadsAtLine(line);
+    const html = this.getLineThreadHtml(line);
+    if (!html) {
+      this.clearTooltip();
+      return;
+    }
+
+    this.cancelTooltipHide();
+    if (threads[0]?.rootComment.id) {
+      this.options.onCommentSelect?.(threads[0].rootComment.id);
+    }
 
     if (!this.tooltip) {
       this.tooltip = document.createElement("div");
@@ -382,6 +460,79 @@ export class MilkdownMrsfOverlay {
     this.tooltip = null;
   }
 
+  private updateAddButton(): void {
+    if (this.options.showSelectionAddButton === false || this.options.interactive === false || !this.view.state.selection || this.view.state.selection.empty) {
+      this.hideAddButton();
+      return;
+    }
+
+    const selection = selectionToEditorSelection(this.view.state.selection, this.view.state.doc);
+    const selectedText = getSelectedText(this.view.state as Parameters<typeof getSelectedText>[0]);
+    if (!selectedText.trim()) {
+      this.hideAddButton();
+      return;
+    }
+
+    try {
+      const startCoords = this.view.coordsAtPos(this.view.state.selection.from);
+      const endCoords = this.view.coordsAtPos(this.view.state.selection.to);
+      const containerRect = this.container.getBoundingClientRect();
+      const top = Math.max(
+        this.container.scrollTop,
+        Math.min(startCoords.top, endCoords.top) - containerRect.top + this.container.scrollTop - 42,
+      );
+      const left = Math.max(
+        this.container.scrollLeft,
+        Math.max(startCoords.left, endCoords.right) - containerRect.left + this.container.scrollLeft + 8,
+      );
+
+      this.pendingAddSelection = { selection, selectedText };
+      this.addButton.style.top = `${top}px`;
+      this.addButton.style.left = `${left}px`;
+      this.addButton.style.display = "inline-flex";
+    } catch {
+      this.hideAddButton();
+    }
+  }
+
+  private hideAddButton(): void {
+    this.pendingAddSelection = null;
+    this.addButton.style.display = "none";
+  }
+
+  private async handleAddComment(): Promise<void> {
+    const pending = this.pendingAddSelection;
+    const controller = this.getController();
+    if (!pending || !controller) {
+      return;
+    }
+
+    const draft = await this.resolveComposeResult(
+      this.options.composeAdd?.(pending)
+        ?? openMilkdownMrsfFormDialog({
+          action: "add",
+          selectionText: pending.selectedText,
+          targetDocument: this.editorRoot.ownerDocument,
+          themeSource: this.container,
+        }),
+    );
+    if (!draft) {
+      return;
+    }
+
+    const comment = await controller.addCommentFromSelection(
+      pending.selection,
+      draft.text,
+      pending.selectedText,
+      {
+        severity: draft.severity ?? undefined,
+        type: draft.type ?? undefined,
+      },
+    );
+    this.options.onCommentSelect?.(comment.id);
+    this.hideAddButton();
+  }
+
   private async handleTooltipClick(event: Event): Promise<void> {
     const target = event.target instanceof HTMLElement ? event.target.closest<HTMLElement>("[data-mrsf-action]") : null;
     if (!target) {
@@ -421,7 +572,13 @@ export class MilkdownMrsfOverlay {
     if (action === "reply") {
       const draft = await this.resolveComposeResult(
         this.options.composeReply?.({ comment, thread })
-          ?? this.defaultCompose("Reply text", "", comment.severity ?? "low", comment.type ?? "note"),
+          ?? openMilkdownMrsfFormDialog({
+            action: "reply",
+            initialSeverity: comment.severity ?? null,
+            initialType: comment.type ?? null,
+            targetDocument: this.editorRoot.ownerDocument,
+            themeSource: this.container,
+          }),
       );
       if (!draft) {
         return;
@@ -435,7 +592,15 @@ export class MilkdownMrsfOverlay {
     if (action === "edit") {
       const draft = await this.resolveComposeResult(
         this.options.composeEdit?.({ comment, thread })
-          ?? this.defaultCompose("Edit comment text", comment.text, comment.severity ?? undefined, comment.type ?? undefined),
+          ?? openMilkdownMrsfFormDialog({
+            action: "edit",
+            initialText: comment.text,
+            initialSeverity: comment.severity ?? null,
+            initialType: comment.type ?? null,
+            selectionText: comment.selected_text ?? null,
+            targetDocument: this.editorRoot.ownerDocument,
+            themeSource: this.container,
+          }),
       );
       if (!draft) {
         return;
@@ -453,7 +618,13 @@ export class MilkdownMrsfOverlay {
     if (action === "delete") {
       const confirmed = await Promise.resolve(
         this.options.confirmDelete?.({ comment, thread })
-          ?? window.confirm(`Delete comment by ${comment.author || "Unknown"}?`),
+          ?? openMilkdownMrsfConfirmDialog({
+            title: "Delete comment",
+            message: `Delete comment by ${comment.author || "Unknown"}?`,
+            confirmLabel: "Delete",
+            targetDocument: this.editorRoot.ownerDocument,
+            themeSource: this.container,
+          }),
       );
       if (!confirmed) {
         return;
@@ -464,7 +635,7 @@ export class MilkdownMrsfOverlay {
   }
 
   private async resolveComposeResult(
-    result: MilkdownMrsfComposeResult | null | Promise<MilkdownMrsfComposeResult | null>,
+    result: DialogComposeResult | MilkdownMrsfComposeResult | null | Promise<DialogComposeResult | MilkdownMrsfComposeResult | null>,
   ): Promise<MilkdownMrsfComposeResult | null> {
     const resolved = await Promise.resolve(result);
     if (!resolved?.text?.trim()) {
@@ -472,26 +643,9 @@ export class MilkdownMrsfOverlay {
     }
 
     return {
-      ...resolved,
       text: resolved.text.trim(),
-    };
-  }
-
-  private defaultCompose(
-    label: string,
-    initialText: string,
-    severity?: MilkdownMrsfComposeResult["severity"],
-    type?: MilkdownMrsfComposeResult["type"],
-  ): MilkdownMrsfComposeResult | null {
-    const text = window.prompt(label, initialText);
-    if (!text?.trim()) {
-      return null;
-    }
-
-    return {
-      text: text.trim(),
-      severity,
-      type,
+      severity: resolved.severity ?? undefined,
+      type: resolved.type ?? undefined,
     };
   }
 
@@ -624,6 +778,7 @@ export class MilkdownMrsfOverlay {
     }
     badge.dataset.mrsfCommentId = entry.rootCommentId;
     badge.dataset.mrsfLine = String(entry.line);
+    badge.dataset.mrsfGutterLine = String(entry.line);
     badge.setAttribute("aria-label", presentation.ariaLabel);
     badge.title = presentation.title;
     badge.textContent = presentation.label;

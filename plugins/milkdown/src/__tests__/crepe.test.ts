@@ -1,12 +1,20 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Editor, defaultValueCtx, editorViewCtx, rootCtx } from "@milkdown/kit/core";
 import { commonmark } from "@milkdown/kit/preset/commonmark";
 import { Crepe } from "@milkdown/crepe";
+import { TextSelection } from "@milkdown/prose/state";
 import type { MrsfDocument } from "@mrsf/cli/browser";
-import { createCrepeMrsfFeature, createMilkdownMrsfPlugin, getCrepeMrsfController, getCrepeMrsfDecorationState } from "../index.js";
+import {
+  createCrepeMrsfFeature,
+  createCrepeMrsfToolbarConfig,
+  createMilkdownMrsfPlugin,
+  getCrepeMrsfController,
+  getCrepeMrsfDecorationState,
+} from "../index.js";
 import type { MilkdownMrsfHostAdapter } from "../host/HostAdapter.js";
+import { addCrepeMrsfToolbarItem, runCrepeAddComment } from "../ui/crepeCommentAction.js";
 
 function flush(delay = 0): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, delay));
@@ -45,6 +53,27 @@ Crepe and direct Milkdown share the same review controller.
 describe("Crepe integration", () => {
   let crepe: Crepe | null = null;
   let editor: Editor | null = null;
+
+  beforeEach(() => {
+    if (typeof Range !== "undefined") {
+      Range.prototype.getClientRects ??= function getClientRects() {
+        return [] as unknown as DOMRectList;
+      };
+      Range.prototype.getBoundingClientRect ??= function getBoundingClientRect() {
+        return {
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: 0,
+          height: 0,
+          toJSON: () => ({}),
+        };
+      };
+    }
+  });
 
   afterEach(async () => {
     if (crepe) {
@@ -101,6 +130,11 @@ describe("Crepe integration", () => {
     crepe = new Crepe({
       root,
       defaultValue: "hello world",
+      featureConfigs: {
+        toolbar: createCrepeMrsfToolbarConfig({
+          defaultAuthor: "Tester",
+        }),
+      },
     });
     crepe.addFeature(createCrepeMrsfFeature(host, {
       resourceId: "example-crepe",
@@ -165,6 +199,11 @@ describe("Crepe integration", () => {
     crepe = new Crepe({
       root,
       defaultValue: "hello world",
+      featureConfigs: {
+        toolbar: createCrepeMrsfToolbarConfig({
+          defaultAuthor: "Tester",
+        }),
+      },
     });
     crepe.addFeature(createCrepeMrsfFeature(host, {
       resourceId: "example-crepe-overlay",
@@ -266,6 +305,12 @@ describe("Crepe integration", () => {
     crepe = new Crepe({
       root,
       defaultValue: DEMO_MARKDOWN,
+      featureConfigs: {
+        toolbar: createCrepeMrsfToolbarConfig({
+          defaultAuthor: "Tester",
+          interactive: true,
+        }),
+      },
     });
     crepe.addFeature(createCrepeMrsfFeature(host, {
       resourceId: "example-crepe-switch",
@@ -278,5 +323,114 @@ describe("Crepe integration", () => {
     const controller = getCrepeMrsfController(crepe);
     expect(controller).not.toBeNull();
     await waitFor(() => getCrepeMrsfDecorationState(crepe!).decorations.find().length > 0);
+  });
+
+  it("adds an MRSF action into the Crepe toolbar builder", () => {
+    let capturedItem:
+      | {
+          icon: string;
+          active: () => boolean;
+          onRun: (ctx: { value: string }) => void;
+        }
+      | undefined;
+    const receivedContexts: Array<{ value: string }> = [];
+
+    const builder = {
+      addGroup(_key: string, _label: string) {
+        return {
+          addItem(
+            _itemKey: string,
+            item: {
+              icon: string;
+              active: () => boolean;
+              onRun: (ctx: { value: string }) => void;
+            },
+          ) {
+            capturedItem = item;
+            return this;
+          },
+        };
+      },
+    };
+
+    addCrepeMrsfToolbarItem(builder, (ctx) => {
+      receivedContexts.push(ctx as { value: string });
+    });
+
+    expect(capturedItem).toBeDefined();
+    expect(capturedItem?.icon).toContain("currentColor");
+    expect(capturedItem?.active({ value: "unused" })).toBe(false);
+
+    capturedItem?.onRun({ value: "toolbar" });
+    expect(receivedContexts).toEqual([{ value: "toolbar" }]);
+  });
+
+  it("runs the native Crepe add-comment action against the current selection", async () => {
+    let sidecar: MrsfDocument = {
+      mrsf_version: "1.0",
+      document: "example.md",
+      comments: [],
+    };
+
+    const host: MilkdownMrsfHostAdapter = {
+      async getDocumentText() {
+        return "hello world";
+      },
+      async getDocumentPath() {
+        return "example.md";
+      },
+      async discoverSidecar() {
+        return "/tmp/example.review.yaml";
+      },
+      async readSidecar() {
+        return structuredClone(sidecar);
+      },
+      async writeSidecar(_path, document) {
+        sidecar = structuredClone(document);
+      },
+    };
+
+    const root = document.createElement("div");
+    document.body.appendChild(root);
+
+    crepe = new Crepe({
+      root,
+      defaultValue: "hello world",
+      featureConfigs: {
+        toolbar: createCrepeMrsfToolbarConfig({
+          defaultAuthor: "Tester",
+          interactive: true,
+        }),
+      },
+    });
+    crepe.addFeature(createCrepeMrsfFeature(host, {
+      resourceId: "example-crepe-menu",
+      defaultAuthor: "Tester",
+      interactive: true,
+    }));
+
+    await crepe.create();
+
+    const controller = getCrepeMrsfController(crepe);
+    expect(controller).not.toBeNull();
+
+    const view = crepe.editor.action((ctx) => {
+      const editorView = ctx.get(editorViewCtx);
+      editorView.dispatch(
+        editorView.state.tr.setSelection(TextSelection.create(editorView.state.doc, 1, 6)),
+      );
+      return editorView;
+    });
+
+    await runCrepeAddComment(view, controller, {
+      composeAdd: () => ({
+        text: "Menu comment",
+        severity: "low",
+        type: "note",
+      }),
+    });
+
+    await waitFor(() => (controller?.getState()?.document.comments.length ?? 0) === 1);
+    expect(controller?.getState()?.document.comments[0]?.text).toBe("Menu comment");
   });
 });
