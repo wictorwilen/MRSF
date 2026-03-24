@@ -458,14 +458,24 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
     let html = /* html */ `
 <div class="thread ${statusClass}">
   <div class="comment root" data-id="${root.id}">
-    <div class="comment-header">
-      <span class="status-icon">${statusIcon}</span>
-      <strong class="author">${this.esc(root.author)}</strong>
-      <span class="meta">${time} · ${lineInfo}${badges}</span>
+    <div
+      class="comment-main"
+      role="button"
+      tabindex="0"
+      onclick="postMessage({type:'navigate',commentId:'${root.id}'})"
+      onkeydown="handleCommentKeydown(event, '${root.id}')"
+      title="Go to this comment in the document"
+      aria-label="Go to comment by ${this.esc(root.author)} on ${lineInfo}"
+    >
+      <div class="comment-header">
+        <span class="status-icon">${statusIcon}</span>
+        <strong class="author">${this.esc(root.author)}</strong>
+        <span class="meta">${time} · ${lineInfo}${badges}</span>
+      </div>
+      <div class="comment-text">${this.esc(root.text)}</div>
     </div>
-    <div class="comment-text">${this.esc(root.text)}</div>
     <div class="comment-actions">
-      <button onclick="postMessage({type:'navigate',commentId:'${root.id}'})" title="Go to">📍</button>
+      <button onclick="postMessage({type:'navigate',commentId:'${root.id}'})" title="Go to this comment in the document">📍</button>
       ${!root.resolved ? `<button onclick="postMessage({type:'resolve',commentId:'${root.id}'})" title="Resolve">✅</button>` : `<button onclick="postMessage({type:'unresolve',commentId:'${root.id}'})" title="Unresolve">🔄</button>`}
       <button onclick="toggleReply('${root.id}')" title="Reply">💬</button>
       <button onclick="postMessage({type:'delete',commentId:'${root.id}'})" title="Delete">🗑️</button>
@@ -657,6 +667,19 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
         flex-wrap: wrap;
         margin-bottom: 4px;
       }
+      .comment-main {
+        border-radius: 3px;
+        cursor: pointer;
+        padding: 2px;
+        margin: -2px -2px 4px;
+      }
+      .comment-main:hover {
+        background: var(--vscode-list-hoverBackground, var(--vscode-toolbar-hoverBackground));
+      }
+      .comment-main:focus {
+        outline: 1px solid var(--vscode-focusBorder);
+        outline-offset: 1px;
+      }
       .author { font-size: 0.9em; }
       .meta { font-size: 0.8em; opacity: 0.7; }
       .status-icon { font-size: 14px; }
@@ -747,6 +770,15 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
 
       function postMessage(msg) {
         vscode.postMessage(msg);
+      }
+
+      function handleCommentKeydown(event, commentId) {
+        if (event.key !== 'Enter' && event.key !== ' ') {
+          return;
+        }
+
+        event.preventDefault();
+        postMessage({ type: 'navigate', commentId });
       }
 
       function highlightCommentThread(commentId) {

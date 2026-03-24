@@ -130,6 +130,8 @@ describe("SidebarViewProvider", () => {
     expect(view.webviewView.webview.html).toContain("Root &lt;comment&gt;");
     expect(view.webviewView.webview.html).toContain("Reply");
     expect(view.webviewView.webview.html).toContain("1 open");
+    expect(view.webviewView.webview.html).toContain('class="comment-main"');
+    expect(view.webviewView.webview.html).toContain('title="Go to this comment in the document"');
     expect(workspaceState.update).toHaveBeenCalledWith("mrsf.lastDocUri", uri.toString());
   });
 
