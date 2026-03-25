@@ -54,11 +54,13 @@ function mergePageScopedThreads(
   }
 
   for (const comment of comments) {
-    if (comment.reply_to || comment.line != null || comment.x_page == null) {
+    const pageNumber = typeof comment.x_page === "number" ? comment.x_page : null;
+
+    if (comment.reply_to || comment.line != null || pageNumber == null) {
       continue;
     }
 
-    const displayLine = pageLineMap.get(comment.x_page);
+    const displayLine = pageLineMap.get(pageNumber);
     if (displayLine == null) {
       continue;
     }

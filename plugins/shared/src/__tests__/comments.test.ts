@@ -78,6 +78,20 @@ describe("toSlimComments", () => {
     expect(c.timestamp).toBe("2026-01-01T00:00:00Z");
   });
 
+  it("preserves arbitrary x_* extension fields", () => {
+    const doc = makeDoc([
+      makeRawComment({
+        x_page: 2,
+        x_vendor_state: "draft",
+      }),
+    ]);
+
+    const result = toSlimComments(doc as any);
+
+    expect(result[0].x_page).toBe(2);
+    expect(result[0].x_vendor_state).toBe("draft");
+  });
+
   it("converts author default for empty/missing author", () => {
     const doc = makeDoc([{ id: "c1", author: "", text: "x", line: 1 }]);
     const result = toSlimComments(doc as any);

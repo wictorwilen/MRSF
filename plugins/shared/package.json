@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@mrsf/plugin-shared",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Shared internals for MRSF rendering plugins",
   "type": "module",
   "main": "./dist/index.js",

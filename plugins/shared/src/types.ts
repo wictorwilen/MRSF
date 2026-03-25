@@ -98,7 +98,6 @@ export interface SlimComment {
   author: string;
   text: string;
   line: number | null;
-  x_page: number | null;
   end_line: number | null;
   start_column: number | null;
   end_column: number | null;
@@ -108,6 +107,7 @@ export interface SlimComment {
   severity: string | null;
   type: string | null;
   timestamp: string | null;
+  [key: `x_${string}`]: unknown;
 }
 
 /** A root comment with its threaded replies. */

@@ -1,6 +1,6 @@
 {
   "name": "@mrsf/marp-mrsf",
-  "version": "0.4.8",
+  "version": "0.4.9",
   "description": "Marpit/Marp plugin for rendering Sidemark/MRSF review comments",
   "type": "module",
   "main": "./dist/index.js",

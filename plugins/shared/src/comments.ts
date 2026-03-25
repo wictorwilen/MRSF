@@ -7,6 +7,18 @@ import type { MrsfPluginOptions, SlimComment, CommentThread, LineMap, CommentLoa
 
 export type { CommentLoader };
 
+function getExtensionFields(comment: Record<string, unknown>): Record<`x_${string}`, unknown> {
+  const extensions: Record<`x_${string}`, unknown> = {};
+
+  for (const [key, value] of Object.entries(comment)) {
+    if (key.startsWith("x_")) {
+      extensions[key as `x_${string}`] = value;
+    }
+  }
+
+  return extensions;
+}
+
 /**
  * Convert an MrsfDocument into a slim comment array.
  */
@@ -16,7 +28,6 @@ export function toSlimComments(doc: MrsfDocument): SlimComment[] {
     author: c.author || "Unknown",
     text: c.text || "",
     line: c.line ?? null,
-    x_page: typeof c.x_page === "number" ? c.x_page : null,
     end_line: c.end_line ?? null,
     start_column: c.start_column ?? null,
     end_column: c.end_column ?? null,
@@ -26,6 +37,7 @@ export function toSlimComments(doc: MrsfDocument): SlimComment[] {
     severity: c.severity || null,
     type: c.type || null,
     timestamp: c.timestamp || null,
+    ...getExtensionFields(c as Record<string, unknown>),
   }));
 }
 
