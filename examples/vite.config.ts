@@ -100,6 +100,31 @@ export default defineConfig({
       },
     ],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules/@marp-team/marp-core")) {
+            return "vendor-marp-core";
+          }
+
+          if (id.includes("node_modules/mathjax-full") || id.includes("node_modules/katex")) {
+            return "vendor-marp-math";
+          }
+
+          if (id.includes("node_modules/highlight.js")) {
+            return "vendor-marp-highlight";
+          }
+
+          if (id.includes("plugins/marp/") || id.includes("node_modules/@mrsf/marp-mrsf")) {
+            return "vendor-mrsf-marp";
+          }
+
+          return undefined;
+        },
+      },
+    },
+  },
   optimizeDeps: {
     include: ["@tiptap/core", ...tiptapSubpaths, ...milkdownPackages],
   },

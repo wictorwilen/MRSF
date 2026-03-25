@@ -4,6 +4,8 @@
   "type": "module",
   "description": "Runnable demo scripts for MRSF rendering plugins",
   "scripts": {
+    "demo:marp": "vite marp-demo",
+    "demo:marp:build": "vite build marp-demo",
     "demo:milkdown": "vite milkdown-demo",
     "demo:milkdown:build": "vite build milkdown-demo",
     "demo:monaco": "vite monaco-demo",
@@ -15,6 +17,7 @@
     "test:monaco-demo": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
+    "@marp-team/marpit": "^3.2.1",
     "@milkdown/core": "^7.19.1",
     "@milkdown/crepe": "^7.19.1",
     "@milkdown/ctx": "^7.19.1",
@@ -22,6 +25,7 @@
     "@milkdown/plugin-listener": "^7.19.1",
     "@milkdown/prose": "^7.19.1",
     "@mrsf/cli": "file:../cli",
+    "@mrsf/marp-mrsf": "file:../plugins/marp",
     "@mrsf/markdown-it-mrsf": "file:../plugins/markdown-it",
     "@mrsf/milkdown-mrsf": "file:../plugins/milkdown",
     "@mrsf/monaco-mrsf": "file:../plugins/monaco",

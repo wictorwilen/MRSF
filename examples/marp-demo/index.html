@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MRSF Marp Demo</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">@mrsf/marp-mrsf</p>
+          <h1>Interactive Marp Demo</h1>
+          <p class="lede">
+            Render a Marp deck with MRSF comments, toggle inline SVG mode, and
+            inspect page metadata and shared controller behavior in a presentation layout.
+          </p>
+          <div class="hero-meta" aria-live="polite">
+            <span id="render-mode" class="meta-pill">HTML mode</span>
+            <span id="page-count" class="meta-pill">0 pages</span>
+            <span id="thread-count" class="meta-pill">0 threads</span>
+          </div>
+        </div>
+        <div class="hero-actions">
+          <button id="toggle-svg" type="button">Toggle Inline SVG</button>
+          <button id="rerender" type="button">Re-render Deck</button>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="deck-card">
+          <div class="panel-header">
+            <span>Rendered Deck</span>
+            <span id="deck-status" class="status-pill">Ready</span>
+          </div>
+          <div id="deck-host" class="deck-host"></div>
+        </section>
+
+        <aside class="side-panel">
+          <section class="panel-card">
+            <div class="panel-header">
+              <span>Render Info</span>
+            </div>
+            <div id="summary" class="summary-panel"></div>
+          </section>
+
+          <section class="panel-card">
+            <div class="panel-header">
+              <span>Page Review</span>
+            </div>
+            <div class="page-review-panel">
+              <div id="page-actions" class="page-actions-panel"></div>
+              <form id="page-comment-form" class="page-comment-form" hidden>
+                <div class="form-grid">
+                  <label class="form-field">
+                    <span>Page</span>
+                    <select id="page-comment-page"></select>
+                  </label>
+                  <label class="form-field">
+                    <span>Type</span>
+                    <select id="page-comment-type">
+                      <option value="">(none)</option>
+                      <option value="suggestion">suggestion</option>
+                      <option value="issue">issue</option>
+                      <option value="question">question</option>
+                      <option value="note">note</option>
+                    </select>
+                  </label>
+                  <label class="form-field">
+                    <span>Severity</span>
+                    <select id="page-comment-severity">
+                      <option value="">(none)</option>
+                      <option value="low">low</option>
+                      <option value="medium">medium</option>
+                      <option value="high">high</option>
+                    </select>
+                  </label>
+                </div>
+                <label class="form-field form-field-full">
+                  <span>Page comment</span>
+                  <textarea id="page-comment-text" rows="4" placeholder="Add a page-level review note for this slide."></textarea>
+                </label>
+                <div class="form-actions">
+                  <button id="page-comment-cancel" type="button">Cancel</button>
+                  <button id="page-comment-submit" type="submit">Add Page Comment</button>
+                </div>
+              </form>
+            </div>
+          </section>
+
+          <section class="panel-card">
+            <div class="panel-header">
+              <span>Thread Overview</span>
+            </div>
+            <div id="thread-groups" class="thread-groups"></div>
+          </section>
+
+          <section class="panel-card">
+            <div class="panel-header">
+              <span>Recent Activity</span>
+              <button id="reset-demo" type="button">Reset Review State</button>
+            </div>
+            <div id="activity-log" class="activity-log"></div>
+          </section>
+
+          <section class="panel-card">
+            <div class="panel-header">
+              <span>Live Sidecar</span>
+            </div>
+            <pre id="sidecar-output" class="code-panel"></pre>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+  </html>

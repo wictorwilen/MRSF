@@ -14,6 +14,7 @@
 [![VS Code Installs](https://img.shields.io/visual-studio-marketplace/i/wictor.mrsf-vscode?label=VS%20Code%20installs)](https://marketplace.visualstudio.com/items?itemName=wictor.mrsf-vscode)
 [![mrsf on PyPI](https://img.shields.io/pypi/v/mrsf?label=mrsf%20on%20PyPI)](https://pypi.org/project/mrsf/)
 [![@mrsf/markdown-it-mrsf on npm](https://img.shields.io/npm/v/@mrsf/markdown-it-mrsf?label=%40mrsf%2Fmarkdown-it-mrsf)](https://www.npmjs.com/package/@mrsf/markdown-it-mrsf)
+[![@mrsf/marp-mrsf on npm](https://img.shields.io/npm/v/@mrsf/marp-mrsf?label=%40mrsf%2Fmarp-mrsf)](https://www.npmjs.com/package/@mrsf/marp-mrsf)
 [![@mrsf/marked-mrsf on npm](https://img.shields.io/npm/v/@mrsf/marked-mrsf?label=%40mrsf%2Fmarked-mrsf)](https://www.npmjs.com/package/@mrsf/marked-mrsf)
 [![@mrsf/rehype-mrsf on npm](https://img.shields.io/npm/v/@mrsf/rehype-mrsf?label=%40mrsf%2Frehype-mrsf)](https://www.npmjs.com/package/@mrsf/rehype-mrsf)
 [![MCP Compatible](https://img.shields.io/badge/MCP-compatible-blueviolet?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyem0wIDE4Yy00LjQyIDAtOC0zLjU4LTgtOHMzLjU4LTggOC04IDggMy41OCA4IDgtMy41OCA4LTggOHoiLz48L3N2Zz4=)](https://modelcontextprotocol.io)
@@ -46,7 +47,7 @@ MRSF solves this with **sidecar files** that hold review metadata separate from 
 - CLI tools for validation, re-anchoring, status checks  
 - MCP server for integrations with LLMs and assistant clients
 - Python CLI & SDK (`pip install mrsf`) — 1:1 port of the Node.js CLI
-- Rendering plugins for Marked, markdown-it, and rehype/unified ecosystems
+- Rendering plugins for Marp, Marked, markdown-it, and rehype/unified ecosystems
 - Interactive editor integrations for VS Code, Monaco, Milkdown/Crepe, and experimental Tiptap hosts
 
 ## 📄 Specification
@@ -248,6 +249,26 @@ md.use(mrsfPlugin, { sidecarPath: "doc.md.review.yaml" });
 
 See [`plugins/markdown-it/README.md`](plugins/markdown-it/README.md).
 
+### Marp Plugin
+
+For Marpit and Marp presentation pipelines:
+
+```bash
+npm install @mrsf/marp-mrsf
+```
+
+```js
+import { Marpit } from "@marp-team/marpit";
+import { mrsfPlugin } from "@mrsf/marp-mrsf";
+
+const marpit = new Marpit();
+marpit.use(mrsfPlugin, { comments: sidecarData, interactive: true });
+```
+
+The plugin adds `data-mrsf-page` metadata to rendered page containers and also accepts vendor-only `x_page` comment hints when a presentation-level anchor is more useful than a line anchor.
+
+See [`plugins/marp/README.md`](plugins/marp/README.md).
+
 ### Marked Plugin
 
 For Marked-based renderers in Node.js or the browser:
@@ -351,6 +372,7 @@ We welcome:
 | VS Code extension | [`vscode/`](vscode/) | [Marketplace](https://marketplace.visualstudio.com/items?itemName=wictor.mrsf-vscode) |
 | Python CLI & SDK | [`python/`](python/) | `pip install mrsf` |
 | Marked plugin | [`plugins/marked/`](plugins/marked/) | `npm install @mrsf/marked-mrsf` |
+| Marp plugin | [`plugins/marp/`](plugins/marp/) | `npm install @mrsf/marp-mrsf` |
 | markdown-it plugin | [`plugins/markdown-it/`](plugins/markdown-it/) | `npm install @mrsf/markdown-it-mrsf` |
 | Monaco plugin | [`plugins/monaco/`](plugins/monaco/) | `npm install @mrsf/monaco-mrsf` |
 | Milkdown + Crepe plugin | [`plugins/milkdown/`](plugins/milkdown/) | See package README |

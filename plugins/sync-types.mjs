@@ -18,7 +18,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const sharedSrc = resolve(__dirname, "shared", "src");
 
-const plugins = ["rehype", "markdown-it", "marked"];
+const plugins = ["rehype", "markdown-it", "marked", "marp"];
 const files = ["types.ts", "html.ts", "gutter.ts", "controller.ts"];
 
 for (const file of files) {

@@ -10,6 +10,7 @@ function makeComment(overrides: Partial<SlimComment> = {}): SlimComment {
     author: "Alice",
     text: "A comment",
     line: 5,
+    x_page: null,
     end_line: null,
     start_column: null,
     end_column: null,

@@ -98,6 +98,7 @@ export interface SlimComment {
   author: string;
   text: string;
   line: number | null;
+  x_page: number | null;
   end_line: number | null;
   start_column: number | null;
   end_column: number | null;

@@ -53,6 +53,17 @@ npm run demo:monaco
 Then open the printed local Vite URL and navigate to `/` to try the interactive Monaco editor demo.
 The toolbar now includes `Reanchor Saved Snapshot`, which restores the last host-written sidecar and runs the browser-safe MRSF re-anchoring algorithm against the current document so you can compare persisted anchors with the live revision.
 
+There is also a browser demo for the Marp integration:
+
+```bash
+cd examples
+npm install
+npm run demo:marp
+```
+
+Then open the printed local Vite URL and navigate to `/` to try the interactive Marp demo.
+The demo renders a small Marp deck with MRSF comments, lets you toggle inline SVG mode, and mounts the shared MRSF controller so you can inspect page metadata, gutter behavior, and thread interactions in a presentation-style layout. It also includes a vendor-only `x_page` example comment so you can verify whole-page anchoring behavior before publishing a Marp host.
+
 There is also a browser demo for the Tiptap integration:
 
 ```bash

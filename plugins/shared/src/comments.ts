@@ -16,6 +16,7 @@ export function toSlimComments(doc: MrsfDocument): SlimComment[] {
     author: c.author || "Unknown",
     text: c.text || "",
     line: c.line ?? null,
+    x_page: typeof c.x_page === "number" ? c.x_page : null,
     end_line: c.end_line ?? null,
     start_column: c.start_column ?? null,
     end_column: c.end_column ?? null,
