@@ -64,7 +64,7 @@ features:
   - icon: 🥛
     title: Milkdown + Crepe Plugin
     details: "Run the same Sidemark review runtime in direct Milkdown editors and Crepe shells, with shared sidecar workflows, inline anchors, gutters, tooltips, and host-controlled save and reanchor flows."
-    link: /guide/milkdown
+    link: /plugins/milkdown
     linkText: "Milkdown + Crepe guide"
   - icon: ✍️
     title: Tiptap Plugin (Experimental)
@@ -86,6 +86,11 @@ features:
     details: "Use @mrsf/rehype-mrsf to render comments in the unified ecosystem — Astro, Next.js MDX, Docusaurus, and more."
     link: https://www.npmjs.com/package/@mrsf/rehype-mrsf
     linkText: "@mrsf/rehype-mrsf on npm"
+  - icon: 🎤
+    title: Marp Plugin
+    details: "Render review comments in Marpit and Marp slide decks with @mrsf/marp-mrsf, including page-level vendor hints for presentation workflows."
+    link: /plugins/marp
+    linkText: "Marp plugin guide"
 ---
 
 ## Markdown Comments Without Polluting Markdown
@@ -99,9 +104,22 @@ Sidemark, also known as **MRSF** (Markdown Review Sidecar Format), stores commen
 If you want comments inside a live editor instead of rendered HTML, Sidemark also includes interactive editor packages:
 
 - [VS Code extension](/vscode/) for a turnkey desktop workflow
-- [Monaco plugin](/guide/monaco) for custom Monaco-based apps
-- [Milkdown + Crepe guide](/guide/milkdown) for direct Milkdown editors and Crepe hosts sharing the same runtime
-- [Tiptap plugin](/guide/tiptap) for experimental rich-text editor workflows
+- [Monaco plugin](/plugins/monaco) for custom Monaco-based apps
+- [Milkdown + Crepe guide](/plugins/milkdown) for direct Milkdown editors and Crepe hosts sharing the same runtime
+- [Tiptap plugin](/plugins/tiptap) for experimental rich-text editor workflows
+
+## Plugins for Rendering and Editing
+
+Sidemark now has a dedicated plugin section for both rendering pipelines and editor integrations:
+
+- [Plugins overview](/plugins/)
+- [markdown-it plugin](/plugins/markdown-it)
+- [rehype plugin](/plugins/rehype)
+- [Marked plugin](/plugins/marked)
+- [Marp plugin](/plugins/marp)
+- [Monaco plugin](/plugins/monaco)
+- [Milkdown + Crepe plugin](/plugins/milkdown)
+- [Tiptap plugin](/plugins/tiptap)
 
 ## How Sidemark Handles Comments In Markdown Workflows
 

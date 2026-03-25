@@ -98,9 +98,22 @@ See [the skill file](https://github.com/wictorwilen/MRSF/blob/main/examples/mrsf
 Sidemark is not limited to static rendering or CLI workflows. The repo also includes editor-native integrations when you want the review model to live inside an editing surface:
 
 - [VS Code extension](/vscode/) for a ready-made desktop editor experience
-- [Monaco plugin](./monaco) for custom Monaco hosts
-- [Milkdown + Crepe plugin](./milkdown) for direct Milkdown editors and Crepe shells sharing the same review controller
-- [Tiptap plugin](./tiptap) for experimental rich-text editing workflows
+- [Monaco plugin](/plugins/monaco) for custom Monaco hosts
+- [Milkdown + Crepe plugin](/plugins/milkdown) for direct Milkdown editors and Crepe shells sharing the same review controller
+- [Tiptap plugin](/plugins/tiptap) for experimental rich-text editing workflows
+
+## Plugin Packages
+
+Rendering and editor integrations now live in their own section:
+
+- [Plugins overview](/plugins/)
+- [markdown-it plugin](/plugins/markdown-it)
+- [rehype plugin](/plugins/rehype)
+- [Marked plugin](/plugins/marked)
+- [Marp plugin](/plugins/marp)
+- [Monaco plugin](/plugins/monaco)
+- [Milkdown + Crepe plugin](/plugins/milkdown)
+- [Tiptap plugin](/plugins/tiptap)
 
 ## Human + Agent Collaboration
 
@@ -144,8 +157,9 @@ Each step is **machine-readable**. The agent never modifies the Markdown directl
 - [Specification](/specification) — the full MRSF v1.0 spec
 - [Examples](./examples) — worked examples for every re-anchoring strategy
 - [Python CLI & SDK](./python) — same CLI and library in Python
-- [Monaco Plugin](./monaco) — embed Sidemark in Monaco-based editors
-- [Marp Plugin](./marp) — render MRSF comments in Marpit and Marp HTML output
-- [Milkdown + Crepe Plugin](./milkdown) — editor-native MRSF for direct Milkdown and Crepe hosts
-- [Tiptap Plugin](./tiptap) — experimental; help needed for the Tiptap rich-text editor integration
-- [Marked Plugin](./marked) — integrate MRSF into Marked pipelines and browser renderers
+- [Plugins](/plugins/) — rendering and editor integrations
+- [Monaco Plugin](/plugins/monaco) — embed Sidemark in Monaco-based editors
+- [Marp Plugin](/plugins/marp) — render MRSF comments in Marpit and Marp HTML output
+- [Milkdown + Crepe Plugin](/plugins/milkdown) — editor-native MRSF for direct Milkdown and Crepe hosts
+- [Tiptap Plugin](/plugins/tiptap) — experimental; help needed for the Tiptap rich-text editor integration
+- [Marked Plugin](/plugins/marked) — integrate MRSF into Marked pipelines and browser renderers

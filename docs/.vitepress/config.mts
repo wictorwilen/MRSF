@@ -195,6 +195,7 @@ export default withMermaid(defineConfig({
 
     nav: [
       { text: "Guide", link: "/guide/", activeMatch: "/guide/" },
+      { text: "Plugins", link: "/plugins/", activeMatch: "/plugins/" },
       {
         text: "Specification",
         link: "/specification",
@@ -220,14 +221,33 @@ export default withMermaid(defineConfig({
             { text: "Examples", link: "/guide/examples" },
             { text: "Agent Skill", link: "/guide/agent-skill" },
             { text: "Python CLI & SDK", link: "/guide/python" },
-            { text: "Monaco Plugin", link: "/guide/monaco" },
-            { text: "Milkdown + Crepe Plugin", link: "/guide/milkdown" },
-            { text: "Tiptap Plugin", link: "/guide/tiptap" },
-            { text: "Marked Plugin", link: "/guide/marked" },
-            { text: "markdown-it Plugin", link: "/guide/markdown-it" },
-            { text: "rehype Plugin", link: "/guide/rehype" },
             { text: "CI/CD Integration", link: "/guide/ci-integration" },
             { text: "FAQ", link: "/guide/faq" },
+          ],
+        },
+      ],
+      "/plugins/": [
+        {
+          text: "Plugins",
+          items: [
+            { text: "Overview", link: "/plugins/" },
+          ],
+        },
+        {
+          text: "Rendering Plugins",
+          items: [
+            { text: "markdown-it", link: "/plugins/markdown-it" },
+            { text: "rehype", link: "/plugins/rehype" },
+            { text: "Marked", link: "/plugins/marked" },
+            { text: "Marp", link: "/plugins/marp" },
+          ],
+        },
+        {
+          text: "Editor Plugins",
+          items: [
+            { text: "Monaco", link: "/plugins/monaco" },
+            { text: "Milkdown + Crepe", link: "/plugins/milkdown" },
+            { text: "Tiptap", link: "/plugins/tiptap" },
           ],
         },
       ],
