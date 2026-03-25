@@ -306,6 +306,7 @@ export class MilkdownMrsfOverlay {
       author: comment.author || "Unknown",
       text: comment.text || "",
       line: comment.line ?? null,
+      x_page: null,
       end_line: comment.end_line ?? null,
       start_column: comment.start_column ?? null,
       end_column: comment.end_column ?? null,
