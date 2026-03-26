@@ -339,11 +339,76 @@ export function activate(context: vscode.ExtensionContext) {
   // stay aligned.  The real reanchor (fuzzy match) + persist happens on save.
   const dirtyDocs = new Set<string>();
 
+  /**
+   * Run the full reanchor cycle for a document: reload sidecar from disk,
+   * run the reanchor algorithm against the current file content, auto-apply
+   * high-confidence results, and clear the dirty-anchor indicator.
+   *
+   * Called both on explicit save (onDidSaveTextDocument) and when the
+   * file is reloaded after an external write (e.g. by an AI agent writing
+   * directly to disk via the MCP server).
+   */
+  async function runReanchor(uri: vscode.Uri): Promise<void> {
+    const config = vscode.workspace.getConfiguration("sidemark");
+
+    // Reload the sidecar from disk (original positions) before running
+    // the full reanchor.  This ensures we anchor against the on-disk
+    // state rather than the in-memory shifted positions.
+    await store.reloadFromDisk(uri);
+
+    const doc = store.get(uri);
+    if (!doc || doc.comments.length === 0) {
+      dirtyDocs.delete(uri.fsPath);
+      statusBar.setDirtyAnchors(dirtyDocs.size > 0);
+      return;
+    }
+
+    try {
+      const threshold = config.get<number>("reanchorThreshold", 0.6);
+      const results = await statusBar.withProgress("Reanchoring...", () =>
+        store.reanchorComments(uri, { threshold }),
+      );
+      if (results.length > 0) {
+        // Auto-apply all anchored/shifted results silently
+        const autoApply = results.filter(
+          (r) => r.status === "anchored" || r.score >= 0.8,
+        );
+        if (autoApply.length > 0) {
+          await store.applyReanchors(uri, autoApply);
+        }
+      }
+    } catch {
+      // Best effort — don't interrupt the user's flow
+    }
+
+    // Clear dirty state after reanchor
+    store.clearPendingShifts(uri);
+    dirtyDocs.delete(uri.fsPath);
+    statusBar.setDirtyAnchors(dirtyDocs.size > 0);
+  }
+
   context.subscriptions.push(
-    vscode.workspace.onDidChangeTextDocument((e) => {
+    vscode.workspace.onDidChangeTextDocument(async (e) => {
       if (e.document.languageId !== "markdown") return;
       const doc = store.get(e.document.uri);
       if (!doc || doc.comments.length === 0) return;
+
+      // Detect when the document has been reloaded from disk without the
+      // user saving — for example, when an AI agent (MCP server or Copilot)
+      // writes to the file directly on disk.  After such a reload the
+      // document is clean (isDirty === false) and carries real content
+      // changes, but there is no corresponding onDidSaveTextDocument event.
+      // The live-tracker heuristic is unreliable for large replacements, so
+      // we run a full reanchor instead.
+      // Undo/redo operations can also leave the document clean, but they set
+      // e.reason (1 = Undo, 2 = Redo) so we exclude them here.
+      if (e.document.isDirty === false && e.contentChanges.length > 0 && !e.reason) {
+        const config = vscode.workspace.getConfiguration("sidemark");
+        if (config.get<boolean>("reanchorOnSave", true)) {
+          await runReanchor(e.document.uri);
+        }
+        return;
+      }
 
       // Apply line-shift adjustments to in-memory comments so
       // decorations track the edits in real-time.
@@ -363,42 +428,7 @@ export function activate(context: vscode.ExtensionContext) {
       const config = vscode.workspace.getConfiguration("sidemark");
       if (!config.get<boolean>("reanchorOnSave", true)) return;
 
-      const uri = document.uri;
-
-      // Reload the sidecar from disk (original positions) before running
-      // the full reanchor.  This ensures we anchor against the on-disk
-      // state rather than the in-memory shifted positions.
-      await store.reloadFromDisk(uri);
-
-      const doc = store.get(uri);
-      if (!doc || doc.comments.length === 0) {
-        dirtyDocs.delete(document.uri.fsPath);
-        statusBar.setDirtyAnchors(dirtyDocs.size > 0);
-        return;
-      }
-
-      try {
-        const threshold = config.get<number>("reanchorThreshold", 0.6);
-        const results = await statusBar.withProgress("Reanchoring...", () =>
-          store.reanchorComments(uri, { threshold }),
-        );
-        if (results.length > 0) {
-          // Auto-apply all anchored/shifted results silently
-          const autoApply = results.filter(
-            (r) => r.status === "anchored" || r.score >= 0.8,
-          );
-          if (autoApply.length > 0) {
-            await store.applyReanchors(uri, autoApply);
-          }
-        }
-      } catch {
-        // Best effort — don't interrupt the user's save flow
-      }
-
-      // Clear dirty state after reanchor
-      store.clearPendingShifts(uri);
-      dirtyDocs.delete(document.uri.fsPath);
-      statusBar.setDirtyAnchors(dirtyDocs.size > 0);
+      await runReanchor(document.uri);
     }),
   );
 

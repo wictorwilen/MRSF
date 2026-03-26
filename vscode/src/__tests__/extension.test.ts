@@ -429,6 +429,119 @@ describe("extension activate", () => {
     expect(mockStatusBar.setStaleCount).toHaveBeenCalledWith(0);
   });
 
+  it("reanchors when a markdown file is reloaded after an external write (e.g. AI agent via MCP)", async () => {
+    const uri = Uri.file("/workspace/doc.md");
+    const context = {
+      extensionUri: Uri.file("/workspace/ext"),
+      subscriptions: [] as Array<{ dispose?: () => void }>,
+      workspaceState: {
+        get: vi.fn(),
+        update: vi.fn(),
+      },
+    };
+
+    activate(context as never);
+
+    // Simulate VS Code reloading the file after an AI agent wrote to it
+    // directly on disk (e.g. via the MCP server).  The key signals are:
+    //  • isDirty === false  — the document is clean (already matches disk)
+    //  • contentChanges has entries  — the content actually changed
+    //  • reason is absent  — not an undo/redo operation
+    __mock.emitDidChangeTextDocument({
+      document: { uri, languageId: "markdown", isDirty: false },
+      contentChanges: [{ range: { start: { line: 0, character: 0 }, end: { line: 5, character: 0 } }, text: "new content\n" }],
+    });
+
+    await Promise.resolve();
+    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // A full reanchor must have run — NOT the live line-tracker heuristic
+    expect(mockStore.applyLiveEdits).not.toHaveBeenCalled();
+    expect(mockStore.reloadFromDisk).toHaveBeenCalledWith(uri);
+    expect(mockStore.reanchorComments).toHaveBeenCalledWith(uri, { threshold: 0.6 });
+    expect(mockStore.applyReanchors).toHaveBeenCalledWith(uri, [
+      { commentId: "c1", status: "anchored", score: 1 },
+    ]);
+    expect(mockStore.clearPendingShifts).toHaveBeenCalledWith(uri);
+  });
+
+  it("does not reanchor on external reload when reanchorOnSave is disabled", () => {
+    const uri = Uri.file("/workspace/doc.md");
+    const context = {
+      extensionUri: Uri.file("/workspace/ext"),
+      subscriptions: [] as Array<{ dispose?: () => void }>,
+      workspaceState: {
+        get: vi.fn(),
+        update: vi.fn(),
+      },
+    };
+
+    __mock.configuration.set("sidemark.reanchorOnSave", false);
+    activate(context as never);
+
+    __mock.emitDidChangeTextDocument({
+      document: { uri, languageId: "markdown", isDirty: false },
+      contentChanges: [{ range: { start: { line: 0, character: 0 }, end: { line: 5, character: 0 } }, text: "new content\n" }],
+    });
+
+    expect(mockStore.reloadFromDisk).not.toHaveBeenCalled();
+    expect(mockStore.reanchorComments).not.toHaveBeenCalled();
+    expect(mockStore.applyLiveEdits).not.toHaveBeenCalled();
+  });
+
+  it("uses live tracker (not reanchor) when document is dirty after change (user editing or Copilot API changes)", () => {
+    const uri = Uri.file("/workspace/doc.md");
+    const context = {
+      extensionUri: Uri.file("/workspace/ext"),
+      subscriptions: [] as Array<{ dispose?: () => void }>,
+      workspaceState: {
+        get: vi.fn(),
+        update: vi.fn(),
+      },
+    };
+
+    activate(context as never);
+
+    // isDirty: true means the change is a live edit (user typing or Copilot
+    // applying edits via workspace.applyEdit), not an external file reload
+    __mock.emitDidChangeTextDocument({
+      document: { uri, languageId: "markdown", isDirty: true },
+      contentChanges: [{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } }, text: "x" }],
+    });
+
+    expect(mockStore.applyLiveEdits).toHaveBeenCalledWith(uri, expect.any(Array));
+    expect(mockStore.reloadFromDisk).not.toHaveBeenCalled();
+    expect(mockStore.reanchorComments).not.toHaveBeenCalled();
+  });
+
+  it("skips reanchor on clean-document change caused by undo/redo", () => {
+    const uri = Uri.file("/workspace/doc.md");
+    const context = {
+      extensionUri: Uri.file("/workspace/ext"),
+      subscriptions: [] as Array<{ dispose?: () => void }>,
+      workspaceState: {
+        get: vi.fn(),
+        update: vi.fn(),
+      },
+    };
+
+    activate(context as never);
+
+    // reason = 1 (TextDocumentChangeReason.Undo) — user undid all changes,
+    // document returned to saved state.  Should NOT trigger an external-reload
+    // reanchor.  The live-tracker handles the undo shift instead.
+    __mock.emitDidChangeTextDocument({
+      document: { uri, languageId: "markdown", isDirty: false },
+      contentChanges: [{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } }, text: "" }],
+      reason: 1,
+    });
+
+    // The external-reload reanchor must NOT be triggered for undo/redo
+    expect(mockStore.reloadFromDisk).not.toHaveBeenCalled();
+    expect(mockStore.reanchorComments).not.toHaveBeenCalled();
+  });
+
   it("renders preview data from disk fallbacks and skips invalid preview cases", () => {
     const uri = Uri.file("/workspace/doc.md");
     const context = {
