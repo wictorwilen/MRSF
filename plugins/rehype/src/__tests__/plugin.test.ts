@@ -10,7 +10,10 @@
  * via the MrsfController — not tested here.
  */
 
-import { describe, it, expect } from "vitest";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { describe, it, expect, afterEach } from "vitest";
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
@@ -18,6 +21,8 @@ import rehypeStringify from "rehype-stringify";
 import { rehypeMrsf } from "../index.js";
 import type { MrsfPluginOptions } from "../types.js";
 import type { MrsfDocument } from "@mrsf/cli";
+
+const tempDirs: string[] = [];
 
 /** Helper: create an MrsfDocument with the given comments. */
 function makeSidecar(
@@ -63,6 +68,24 @@ function parseDataScript(html: string): { threads: any[] } | null {
   if (!match) return null;
   return JSON.parse(match[1]);
 }
+
+function parseDataElement(html: string): { threads: any[] } | null {
+  const match = html.match(/data-mrsf-json="([^"]+)"/);
+  if (!match) return null;
+  return JSON.parse(
+    match[1]
+      .replace(/&amp;/g, "&")
+      .replace(/&quot;/g, '"')
+      .replace(/&gt;/g, ">")
+      .replace(/&lt;/g, "<"),
+  );
+}
+
+afterEach(() => {
+  for (const dir of tempDirs.splice(0)) {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
 
 // ── Line annotation ────────────────────────────────────────
 
@@ -158,6 +181,63 @@ describe("line annotation", () => {
     expect(html).toContain('data-mrsf-start-line="1"');
     expect(html).toContain('data-mrsf-end-line="1"');
   });
+
+  it("should load comments from sidecarPath", async () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "mrsf-rehype-"));
+    tempDirs.push(dir);
+    const sidecarPath = path.join(dir, "doc.md.review.yaml");
+    writeFileSync(sidecarPath, [
+      'mrsf_version: "1.0"',
+      'document: doc.md',
+      'comments:',
+      '  - id: from-sidecar',
+      '    author: Tester',
+      '    timestamp: "2026-01-01T00:00:00Z"',
+      '    text: Loaded from sidecar',
+      '    resolved: false',
+      '    line: 1',
+      '',
+    ].join("\n"), "utf-8");
+
+    const result = await unified()
+      .use(remarkParse)
+      .use(remarkRehype)
+      .use(rehypeMrsf, { sidecarPath, cwd: dir, lineHighlight: true } as MrsfPluginOptions)
+      .use(rehypeStringify, { allowDangerousHtml: true })
+      .process("# Hello\n");
+    const html = String(result);
+
+    expect(parseDataScript(html)?.threads[0].comment.id).toBe("from-sidecar");
+    expect(html).toContain("mrsf-line-highlight");
+  });
+
+  it("should load comments from documentPath auto-discovery", async () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "mrsf-rehype-"));
+    tempDirs.push(dir);
+    const sidecarPath = path.join(dir, "doc.md.review.yaml");
+    writeFileSync(sidecarPath, [
+      'mrsf_version: "1.0"',
+      'document: doc.md',
+      'comments:',
+      '  - id: from-document',
+      '    author: Tester',
+      '    timestamp: "2026-01-01T00:00:00Z"',
+      '    text: Loaded from document',
+      '    resolved: false',
+      '    line: 1',
+      '',
+    ].join("\n"), "utf-8");
+
+    const result = await unified()
+      .use(remarkParse)
+      .use(remarkRehype)
+      .use(rehypeMrsf, { documentPath: "doc.md", cwd: dir } as MrsfPluginOptions)
+      .use(rehypeStringify, { allowDangerousHtml: true })
+      .process("# Hello\n");
+    const html = String(result);
+
+    expect(parseDataScript(html)?.threads[0].comment.id).toBe("from-document");
+  });
 });
 
 // ── Embedded data script ───────────────────────────────────
@@ -250,6 +330,15 @@ describe("embedded data script", () => {
     const lines = data!.threads.map((t: any) => t.comment.line);
     expect(lines).toContain(1);
     expect(lines).toContain(3);
+  });
+
+  it("should support element data containers", async () => {
+    const html = await render("# Title\n", [
+      { id: "c1", text: "A comment", line: 1 },
+    ], { dataContainer: "element", dataElementId: "custom-data" });
+    expect(html).toContain('id="custom-data"');
+    expect(html).not.toContain("application/mrsf+json");
+    expect(html).toContain("data-mrsf-json=");
   });
 });
 

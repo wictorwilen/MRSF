@@ -1,6 +1,6 @@
 {
   "name": "@mrsf/rehype-mrsf",
-  "version": "0.4.9",
+  "version": "0.4.10",
   "description": "rehype plugin for rendering Sidemark/MRSF (Markdown Review Sidecar Format) review comments",
   "type": "module",
   "main": "./dist/index.js",
@@ -87,6 +87,7 @@
     "@mrsf/plugin-shared": "file:../shared",
     "@types/hast": "^3.0.4",
     "@types/node": "^22.13.10",
+    "@vitest/coverage-v8": "^3.2.4",
     "esbuild": "^0.27.3",
     "rehype-stringify": "^10.0.1",
     "remark-gfm": "^4.0.1",
@@ -94,6 +95,6 @@
     "remark-rehype": "^11.1.1",
     "typescript": "^5.8.2",
     "unified": "^11.0.5",
-    "vitest": "^3.0.9"
+    "vitest": "^3.2.4"
   }
 }

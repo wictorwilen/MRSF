@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  pull_request:
+    paths:
+      - "cli/**"
+      - "plugins/**"
+      - "examples/**"
+      - "package.json"
+      - "vitest.config.ts"
+  push:
+    branches: [main]
+    paths:
+      - "cli/**"
+      - "plugins/**"
+      - "examples/**"
+      - "package.json"
+      - "vitest.config.ts"
+  workflow_dispatch:
+
+jobs:
+  renderer-coverage:
+    name: Renderer Coverage (${{ matrix.package.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - name: markdown-it
+            path: plugins/markdown-it
+          - name: rehype
+            path: plugins/rehype
+          - name: marked
+            path: plugins/marked
+          - name: marp
+            path: plugins/marp
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+
+      - name: Build CLI library
+        run: |
+          cd cli
+          npm ci
+          npm run build
+
+      - name: Build shared plugin library
+        run: |
+          cd plugins/shared
+          npm ci
+          npm run build
+
+      - name: Build and test ${{ matrix.package.name }}
+        run: |
+          cd ${{ matrix.package.path }}
+          npm ci
+          npm run build
+          npm test -- --coverage
+
+  editor-builds:
+    name: Editor And Demo Builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+
+      - name: Build CLI library
+        run: |
+          cd cli
+          npm ci
+          npm run build
+
+      - name: Build shared plugin library
+        run: |
+          cd plugins/shared
+          npm ci
+          npm run build
+
+      - name: Build Milkdown plugin
+        run: |
+          cd plugins/milkdown
+          npm ci
+          npm run build
+
+      - name: Build Milkdown example demo
+        run: |
+          cd examples
+          npm install
+          npm run demo:milkdown:build

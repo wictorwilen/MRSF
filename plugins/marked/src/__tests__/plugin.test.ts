@@ -1,8 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { describe, expect, it, afterEach } from "vitest";
 import { Marked } from "marked";
 import { markedMrsf } from "../index.js";
 import type { MrsfPluginOptions } from "../types.js";
 import type { MrsfDocument } from "@mrsf/cli";
+
+const tempDirs: string[] = [];
 
 function makeSidecar(
   comments: Partial<MrsfDocument["comments"][number]>[],
@@ -39,6 +44,24 @@ function parseDataScript(html: string): { threads: any[] } | null {
   if (!match) return null;
   return JSON.parse(match[1]);
 }
+
+function parseDataElement(html: string): { threads: any[] } | null {
+  const match = html.match(/data-mrsf-json="([^"]+)"/);
+  if (!match) return null;
+  return JSON.parse(
+    match[1]
+      .replace(/&quot;/g, '"')
+      .replace(/&gt;/g, ">")
+      .replace(/&lt;/g, "<")
+      .replace(/&amp;/g, "&"),
+  );
+}
+
+afterEach(() => {
+  for (const dir of tempDirs.splice(0)) {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
 
 describe("line annotation", () => {
   it("should annotate a heading for a line-anchored comment", () => {
@@ -103,6 +126,104 @@ describe("line annotation", () => {
     const data = parseDataScript(html);
     expect(data!.threads[0].comment.text).toBe("Inline");
   });
+
+  it("should load comments from sidecarPath", () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "mrsf-marked-"));
+    tempDirs.push(dir);
+    const sidecarPath = path.join(dir, "doc.md.review.yaml");
+    writeFileSync(sidecarPath, [
+      'mrsf_version: "1.0"',
+      'document: doc.md',
+      'comments:',
+      '  - id: from-sidecar',
+      '    author: Tester',
+      '    timestamp: "2026-01-01T00:00:00Z"',
+      '    text: Loaded from sidecar',
+      '    resolved: false',
+      '    line: 1',
+      '',
+    ].join("\n"), "utf-8");
+
+    const parser = new Marked();
+    parser.use(markedMrsf({ sidecarPath, cwd: dir, lineHighlight: true }));
+    const html = parser.parse("# Hello\n") as string;
+
+    expect(parseDataScript(html)?.threads[0].comment.id).toBe("from-sidecar");
+    expect(html).toContain("mrsf-line-highlight");
+  });
+
+  it("should load comments from documentPath auto-discovery", () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "mrsf-marked-"));
+    tempDirs.push(dir);
+    const sidecarPath = path.join(dir, "doc.md.review.yaml");
+    writeFileSync(sidecarPath, [
+      'mrsf_version: "1.0"',
+      'document: doc.md',
+      'comments:',
+      '  - id: from-document',
+      '    author: Tester',
+      '    timestamp: "2026-01-01T00:00:00Z"',
+      '    text: Loaded from document',
+      '    resolved: false',
+      '    line: 1',
+      '',
+    ].join("\n"), "utf-8");
+
+    const parser = new Marked();
+    parser.use(markedMrsf({ documentPath: "doc.md", cwd: dir }));
+    const html = parser.parse("# Hello\n") as string;
+
+    expect(parseDataScript(html)?.threads[0].comment.id).toBe("from-document");
+  });
+
+  it("should handle loader returning null", () => {
+    const parser = new Marked();
+    parser.use(markedMrsf({ loader: () => null }));
+    const html = parser.parse("# Hello\n") as string;
+    expect(html).not.toContain("application/mrsf+json");
+  });
+
+  it("should handle loader errors gracefully", () => {
+    const parser = new Marked();
+    parser.use(markedMrsf({ loader: () => { throw new Error("boom"); } }));
+    const html = parser.parse("# Hello\n") as string;
+    expect(html).not.toContain("application/mrsf+json");
+  });
+
+  it("should fall back to .review.json when yaml sidecar is missing", () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "mrsf-marked-"));
+    tempDirs.push(dir);
+    const sidecarPath = path.join(dir, "doc.md.review.json");
+    writeFileSync(sidecarPath, JSON.stringify({
+      mrsf_version: "1.0",
+      document: "doc.md",
+      comments: [{
+        id: "from-json",
+        author: "Tester",
+        timestamp: "2026-01-01T00:00:00Z",
+        text: "Loaded from json",
+        resolved: false,
+        line: 1,
+      }],
+    }), "utf-8");
+
+    const parser = new Marked();
+    parser.use(markedMrsf({ documentPath: "doc.md", cwd: dir }));
+    const html = parser.parse("# Hello\n") as string;
+
+    expect(parseDataScript(html)?.threads[0].comment.id).toBe("from-json");
+  });
+
+  it("should handle missing sidecarPath files gracefully", () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "mrsf-marked-"));
+    tempDirs.push(dir);
+
+    const parser = new Marked();
+    parser.use(markedMrsf({ sidecarPath: "missing.review.yaml", cwd: dir }));
+    const html = parser.parse("# Hello\n") as string;
+
+    expect(html).not.toContain("application/mrsf+json");
+  });
 });
 
 describe("embedded data script", () => {
@@ -134,6 +255,15 @@ describe("embedded data script", () => {
     ]);
     const data = parseDataScript(html);
     expect(data!.threads[0].comment.selected_text).toBe("Hello");
+  });
+
+  it("should support element data containers", () => {
+    const html = render("# Title\n", [
+      { id: "c1", text: "A comment", line: 1 },
+    ], { dataContainer: "element", dataElementId: "custom-data" });
+    expect(html).toContain('id="custom-data"');
+    expect(html).not.toContain("application/mrsf+json");
+    expect(parseDataElement(html)?.threads[0].comment.id).toBe("c1");
   });
 });
 

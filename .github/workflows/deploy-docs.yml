@@ -52,6 +52,12 @@ jobs:
           npm ci
           npm run build
 
+      - name: Build Marp plugin
+        run: |
+          cd plugins/marp
+          npm ci
+          npm run build
+
       - name: Build Milkdown plugin
         run: |
           cd plugins/milkdown

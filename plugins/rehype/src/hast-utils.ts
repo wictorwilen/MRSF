@@ -9,6 +9,14 @@
 import type { Element } from "hast";
 import type { CommentThread } from "./types.js";
 
+function escapeAttribute(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 /**
  * Create a `<script type="application/mrsf+json">` element containing
  * serialized comment thread data for the MrsfController to consume.
@@ -23,5 +31,19 @@ export function createDataScript(threads: CommentThread[]): Element {
       type: "application/mrsf+json",
     },
     children: [{ type: "text", value: data }],
+  };
+}
+
+export function createDataElement(threads: CommentThread[], elementId: string): Element {
+  const payload = JSON.stringify({ threads });
+  return {
+    type: "element",
+    tagName: "div",
+    properties: {
+      id: escapeAttribute(elementId),
+      "data-mrsf-json": escapeAttribute(payload),
+      "aria-hidden": "true",
+    },
+    children: [],
   };
 }

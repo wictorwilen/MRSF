@@ -21,7 +21,11 @@ export function createRehypeMrsf(loader: CommentLoader) {
       const result = resolveComments(loader, options);
       if (!result) return;
 
-      transformTree(tree, result.lineMap, { lineHighlight: options.lineHighlight ?? false });
+      transformTree(tree, result.lineMap, {
+        lineHighlight: options.lineHighlight ?? false,
+        dataContainer: options.dataContainer,
+        dataElementId: options.dataElementId,
+      });
     };
   };
 }

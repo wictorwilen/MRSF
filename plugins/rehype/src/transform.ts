@@ -13,7 +13,7 @@
 import type { Root, Element, ElementContent } from "hast";
 import { visit } from "unist-util-visit";
 import type { LineMap, CommentThread } from "./types.js";
-import { createDataScript } from "./hast-utils.js";
+import { createDataElement, createDataScript } from "./hast-utils.js";
 
 /** Block-level tag names that can carry line-anchored comments. */
 const BLOCK_TAGS = new Set([
@@ -78,6 +78,8 @@ function addClass(node: Element, cls: string): void {
 export interface TransformOptions {
   /** Whether to add mrsf-line-highlight class on commented elements. Default: false. */
   lineHighlight?: boolean;
+  dataContainer?: "script" | "element";
+  dataElementId?: string;
 }
 
 /**
@@ -127,7 +129,9 @@ export function transformTree(
   }
 
   if (allThreads.length > 0) {
-    const script = createDataScript(allThreads);
-    tree.children.push(script as ElementContent);
+    const dataNode = options.dataContainer === "element"
+      ? createDataElement(allThreads, options.dataElementId || "mrsf-comment-data")
+      : createDataScript(allThreads);
+    tree.children.push(dataNode as ElementContent);
   }
 }
