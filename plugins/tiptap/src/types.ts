@@ -187,6 +187,8 @@ export type TiptapMrsfTheme = "light" | "dark" | "auto";
 
 export type TiptapMrsfGutterPosition = "left" | "right";
 
+export type TiptapMrsfLiveTrackingMode = "eager" | "debounced" | "save-only";
+
 export interface TiptapMrsfDisplayOptions {
   interactive?: boolean;
   inlineHighlights?: boolean;
@@ -199,6 +201,7 @@ export interface TiptapMrsfDisplayOptions {
 export interface TiptapMrsfPluginControllerOptions extends TiptapMrsfDisplayOptions {
   resourceId: string;
   showResolved?: boolean;
+  liveTracking?: TiptapMrsfLiveTrackingMode;
   defaultAuthor?: string;
   onStateChange?: (event: TiptapMrsfStateChangeEvent) => void;
   onSaveRequest?: (request: TiptapMrsfPluginSaveRequest) => void | Promise<void>;

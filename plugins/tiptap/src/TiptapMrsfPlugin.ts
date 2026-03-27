@@ -11,16 +11,21 @@ import type {
   ReviewState,
   ReviewThread,
   TiptapMrsfDisplayOptions,
+  TiptapMrsfLiveTrackingMode,
   TiptapMrsfPluginControllerOptions,
   TiptapMrsfPluginSaveOptions,
   TiptapMrsfStateChangeSource,
 } from "./types.js";
+
+const LIVE_TRACKING_DEBOUNCE_MS = 120;
 
 export class TiptapMrsfPlugin {
   private readonly store: ReviewStore;
   private unsubscribeStore: (() => void) | null = null;
   private readonly options: TiptapMrsfPluginControllerOptions;
   private pendingStateSource: TiptapMrsfStateChangeSource = "load";
+  private pendingTextUpdate: { previousText: string; nextText: string } | null = null;
+  private pendingTextUpdateTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private readonly editor: Editor,
@@ -51,6 +56,7 @@ export class TiptapMrsfPlugin {
   }
 
   async loadCurrent(source: TiptapMrsfStateChangeSource = "load"): Promise<ReviewState> {
+    this.clearPendingTextUpdate();
     this.pendingStateSource = source;
     return this.store.load(this.options.resourceId, {
       geometry: this.getGeometry(),
@@ -63,6 +69,7 @@ export class TiptapMrsfPlugin {
   }
 
   refresh(): ReviewState {
+    this.clearPendingTextUpdate();
     this.pendingStateSource = "refresh";
     return this.store.refresh(this.options.resourceId, this.getText(), this.getGeometry());
   }
@@ -74,9 +81,42 @@ export class TiptapMrsfPlugin {
 
     const before = getDocumentText(previousState.doc);
     const after = getDocumentText(nextState.doc);
-    const changes = diffTextChange(before, after);
+    this.queueTextUpdate(before, after);
+    return null;
+  }
+
+  queueTextUpdate(previousText: string, nextText: string): void {
+    if (previousText === nextText) {
+      return;
+    }
+
+    this.pendingTextUpdate = this.pendingTextUpdate
+      ? { previousText: this.pendingTextUpdate.previousText, nextText }
+      : { previousText, nextText };
+
+    const mode = this.getLiveTrackingMode();
+    if (mode === "save-only") {
+      return;
+    }
+
+    if (mode === "eager") {
+      this.flushPendingTextUpdate();
+      return;
+    }
+
+    this.schedulePendingTextUpdate();
+  }
+
+  flushPendingTextUpdate(): ReviewState | null {
+    if (!this.pendingTextUpdate) {
+      return null;
+    }
+
+    const pending = this.pendingTextUpdate;
+    this.clearPendingTextUpdate();
+    const changes = diffTextChange(pending.previousText, pending.nextText);
     this.pendingStateSource = "content";
-    return this.store.applyLiveEdits(this.options.resourceId, changes, after, geometryFromText(after));
+    return this.store.applyLiveEdits(this.options.resourceId, changes, pending.nextText, geometryFromText(pending.nextText));
   }
 
   getState(): ReviewState | null {
@@ -197,6 +237,7 @@ export class TiptapMrsfPlugin {
   }
 
   async save(options: TiptapMrsfPluginSaveOptions = {}): Promise<void> {
+    this.flushPendingTextUpdate();
     const state = this.store.getState(this.options.resourceId);
     if (!state) {
       return;
@@ -221,6 +262,7 @@ export class TiptapMrsfPlugin {
   }
 
   async reanchor(options: ReviewReanchorOptions = {}): Promise<ReviewState> {
+    this.clearPendingTextUpdate();
     this.pendingStateSource = "reanchor";
     return this.store.reanchor(this.options.resourceId, options);
   }
@@ -243,8 +285,33 @@ export class TiptapMrsfPlugin {
   }
 
   dispose(): void {
+    this.clearPendingTextUpdate();
     this.unsubscribeStore?.();
     this.unsubscribeStore = null;
+  }
+
+  private getLiveTrackingMode(): TiptapMrsfLiveTrackingMode {
+    return this.options.liveTracking ?? "debounced";
+  }
+
+  private schedulePendingTextUpdate(): void {
+    if (this.pendingTextUpdateTimer != null) {
+      clearTimeout(this.pendingTextUpdateTimer);
+    }
+
+    this.pendingTextUpdateTimer = setTimeout(() => {
+      this.pendingTextUpdateTimer = null;
+      this.flushPendingTextUpdate();
+    }, LIVE_TRACKING_DEBOUNCE_MS);
+  }
+
+  private clearPendingTextUpdate(): void {
+    if (this.pendingTextUpdateTimer != null) {
+      clearTimeout(this.pendingTextUpdateTimer);
+      this.pendingTextUpdateTimer = null;
+    }
+
+    this.pendingTextUpdate = null;
   }
 
   private getText(): string {

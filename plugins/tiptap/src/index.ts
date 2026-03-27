@@ -37,6 +37,7 @@ export type {
   TiptapMrsfExtensionOptions,
   TiptapMrsfFormDialogOptions,
   TiptapMrsfGutterPosition,
+  TiptapMrsfLiveTrackingMode,
   TiptapMrsfPluginControllerOptions,
   TiptapMrsfPluginSaveOptions,
   TiptapMrsfPluginSaveRequest,

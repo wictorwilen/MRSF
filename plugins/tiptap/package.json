@@ -1,6 +1,6 @@
 {
   "name": "@mrsf/tiptap-mrsf",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Experimental Tiptap editor plugin for MRSF review comments — help needed",
   "type": "module",
   "main": "./dist/index.js",

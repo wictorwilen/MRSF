@@ -131,4 +131,132 @@ describe("Tiptap integration", () => {
 
     editor.destroy();
   });
+
+  it("debounces live tracking by default and flushes save-only updates on save", async () => {
+    vi.useFakeTimers();
+
+    const writes: MrsfDocument[] = [];
+    const initialSidecar: MrsfDocument = {
+      mrsf_version: "1.0",
+      document: "example.md",
+      comments: [
+        {
+          id: "c1",
+          author: "A",
+          timestamp: "2025-01-01T00:00:00.000Z",
+          text: "Comment",
+          resolved: false,
+          line: 1,
+          start_column: 6,
+          end_column: 11,
+          selected_text: "world",
+        },
+      ],
+    };
+    let sidecar = structuredClone(initialSidecar);
+
+    const host: TiptapMrsfHostAdapter = {
+      async getDocumentText() {
+        return "hello world";
+      },
+      async getDocumentPath() {
+        return "example.md";
+      },
+      async discoverSidecar() {
+        return "/tmp/example.review.yaml";
+      },
+      async readSidecar() {
+        return structuredClone(sidecar);
+      },
+      async writeSidecar(_path, document) {
+        sidecar = structuredClone(document as MrsfDocument);
+        writes.push(structuredClone(document as MrsfDocument));
+      },
+    };
+
+    const root = document.createElement("div");
+    document.body.appendChild(root);
+
+    const editor = new Editor({
+      element: root,
+      extensions: [
+        StarterKit,
+        createTiptapMrsfExtension(host, {
+          resourceId: "example",
+          defaultAuthor: "Tester",
+        }),
+      ],
+      content: "<p>hello world</p>",
+    });
+
+    editor.view.coordsAtPos = ((pos: number) => ({
+      top: 20 + pos,
+      bottom: 40 + pos,
+      left: 24,
+      right: 120,
+    })) as typeof editor.view.coordsAtPos;
+
+    await vi.runAllTimersAsync();
+
+    const controller = getTiptapMrsfController(editor);
+    expect(controller).not.toBeNull();
+    await waitFor(() => (controller?.getState()?.snapshot.inlineRanges.length ?? 0) === 1);
+
+    editor.commands.setTextSelection(1);
+    editor.commands.insertContent("start ");
+
+    expect(controller?.getState()?.document.comments[0]?.start_column).toBe(6);
+
+    await vi.advanceTimersByTimeAsync(120);
+
+    expect(controller?.getState()?.document.comments[0]?.start_column).toBe(12);
+
+    editor.destroy();
+
+    const saveOnlyRoot = document.createElement("div");
+    document.body.appendChild(saveOnlyRoot);
+    sidecar = structuredClone(initialSidecar);
+    writes.length = 0;
+
+    const saveOnlyEditor = new Editor({
+      element: saveOnlyRoot,
+      extensions: [
+        StarterKit,
+        createTiptapMrsfExtension(host, {
+          resourceId: "example-save-only",
+          defaultAuthor: "Tester",
+          liveTracking: "save-only",
+        }),
+      ],
+      content: "<p>hello world</p>",
+    });
+
+    saveOnlyEditor.view.coordsAtPos = ((pos: number) => ({
+      top: 20 + pos,
+      bottom: 40 + pos,
+      left: 24,
+      right: 120,
+    })) as typeof saveOnlyEditor.view.coordsAtPos;
+
+    await vi.runAllTimersAsync();
+
+    const saveOnlyController = getTiptapMrsfController(saveOnlyEditor);
+    expect(saveOnlyController).not.toBeNull();
+    await waitFor(() => (saveOnlyController?.getState()?.snapshot.inlineRanges.length ?? 0) === 1);
+
+    saveOnlyEditor.commands.setTextSelection(1);
+    saveOnlyEditor.commands.insertContent("start ");
+
+    expect(saveOnlyController?.getState()?.document.comments[0]?.start_column).toBe(6);
+
+    expect(saveOnlyEditor.commands.mrsfSave("test")).toBe(true);
+    await vi.runAllTimersAsync();
+
+    expect(saveOnlyController?.getState()?.document.comments[0]?.start_column).toBe(12);
+    expect(writes).toHaveLength(1);
+    expect(writes[0]?.comments[0]?.start_column).toBe(12);
+
+    saveOnlyEditor.destroy();
+    vi.useRealTimers();
+  });
 });

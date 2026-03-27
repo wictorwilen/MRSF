@@ -85,6 +85,16 @@ The Tiptap plugin is browser-first and host-driven:
 
 This makes it a good fit for editorial tools, collaborative content apps, internal knowledge systems, and browser-based review workflows built on ProseMirror/Tiptap.
 
+## Performance Tuning
+
+Use the `liveTracking` option to control how aggressively the plugin recomputes review state while the user types:
+
+- `"debounced"` batches editor text changes and applies them after a short pause. This is the default.
+- `"save-only"` defers live tracking until `editor.commands.mrsfSave()` or controller save is called.
+- `"eager"` applies every editor text change immediately.
+
+If you need to minimize typing overhead in larger documents, prefer `liveTracking: "debounced"` or `liveTracking: "save-only"`.
+
 ## Visual Configuration
 
 The Tiptap package uses the same core display vocabulary as the other MRSF plugins:
