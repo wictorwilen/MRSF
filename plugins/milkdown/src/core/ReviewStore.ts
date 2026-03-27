@@ -51,6 +51,10 @@ function createProjectedDocument(document: MrsfDocument, documentLines: string[]
   return projected;
 }
 
+function isSingleLineEdit(change: EditorContentChange): boolean {
+  return change.range.start.lineIndex === change.range.end.lineIndex && !change.text.includes("\n");
+}
+
 export class ReviewStore {
   private states = new Map<string, ReviewState>();
   private listeners = new Set<(state: ReviewState) => void>();
@@ -141,16 +145,34 @@ export class ReviewStore {
 
   applyLiveEdits(resourceId: string, changes: readonly EditorContentChange[], documentText: string, geometry?: DocumentGeometry): ReviewState {
     const state = this.requireState(resourceId);
-    const moved = applyLineShifts(state.document.comments, changes);
+    const storedMoved = applyLineShifts(state.document.comments, changes);
+    const projectedMoved = applyLineShifts(state.projectedDocument.comments, changes);
+    const singleLineOnly = changes.length > 0 && changes.every(isSingleLineEdit);
     state.documentLines = splitDocumentLines(documentText);
-    state.projectedDocument = createProjectedDocument(state.document, state.documentLines);
-    state.snapshot = projectDecorationSnapshot(state.projectedDocument, {
-      showResolved: this.options.showResolved,
-      geometry: geometry ?? geometryFromLines(state.documentLines),
-    });
-    state.dirty = state.dirty || moved;
-    state.hasPendingShifts = state.hasPendingShifts || moved;
-    this.emit(state);
+    const nextGeometry = geometry ?? geometryFromLines(state.documentLines);
+
+    if (!singleLineOnly) {
+      state.projectedDocument = createProjectedDocument(state.document, state.documentLines);
+      state.snapshot = projectDecorationSnapshot(state.projectedDocument, {
+        showResolved: this.options.showResolved,
+        geometry: nextGeometry,
+      });
+      state.dirty = state.dirty || storedMoved;
+      state.hasPendingShifts = state.hasPendingShifts || storedMoved;
+      this.emit(state);
+      return state;
+    }
+
+    if (projectedMoved) {
+      state.snapshot = projectDecorationSnapshot(state.projectedDocument, {
+        showResolved: this.options.showResolved,
+        geometry: nextGeometry,
+      });
+      this.emit(state);
+    }
+
+    state.dirty = state.dirty || storedMoved;
+    state.hasPendingShifts = state.hasPendingShifts || storedMoved;
     return state;
   }
 

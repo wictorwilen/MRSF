@@ -11,6 +11,7 @@ export type {
   HoverTargetSnapshot,
   InlineDecorationSnapshot,
   LineThreadSnapshot,
+  MilkdownMrsfLiveTrackingMode,
   MilkdownMrsfSelectionActionContext,
   MilkdownMrsfControllerOptions,
   MilkdownMrsfPluginSaveOptions,

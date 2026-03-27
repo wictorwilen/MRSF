@@ -112,6 +112,16 @@ Direct Milkdown and Crepe can use the same host adapter and the same sidecar sou
 
 In direct Milkdown, text selections expose an inline add-comment control. In Crepe, the same action is surfaced through Crepe's native selection toolbar and slash menu, while reply, edit, and delete continue to use the built-in MRSF dialogs.
 
+## Performance Tuning
+
+Use the `liveTracking` option to control how much work the plugin performs during continuous typing:
+
+- `"debounced"` batches editor text changes and applies them after a short pause. This is the default and the recommended mode for richer editing surfaces.
+- `"save-only"` defers live tracking until `controller.save()` is called.
+- `"eager"` applies every editor text change immediately.
+
+If you need to minimize typing overhead in larger documents, prefer `liveTracking: "debounced"` or `liveTracking: "save-only"`. If you also want to avoid ProseMirror inline decorations, set `inlineHighlights: false`.
+
 ## Host Integration Model
 
 The package is intentionally host-driven. Your app owns storage and user workflows; the package owns review state, anchoring, projection, and editor overlays.

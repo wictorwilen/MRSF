@@ -69,9 +69,7 @@ export function createMilkdownMrsfPlugin(
     let decorationsEnabled = false;
 
     const requestDecorationRefresh = (): void => {
-      overlay?.update();
-
-      if (!activeView || refreshScheduled) {
+      if (options.inlineHighlights === false || !activeView || refreshScheduled) {
         return;
       }
 
@@ -96,6 +94,9 @@ export function createMilkdownMrsfPlugin(
         ...options,
         onStateChange: (event) => {
           options.onStateChange?.(event);
+          if (event.source !== "content") {
+            overlay?.update();
+          }
           requestDecorationRefresh();
         },
       });
@@ -189,7 +190,7 @@ export function createMilkdownMrsfPlugin(
               return;
             }
 
-            controller.applyTextUpdate(getDocumentText(previousState.doc), getDocumentText(nextView.state.doc));
+            controller.queueTextUpdate(getDocumentText(previousState.doc), getDocumentText(nextView.state.doc));
           },
           destroy: () => {
             overlay?.destroy();

@@ -108,6 +108,16 @@ Use the same host adapter for both modes when you want direct Milkdown and Crepe
 
 In direct Milkdown, the package shows a floating add-comment control for text selections. In Crepe, the same add-comment flow is exposed through Crepe's native selection toolbar and slash menu so it stays aligned with the host editor shell.
 
+## Performance Tuning
+
+`liveTracking` controls how aggressively the plugin recomputes review state while the user types:
+
+- `"debounced"` batches editor text changes and applies them after a short pause. This is the default and is the best fit for rich editing.
+- `"save-only"` skips live tracking while typing and applies the pending text diff right before `controller.save()` persists the sidecar.
+- `"eager"` applies every text change immediately.
+
+If you need to minimize editor overhead in larger documents, prefer `liveTracking: "debounced"` or `liveTracking: "save-only"`.
+
 ## Host Adapter Contract
 
 The package is intentionally host-driven. Your application provides document and sidecar I/O, while the package handles review state, anchoring, projection, and editor overlays.

@@ -7,6 +7,7 @@ import type {
   CommentDraft,
   EditorContentChange,
   EditorSelection,
+  MilkdownMrsfLiveTrackingMode,
   MilkdownMrsfControllerOptions,
   MilkdownMrsfPluginSaveOptions,
   MilkdownMrsfStateChangeSource,
@@ -16,10 +17,14 @@ import type {
   ReviewThread,
 } from "./types.js";
 
+const LIVE_TRACKING_DEBOUNCE_MS = 120;
+
 export class MilkdownMrsfController {
   private readonly store: ReviewStore;
   private unsubscribeStore: (() => void) | null = null;
   private pendingStateSource: MilkdownMrsfStateChangeSource = "load";
+  private pendingTextUpdate: { previousText: string; nextText: string } | null = null;
+  private pendingTextUpdateTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     host: MilkdownMrsfHostAdapter,
@@ -40,6 +45,7 @@ export class MilkdownMrsfController {
   }
 
   async load(options: ReviewLoadOptions = {}, source: MilkdownMrsfStateChangeSource = "load"): Promise<ReviewState> {
+    this.clearPendingTextUpdate();
     this.pendingStateSource = source;
     return this.store.load(this.options.resourceId, options);
   }
@@ -49,6 +55,7 @@ export class MilkdownMrsfController {
   }
 
   refresh(documentText: string): ReviewState {
+    this.clearPendingTextUpdate();
     this.pendingStateSource = "refresh";
     return this.store.refresh(this.options.resourceId, documentText, geometryFromText(documentText));
   }
@@ -60,6 +67,38 @@ export class MilkdownMrsfController {
 
   applyTextUpdate(previousText: string, nextText: string): ReviewState {
     return this.applyChanges(diffTextChange(previousText, nextText), nextText);
+  }
+
+  queueTextUpdate(previousText: string, nextText: string): void {
+    if (previousText === nextText) {
+      return;
+    }
+
+    this.pendingTextUpdate = this.pendingTextUpdate
+      ? { previousText: this.pendingTextUpdate.previousText, nextText }
+      : { previousText, nextText };
+
+    const mode = this.getLiveTrackingMode();
+    if (mode === "save-only") {
+      return;
+    }
+
+    if (mode === "eager") {
+      this.flushPendingTextUpdate();
+      return;
+    }
+
+    this.schedulePendingTextUpdate();
+  }
+
+  flushPendingTextUpdate(): ReviewState | null {
+    if (!this.pendingTextUpdate) {
+      return null;
+    }
+
+    const pending = this.pendingTextUpdate;
+    this.clearPendingTextUpdate();
+    return this.applyTextUpdate(pending.previousText, pending.nextText);
   }
 
   getState(): ReviewState | null {
@@ -149,6 +188,7 @@ export class MilkdownMrsfController {
   }
 
   async save(options: MilkdownMrsfPluginSaveOptions = {}): Promise<void> {
+    this.flushPendingTextUpdate();
     const state = this.store.getState(this.options.resourceId);
     if (!state) {
       return;
@@ -173,12 +213,38 @@ export class MilkdownMrsfController {
   }
 
   async reanchor(options: ReviewReanchorOptions = {}): Promise<ReviewState> {
+    this.clearPendingTextUpdate();
     this.pendingStateSource = "reanchor";
     return this.store.reanchor(this.options.resourceId, options);
   }
 
   dispose(): void {
+    this.clearPendingTextUpdate();
     this.unsubscribeStore?.();
     this.unsubscribeStore = null;
+  }
+
+  private getLiveTrackingMode(): MilkdownMrsfLiveTrackingMode {
+    return this.options.liveTracking ?? "debounced";
+  }
+
+  private schedulePendingTextUpdate(): void {
+    if (this.pendingTextUpdateTimer != null) {
+      clearTimeout(this.pendingTextUpdateTimer);
+    }
+
+    this.pendingTextUpdateTimer = setTimeout(() => {
+      this.pendingTextUpdateTimer = null;
+      this.flushPendingTextUpdate();
+    }, LIVE_TRACKING_DEBOUNCE_MS);
+  }
+
+  private clearPendingTextUpdate(): void {
+    if (this.pendingTextUpdateTimer != null) {
+      clearTimeout(this.pendingTextUpdateTimer);
+      this.pendingTextUpdateTimer = null;
+    }
+
+    this.pendingTextUpdate = null;
   }
 }

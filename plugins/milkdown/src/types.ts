@@ -155,6 +155,8 @@ export interface MilkdownMrsfComposeResult {
   type?: Comment["type"];
 }
 
+export type MilkdownMrsfLiveTrackingMode = "eager" | "debounced" | "save-only";
+
 export interface MilkdownMrsfSelectionActionContext {
   selection: EditorSelection;
   selectedText: string;
@@ -169,6 +171,7 @@ export interface MilkdownMrsfControllerOptions {
   resourceId: string;
   showResolved?: boolean;
   inlineHighlights?: boolean;
+  liveTracking?: MilkdownMrsfLiveTrackingMode;
   showSelectionAddButton?: boolean;
   defaultAuthor?: string;
   onStateChange?: (event: MilkdownMrsfStateChangeEvent) => void;

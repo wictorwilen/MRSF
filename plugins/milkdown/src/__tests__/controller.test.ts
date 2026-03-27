@@ -163,4 +163,51 @@ describe("MilkdownMrsfController", () => {
     expect(harness.writes).toHaveLength(1);
     controller.dispose();
   });
+
+  it("debounces queued text updates into a single content recompute", async () => {
+    vi.useFakeTimers();
+
+    const harness = makeHarness();
+    const sources: string[] = [];
+    const controller = new MilkdownMrsfController(harness.host, {
+      resourceId: "resource",
+      onStateChange: (event) => {
+        sources.push(event.source);
+      },
+    });
+
+    await controller.load();
+    controller.queueTextUpdate("alpha\nbeta\ngamma", "alpha\nbeta!\ngamma");
+    controller.queueTextUpdate("alpha\nbeta!\ngamma", "alpha\nbeta!!\ngamma");
+
+    expect(controller.getState()?.document.comments[0]?.end_column).toBe(4);
+
+    await vi.advanceTimersByTimeAsync(120);
+
+    expect(controller.getState()?.document.comments[0]?.end_column).toBe(6);
+    expect(sources.filter((source) => source === "content")).toHaveLength(1);
+
+    controller.dispose();
+  });
+
+  it("flushes save-only queued text updates before saving", async () => {
+    const harness = makeHarness();
+    const controller = new MilkdownMrsfController(harness.host, {
+      resourceId: "resource",
+      liveTracking: "save-only",
+    });
+
+    await controller.load();
+    controller.queueTextUpdate("alpha\nbeta\ngamma", "alpha\nbeta!!\ngamma");
+
+    expect(controller.getState()?.document.comments[0]?.end_column).toBe(4);
+
+    await controller.save({ reason: "manual-test" });
+
+    expect(controller.getState()?.document.comments[0]?.end_column).toBe(6);
+    expect(harness.writes).toHaveLength(1);
+    expect(harness.writes[0]?.comments[0]?.end_column).toBe(6);
+
+    controller.dispose();
+  });
 });

@@ -111,6 +111,52 @@ describe("ReviewStore", () => {
     expect(state.snapshot.inlineRanges[0]?.line).toBe(2);
   });
 
+  it("fast-paths same-line edits by updating the projected snapshot without full reanchor", async () => {
+    const host = makeHost({
+      async getDocumentText() {
+        return "preface\nalpha\nbeta\ngamma";
+      },
+      async readSidecar() {
+        return {
+          mrsf_version: "1.0",
+          document: "doc.md",
+          comments: [
+            {
+              id: "c1",
+              author: "A",
+              timestamp: "2025-01-01T00:00:00.000Z",
+              text: "Comment",
+              resolved: false,
+              line: 1,
+              start_column: 0,
+              end_column: 5,
+              selected_text: "alpha",
+            },
+          ],
+        } as MrsfDocument;
+      },
+    });
+
+    const store = new ReviewStore(host, { showResolved: true });
+    const state = await store.load("file:///doc.md");
+
+    store.applyLiveEdits("file:///doc.md", [
+      {
+        range: {
+          start: { lineIndex: 1, column: 0 },
+          end: { lineIndex: 1, column: 0 },
+        },
+        text: "pre-",
+      },
+    ], "preface\npre-alpha\nbeta\ngamma");
+
+    expect(state.document.comments[0]?.line).toBe(1);
+    expect(state.projectedDocument.comments[0]?.line).toBe(2);
+    expect(state.snapshot.inlineRanges[0]?.line).toBe(2);
+    expect(state.snapshot.inlineRanges[0]?.range.start.column).toBe(0);
+    expect(state.snapshot.inlineRanges[0]?.range.end.column).toBe(9);
+  });
+
   it("throws for unknown resources and parents", async () => {
     const store = new ReviewStore(makeHost(), { showResolved: true });
 
