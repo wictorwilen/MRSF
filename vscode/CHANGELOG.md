@@ -5,6 +5,13 @@ All notable changes to the **Sidemark** VS Code extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.4] - 2026-03-30
+
+### Fixed
+- Reanchor comments when a Markdown file is reloaded after an external disk write, such as an AI agent updating the file directly.
+- Avoid using the live line-tracker heuristic for clean-document external reloads, which could leave anchors on the wrong lines after large replacements.
+- Preserve existing live tracking behavior for normal dirty edits while skipping the external-reload reanchor path for undo and redo events.
+
 ## [0.1.0] - 2026-03-03
 
 ### Added
