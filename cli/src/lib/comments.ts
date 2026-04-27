@@ -9,6 +9,7 @@ import type {
   CommentFilter,
   CommentExtensions,
   CommentExtensionValue,
+  EditCommentOptions,
   MrsfDocument,
 } from "./types.js";
 import { computeHash } from "./writer.js";
@@ -156,6 +157,26 @@ export function populateSelectedText(
   if (comment.selected_text) {
     comment.selected_text_hash = computeHash(comment.selected_text);
   }
+}
+
+export function editComment(
+  doc: MrsfDocument,
+  commentId: string,
+  opts: EditCommentOptions,
+): Comment {
+  const comment = doc.comments.find((entry) => entry.id === commentId);
+  if (!comment) {
+    throw new Error(`Unknown comment '${commentId}'.`);
+  }
+  if (opts.actor && comment.author !== opts.actor) {
+    throw new Error("Only the comment author can edit this comment.");
+  }
+  if (opts.text.trim().length === 0) {
+    throw new Error("Comment text cannot be empty.");
+  }
+
+  comment.text = opts.text;
+  return comment;
 }
 
 // ---------------------------------------------------------------------------

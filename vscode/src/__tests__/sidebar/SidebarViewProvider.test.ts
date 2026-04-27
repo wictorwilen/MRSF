@@ -69,6 +69,7 @@ function createStore(overrides: Record<string, unknown> = {}) {
     onDidChange: vi.fn().mockImplementation(() => new vscode.Disposable()),
     get: vi.fn(),
     load: vi.fn(),
+    editComment: vi.fn(),
     replyToComment: vi.fn(),
     deleteComment: vi.fn(),
     resolveComment: vi.fn(),
@@ -132,10 +133,14 @@ describe("SidebarViewProvider", () => {
     expect(view.webviewView.webview.html).toContain("1 open");
     expect(view.webviewView.webview.html).toContain('class="comment-main"');
     expect(view.webviewView.webview.html).toContain('title="Go to this comment in the document"');
+    expect(view.webviewView.webview.html).toContain("Reply (Ctrl+Enter / Cmd+Enter)");
+    expect(view.webviewView.webview.html).toContain(`onkeydown="handleReplyKeydown(event, 'c1')"`);
+    expect(view.webviewView.webview.html).toContain(`onclick="sendReply('c1')" title="Reply">Reply</button>`);
+    expect(view.webviewView.webview.html).not.toContain(`toggleEdit('c1')`);
     expect(workspaceState.update).toHaveBeenCalledWith("mrsf.lastDocUri", uri.toString());
   });
 
-  it("handles sidebar messages for reply, delete, sorting, and visibility toggles", async () => {
+  it("handles sidebar messages for edit, reply, delete, sorting, and visibility toggles", async () => {
     const uri = Uri.file("/workspace/doc.md");
     const editor = makeMarkdownEditor(uri);
     vscode.window.activeTextEditor = editor as never;
@@ -162,6 +167,7 @@ describe("SidebarViewProvider", () => {
         ],
       }),
       load: vi.fn(),
+      editComment: vi.fn(),
       replyToComment: vi.fn(),
       deleteComment: vi.fn(),
       resolveComment: vi.fn(),
@@ -175,12 +181,17 @@ describe("SidebarViewProvider", () => {
     provider.resolveWebviewView(view.webviewView as never, {} as never, {} as never);
     __mock.warningMessageResult = "Delete";
 
+    await view.emitMessage({ type: "edit", commentId: "c1", text: "Edited text" });
     await view.emitMessage({ type: "reply", parentId: "c1", text: "New reply" });
     await view.emitMessage({ type: "delete", commentId: "c1" });
     await view.emitMessage({ type: "sort", sortMode: "date" });
     await view.emitMessage({ type: "toggleResolved" });
     await view.emitMessage({ type: "toggleCommentsEnabled" });
 
+    expect(store.editComment).toHaveBeenCalledWith(uri, "c1", {
+      text: "Edited text",
+      actor: "Tester",
+    });
     expect(store.replyToComment).toHaveBeenCalledWith(uri, "c1", "New reply", "Tester");
     expect(store.deleteComment).toHaveBeenCalledWith(uri, "c1");
     expect(__mock.warningMessages).toContain("Delete this comment?");
@@ -191,6 +202,101 @@ describe("SidebarViewProvider", () => {
     expect(html).toContain("sort-btn active");
     expect(html).toContain("Comments are hidden in the editor and Markdown preview.");
     expect(html).not.toContain("Second");
+  });
+
+  it("renders edit controls only for comments owned by the configured author", async () => {
+    const uri = Uri.file("/workspace/doc.md");
+    const editor = makeMarkdownEditor(uri);
+    vscode.window.activeTextEditor = editor as never;
+
+    const store = createStore({
+      get: vi.fn().mockReturnValue({
+        comments: [
+          {
+            id: "c1",
+            author: "Tester",
+            text: "Editable root",
+            timestamp: "2026-03-09T12:00:00Z",
+            line: 3,
+          },
+          {
+            id: "c2",
+            reply_to: "c1",
+            author: "Alice",
+            text: "Not editable reply",
+            timestamp: "2026-03-09T12:01:00Z",
+          },
+        ],
+      }),
+    });
+
+    const provider = new SidebarViewProvider(store as never, Uri.file("/workspace/ext"));
+    const view = createWebviewView();
+
+    provider.resolveWebviewView(view.webviewView as never, {} as never, {} as never);
+    await Promise.resolve();
+
+    expect(view.webviewView.webview.html).toContain(`toggleEdit('c1')`);
+    expect(view.webviewView.webview.html).toContain(`onkeydown="handleEditKeydown(event, 'c1')"`);
+    expect(view.webviewView.webview.html).not.toContain(`toggleEdit('c2')`);
+  });
+
+  it("filters visible threads by author token and keyword query", async () => {
+    const uri = Uri.file("/workspace/doc.md");
+    const editor = makeMarkdownEditor(uri);
+    vscode.window.activeTextEditor = editor as never;
+
+    const store = createStore({
+      get: vi.fn().mockReturnValue({
+        comments: [
+          {
+            id: "c1",
+            author: "Alice",
+            text: "Root thread",
+            timestamp: "2026-03-09T12:00:00Z",
+            line: 3,
+          },
+          {
+            id: "c2",
+            reply_to: "c1",
+            author: "Bob",
+            text: "Need follow-up",
+            timestamp: "2026-03-09T12:01:00Z",
+          },
+          {
+            id: "c3",
+            author: "Cara",
+            text: "Standalone note",
+            timestamp: "2026-03-09T13:00:00Z",
+            line: 8,
+          },
+        ],
+      }),
+    });
+
+    const provider = new SidebarViewProvider(store as never, Uri.file("/workspace/ext"));
+    const view = createWebviewView();
+    provider.resolveWebviewView(view.webviewView as never, {} as never, {} as never);
+
+    await view.emitMessage({ type: "setFilter", filterText: "author:Bob" });
+    expect(view.webviewView.webview.html).toContain('data-refocus-filter="true"');
+    expect(view.webviewView.webview.html).toContain('data-filter-selection-start=""');
+    expect(view.webviewView.webview.html).toContain('value="author:Bob"');
+    expect(view.webviewView.webview.html).toContain("Root thread");
+    expect(view.webviewView.webview.html).toContain("Need follow-up");
+    expect(view.webviewView.webview.html).not.toContain("Standalone note");
+
+    await view.emitMessage({
+      type: "setFilter",
+      filterText: "Standalone",
+      selectionStart: 4,
+      selectionEnd: 4,
+    });
+    expect(view.webviewView.webview.html).toContain('data-filter-selection-start="4"');
+    expect(view.webviewView.webview.html).toContain('data-filter-selection-end="4"');
+    expect(view.webviewView.webview.html).toContain('value="Standalone"');
+    expect(view.webviewView.webview.html).toContain("Standalone note");
+    expect(view.webviewView.webview.html).not.toContain("Root thread");
   });
 
   it("reveals and highlights a comment in the sidebar", async () => {

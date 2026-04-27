@@ -369,5 +369,11 @@ describe("readDocumentLines", () => {
     expect(lines[1]).toBe("");
     expect(lines).toHaveLength(2);
   });
-});
 
+  it("normalizes CRLF line endings", async () => {
+    const fp = path.join(tmpDir, "crlf.md");
+    await writeFile(fp, "first\r\nsecond\r\n\r\nfourth");
+    const lines = await readDocumentLines(fp);
+    expect(lines).toEqual(["", "first", "second", "", "fourth"]);
+  });
+});

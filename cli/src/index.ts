@@ -30,6 +30,7 @@ export type {
   FuzzyCandidate,
   DiffHunk,
   AddCommentOptions,
+  EditCommentOptions,
   CommentFilter,
   AnchorHealth,
   StatusResult,
@@ -99,6 +100,7 @@ export const reanchorFile = reanchor.reanchorFile;
 
 // Comments
 export const addComment = comments.addComment;
+export const editComment = comments.editComment;
 export const normalizeCommentExtensions = comments.normalizeCommentExtensions;
 export const populateSelectedText = comments.populateSelectedText;
 export const resolveComment = comments.resolveComment;

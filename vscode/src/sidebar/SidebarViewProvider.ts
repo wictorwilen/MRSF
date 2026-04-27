@@ -13,6 +13,9 @@ interface WebviewMessage {
   commentId?: string;
   parentId?: string;
   text?: string;
+  filterText?: string;
+  selectionStart?: number;
+  selectionEnd?: number;
   line?: number;
   sortMode?: "line" | "date";
   showResolved?: boolean;
@@ -25,6 +28,10 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
   private disposables: vscode.Disposable[] = [];
   private currentDocUri?: vscode.Uri;
   private sortMode: "line" | "date" = "line";
+  private filterQuery = "";
+  private pendingFilterFocus = false;
+  private pendingFilterSelectionStart?: number;
+  private pendingFilterSelectionEnd?: number;
   private pendingHighlightCommentId?: string;
   private static readonly STATE_KEY = "mrsf.lastDocUri";
 
@@ -216,6 +223,28 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
           );
         }
         break;
+      case "edit":
+        if (msg.commentId && typeof msg.text === "string") {
+          const actor = this.getConfiguredAuthor();
+          if (!actor) {
+            vscode.window.showWarningMessage(
+              "Set sidemark.author to edit your comments.",
+            );
+            break;
+          }
+
+          try {
+            await this.store.editComment(this.currentDocUri, msg.commentId, {
+              text: msg.text,
+              actor,
+            });
+          } catch (err: unknown) {
+            vscode.window.showErrorMessage(
+              `Failed to edit comment: ${err instanceof Error ? err.message : String(err)}`,
+            );
+          }
+        }
+        break;
       case "navigate":
         if (msg.commentId) {
           await this.navigateToComment(msg.commentId);
@@ -235,6 +264,13 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
           this.sortMode = msg.sortMode;
           this.refresh();
         }
+        break;
+      case "setFilter":
+        this.filterQuery = msg.filterText ?? "";
+        this.pendingFilterFocus = true;
+        this.pendingFilterSelectionStart = msg.selectionStart;
+        this.pendingFilterSelectionEnd = msg.selectionEnd;
+        this.refresh();
         break;
       case "toggleResolved": {
         const config = vscode.workspace.getConfiguration("sidemark");
@@ -330,18 +366,80 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
     return false;
   }
 
+  private getConfiguredAuthor(): string | undefined {
+    const author = vscode.workspace.getConfiguration("sidemark").get<string>("author")?.trim();
+    return author && author.length > 0 ? author : undefined;
+  }
+
+  private canEditComment(comment: Comment, currentAuthor?: string): boolean {
+    return currentAuthor != null && currentAuthor === comment.author;
+  }
+
+  private parseFilterQuery(): { author?: string; keyword?: string } {
+    const query = this.filterQuery.trim();
+    if (query.length === 0) {
+      return {};
+    }
+
+    const authorMatch = query.match(/(?:^|\s)author:(?:"([^"]+)"|(\S+))/i);
+    const author = (authorMatch?.[1] ?? authorMatch?.[2])?.trim();
+    const keyword = authorMatch
+      ? `${query.slice(0, authorMatch.index ?? 0)} ${query.slice((authorMatch.index ?? 0) + authorMatch[0].length)}`
+        .trim()
+        .replace(/\s+/g, " ")
+      : query;
+
+    return {
+      author: author && author.length > 0 ? author : undefined,
+      keyword: keyword.length > 0 ? keyword.toLowerCase() : undefined,
+    };
+  }
+
+  private threadMatchesFilter(thread: Comment[]): boolean {
+    const { author, keyword } = this.parseFilterQuery();
+    if (!author && !keyword) {
+      return true;
+    }
+
+    return thread.some((comment) => {
+      if (author && comment.author !== author) {
+        return false;
+      }
+      if (!keyword) {
+        return true;
+      }
+
+      const searchable = [
+        comment.author,
+        comment.text,
+        comment.type,
+        comment.severity,
+      ]
+        .filter((value): value is string => typeof value === "string" && value.length > 0)
+        .join("\n")
+        .toLowerCase();
+
+      return searchable.includes(keyword);
+    });
+  }
+
   private getCommentsHtml(comments: Comment[], docLineCount?: number): string {
     const config = vscode.workspace.getConfiguration("sidemark");
     const commentsEnabled = config.get<boolean>("commentsEnabled", true);
     const showResolved = config.get<boolean>("showResolved", true);
+    const currentAuthor = this.getConfiguredAuthor();
 
     const threads = this.buildThreads(comments);
-    const summary = this.computeSummary(comments, docLineCount);
 
     // Filter threads based on showResolved setting
-    const visibleThreads = showResolved
+    const visibleThreads = (showResolved
       ? threads
-      : threads.filter((thread) => !thread[0].resolved);
+      : threads.filter((thread) => !thread[0].resolved))
+      .filter((thread) => this.threadMatchesFilter(thread));
+    const summary = this.computeSummary(
+      visibleThreads.map((thread) => thread[0]),
+      docLineCount,
+    );
 
     // Sort threads by current mode
     if (this.sortMode === "line") {
@@ -359,7 +457,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
     }
 
     const threadHtml = visibleThreads
-      .map((thread) => this.renderThread(thread, docLineCount))
+      .map((thread) => this.renderThread(thread, docLineCount, currentAuthor))
       .join("");
 
     const lineActive = this.sortMode === "line" ? " active" : "";
@@ -376,7 +474,13 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
     const initialHighlightCommentId = this.pendingHighlightCommentId
       ? this.esc(this.pendingHighlightCommentId)
       : "";
+    const shouldRefocusFilter = this.pendingFilterFocus ? "true" : "false";
+    const filterSelectionStart = this.pendingFilterSelectionStart ?? "";
+    const filterSelectionEnd = this.pendingFilterSelectionEnd ?? "";
     this.pendingHighlightCommentId = undefined;
+    this.pendingFilterFocus = false;
+    this.pendingFilterSelectionStart = undefined;
+    this.pendingFilterSelectionEnd = undefined;
 
     return /* html */ `<!DOCTYPE html>
 <html lang="en">
@@ -385,7 +489,12 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>${this.getStyles()}</style>
 </head>
-<body data-highlight-comment-id="${initialHighlightCommentId}">
+<body
+  data-highlight-comment-id="${initialHighlightCommentId}"
+  data-refocus-filter="${shouldRefocusFilter}"
+  data-filter-selection-start="${filterSelectionStart}"
+  data-filter-selection-end="${filterSelectionEnd}"
+>
   <div class="header">
     <span class="summary">${summary.open} open · ${summary.resolved} resolved${summary.orphaned > 0 ? ` · <span class="orphan-count">${summary.orphaned} orphaned</span>` : ""}</span>
     <div class="header-actions">
@@ -401,8 +510,18 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
     <button class="sort-btn${lineActive}" onclick="postMessage({type:'sort',sortMode:'line'})" title="Sort by line number">Line</button>
     <button class="sort-btn${dateActive}" onclick="postMessage({type:'sort',sortMode:'date'})" title="Sort by date (newest first)">Date</button>
   </div>
+  <div class="filter-bar">
+    <input
+      class="filter-input"
+      type="search"
+      value="${this.esc(this.filterQuery)}"
+      placeholder="Filter comments (author:Name or keyword)"
+      title="Filter comments by author or keyword"
+      oninput="postMessage({type:'setFilter',filterText:this.value,selectionStart:this.selectionStart ?? this.value.length,selectionEnd:this.selectionEnd ?? this.value.length})"
+    >
+  </div>
   <div class="comments">
-    ${threadHtml || '<div class="empty">No comments yet</div>'}
+    ${threadHtml || `<div class="empty">${this.filterQuery.trim().length > 0 ? "No comments match the current filter" : "No comments yet"}</div>`}
   </div>
   <script>${this.getScript()}</script>
 </body>
@@ -439,10 +558,15 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
 </html>`;
   }
 
-  private renderThread(thread: Comment[], docLineCount?: number): string {
+  private renderThread(
+    thread: Comment[],
+    docLineCount?: number,
+    currentAuthor?: string,
+  ): string {
     const root = thread[0];
     const replies = thread.slice(1);
     const isOrphaned = this.isOrphaned(root, docLineCount);
+    const canEditRoot = this.canEditComment(root, currentAuthor);
 
     const statusClass = isOrphaned
       ? "orphaned"
@@ -478,17 +602,37 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
       <button onclick="postMessage({type:'navigate',commentId:'${root.id}'})" title="Go to this comment in the document">📍</button>
       ${!root.resolved ? `<button onclick="postMessage({type:'resolve',commentId:'${root.id}'})" title="Resolve">✅</button>` : `<button onclick="postMessage({type:'unresolve',commentId:'${root.id}'})" title="Unresolve">🔄</button>`}
       <button onclick="toggleReply('${root.id}')" title="Reply">💬</button>
+      ${canEditRoot ? `<button onclick="toggleEdit('${root.id}')" title="Edit">✏️</button>` : ""}
       <button onclick="postMessage({type:'delete',commentId:'${root.id}'})" title="Delete">🗑️</button>
       ${isOrphaned ? `<button onclick="postMessage({type:'reanchor'})" title="Reanchor to fix orphaned anchor">⚓</button>` : ""}
     </div>
     <div class="reply-input" id="reply-${root.id}" style="display:none;">
-      <textarea placeholder="Reply..." rows="2"></textarea>
-      <button onclick="sendReply('${root.id}')">Send</button>
+      <textarea
+        placeholder="Reply..."
+        rows="2"
+        title="Reply (Ctrl+Enter / Cmd+Enter)"
+        onkeydown="handleReplyKeydown(event, '${root.id}')"
+      ></textarea>
+      <button onclick="sendReply('${root.id}')" title="Reply">Reply</button>
     </div>
+    ${canEditRoot ? `
+    <div class="edit-input" id="edit-${root.id}" style="display:none;">
+      <textarea
+        placeholder="Edit comment..."
+        rows="3"
+        title="Save changes (Ctrl+Enter / Cmd+Enter)"
+        onkeydown="handleEditKeydown(event, '${root.id}')"
+      ></textarea>
+      <div class="composer-actions">
+        <button onclick="cancelEdit('${root.id}')" title="Cancel">Cancel</button>
+        <button onclick="saveEdit('${root.id}')" title="Save">Save</button>
+      </div>
+    </div>` : ""}
   </div>`;
 
     for (const reply of replies) {
       const rTime = relativeTime(reply.timestamp);
+      const canEditReply = this.canEditComment(reply, currentAuthor);
       html += /* html */ `
   <div class="comment reply" data-id="${reply.id}">
     <div class="comment-header">
@@ -497,8 +641,22 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
     </div>
     <div class="comment-text">${this.esc(reply.text)}</div>
     <div class="comment-actions">
+      ${canEditReply ? `<button onclick="toggleEdit('${reply.id}')" title="Edit">✏️</button>` : ""}
       <button onclick="postMessage({type:'delete',commentId:'${reply.id}'})" title="Delete">🗑️</button>
     </div>
+    ${canEditReply ? `
+    <div class="edit-input" id="edit-${reply.id}" style="display:none;">
+      <textarea
+        placeholder="Edit comment..."
+        rows="3"
+        title="Save changes (Ctrl+Enter / Cmd+Enter)"
+        onkeydown="handleEditKeydown(event, '${reply.id}')"
+      ></textarea>
+      <div class="composer-actions">
+        <button onclick="cancelEdit('${reply.id}')" title="Cancel">Cancel</button>
+        <button onclick="saveEdit('${reply.id}')" title="Save">Save</button>
+      </div>
+    </div>` : ""}
   </div>`;
     }
 
@@ -633,6 +791,19 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
         border-color: var(--vscode-button-background);
         opacity: 1;
       }
+      .filter-bar {
+        margin-bottom: 8px;
+      }
+      .filter-input {
+        width: 100%;
+        background: var(--vscode-input-background);
+        color: var(--vscode-input-foreground);
+        border: 1px solid var(--vscode-input-border);
+        border-radius: 3px;
+        padding: 5px 8px;
+        font-family: var(--vscode-font-family);
+        font-size: var(--vscode-font-size);
+      }
       .btn-primary {
         background: var(--vscode-button-background);
         color: var(--vscode-button-foreground);
@@ -719,13 +890,15 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
       .badge.orphaned { background: #ff9800; color: #fff; }
       .orphan-count { color: #ff9800; font-weight: bold; }
 
-      .reply-input {
+      .reply-input,
+      .edit-input {
         margin-top: 6px;
         display: flex;
         flex-direction: column;
         gap: 4px;
       }
-      .reply-input textarea {
+      .reply-input textarea,
+      .edit-input textarea {
         background: var(--vscode-input-background);
         color: var(--vscode-input-foreground);
         border: 1px solid var(--vscode-input-border);
@@ -735,7 +908,8 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
         font-size: var(--vscode-font-size);
         resize: vertical;
       }
-      .reply-input button {
+      .reply-input button,
+      .composer-actions button {
         align-self: flex-end;
         background: var(--vscode-button-background);
         color: var(--vscode-button-foreground);
@@ -744,6 +918,11 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
         padding: 3px 10px;
         cursor: pointer;
         font-size: 12px;
+      }
+      .composer-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 4px;
       }
 
       .empty, .empty-state {
@@ -772,6 +951,28 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
         vscode.postMessage(msg);
       }
 
+      function restoreFilterFocus() {
+        if (document.body.dataset.refocusFilter !== 'true') {
+          return;
+        }
+
+        const input = document.querySelector('.filter-input');
+        if (!(input instanceof HTMLInputElement)) {
+          return;
+        }
+
+        const start = Number.parseInt(document.body.dataset.filterSelectionStart || '', 10);
+        const end = Number.parseInt(document.body.dataset.filterSelectionEnd || '', 10);
+
+        requestAnimationFrame(() => {
+          input.focus();
+          input.setSelectionRange(
+            Number.isFinite(start) ? start : input.value.length,
+            Number.isFinite(end) ? end : input.value.length,
+          );
+        });
+      }
+
       function handleCommentKeydown(event, commentId) {
         if (event.key !== 'Enter' && event.key !== ' ') {
           return;
@@ -779,6 +980,30 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
 
         event.preventDefault();
         postMessage({ type: 'navigate', commentId });
+      }
+
+      function handleReplyKeydown(event, parentId) {
+        if (event.key !== 'Enter' || (!event.ctrlKey && !event.metaKey)) {
+          return;
+        }
+
+        event.preventDefault();
+        sendReply(parentId);
+      }
+
+      function handleEditKeydown(event, commentId) {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          cancelEdit(commentId);
+          return;
+        }
+
+        if (event.key !== 'Enter' || (!event.ctrlKey && !event.metaKey)) {
+          return;
+        }
+
+        event.preventDefault();
+        saveEdit(commentId);
       }
 
       function highlightCommentThread(commentId) {
@@ -806,11 +1031,61 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
 
       function toggleReply(parentId) {
         const el = document.getElementById('reply-' + parentId);
+        const editEl = document.getElementById('edit-' + parentId);
+        if (editEl) {
+          editEl.style.display = 'none';
+        }
         if (el) {
           el.style.display = el.style.display === 'none' ? 'flex' : 'none';
           if (el.style.display === 'flex') {
             el.querySelector('textarea').focus();
           }
+        }
+      }
+
+      function toggleEdit(commentId) {
+        const el = document.getElementById('edit-' + commentId);
+        const replyEl = document.getElementById('reply-' + commentId);
+        if (replyEl) {
+          replyEl.style.display = 'none';
+        }
+        if (!el) {
+          return;
+        }
+
+        const textarea = el.querySelector('textarea');
+        const commentText = document.querySelector('.comment[data-id="' + commentId + '"] .comment-text');
+        if (el.style.display === 'none') {
+          if (textarea) {
+            textarea.value = commentText ? commentText.textContent || '' : '';
+            el.style.display = 'flex';
+            textarea.focus();
+            textarea.selectionStart = textarea.value.length;
+            textarea.selectionEnd = textarea.value.length;
+          }
+          return;
+        }
+
+        el.style.display = 'none';
+      }
+
+      function cancelEdit(commentId) {
+        const el = document.getElementById('edit-' + commentId);
+        if (el) {
+          el.style.display = 'none';
+        }
+      }
+
+      function saveEdit(commentId) {
+        const el = document.getElementById('edit-' + commentId);
+        const textarea = el?.querySelector('textarea');
+        if (textarea && textarea.value.trim()) {
+          postMessage({
+            type: 'edit',
+            commentId,
+            text: textarea.value.trim(),
+          });
+          el.style.display = 'none';
         }
       }
 
@@ -842,6 +1117,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
           highlightCommentThread(initialHighlightCommentId);
         });
       }
+      restoreFilterFocus();
     `;
   }
 

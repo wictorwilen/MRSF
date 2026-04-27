@@ -7,6 +7,7 @@ const mockParseSidecar = vi.fn();
 const mockReadDocumentLines = vi.fn();
 const mockWriteSidecar = vi.fn();
 const mockAddComment = vi.fn();
+const mockEditComment = vi.fn();
 const mockPopulateSelectedText = vi.fn();
 const mockResolveComment = vi.fn();
 const mockUnresolveComment = vi.fn();
@@ -35,6 +36,7 @@ vi.mock("@mrsf/cli", () => ({
   readDocumentLines: (...args: unknown[]) => mockReadDocumentLines(...args),
   writeSidecar: (...args: unknown[]) => mockWriteSidecar(...args),
   addComment: (...args: unknown[]) => mockAddComment(...args),
+  editComment: (...args: unknown[]) => mockEditComment(...args),
   populateSelectedText: (...args: unknown[]) => mockPopulateSelectedText(...args),
   resolveComment: (...args: unknown[]) => mockResolveComment(...args),
   unresolveComment: (...args: unknown[]) => mockUnresolveComment(...args),
@@ -68,6 +70,7 @@ describe("SidecarStore", () => {
     mockReadDocumentLines.mockResolvedValue(["", "one", "two"]);
     mockWriteSidecar.mockResolvedValue(undefined);
     mockAddComment.mockResolvedValue({ id: "c-new", line: 2, text: "hi" });
+    mockEditComment.mockReturnValue({ id: "c1", text: "updated" });
     mockApplyLineShifts.mockReturnValue(true);
     mockResolveComment.mockReturnValue(true);
     mockUnresolveComment.mockReturnValue(true);
@@ -246,7 +249,7 @@ describe("SidecarStore", () => {
     expect(await store.getForActiveOrVisible(openUri)).toEqual(expect.objectContaining({ uri: openUri }));
   });
 
-  it("delegates resolve, unresolve, delete, and reply mutations through the CLI helpers", async () => {
+  it("delegates edit, resolve, unresolve, delete, and reply mutations through the CLI helpers", async () => {
     const store = new SidecarStore();
     const uri = Uri.file("/workspace/doc.md");
     (store as any).cache.set(uri.fsPath, {
@@ -255,14 +258,20 @@ describe("SidecarStore", () => {
       documentPath: uri.fsPath,
     });
 
+    const edited = await store.editComment(uri, "c1", { text: "updated", actor: "tester" });
     const resolved = await store.resolveComment(uri, "c1", true);
     const unresolved = await store.unresolveComment(uri, "c1");
     const deleted = await store.deleteComment(uri, "c1", true);
     await store.replyToComment(uri, "c1", "reply", "tester");
 
+    expect(edited).toEqual({ id: "c1", text: "updated" });
     expect(resolved).toBe(true);
     expect(unresolved).toBe(true);
     expect(deleted).toBe(true);
+    expect(mockEditComment).toHaveBeenCalledWith(expect.any(Object), "c1", {
+      text: "updated",
+      actor: "tester",
+    });
     expect(mockResolveComment).toHaveBeenCalledWith(expect.any(Object), "c1", true);
     expect(mockUnresolveComment).toHaveBeenCalledWith(expect.any(Object), "c1");
     expect(mockRemoveComment).toHaveBeenCalledWith(expect.any(Object), "c1", { cascade: true });

@@ -5,6 +5,7 @@
 import { describe, it, expect } from "vitest";
 import {
   addComment,
+  editComment,
   resolveComment,
   unresolveComment,
   removeComment,
@@ -173,6 +174,62 @@ describe("resolveComment", () => {
     resolveComment(doc, "c-1", true);
     expect(doc.comments[0].resolved).toBe(true);
     expect(doc.comments[1].resolved).toBe(true);
+  });
+});
+
+describe("editComment", () => {
+  it("updates the text of an existing comment", () => {
+    const doc = makeDoc();
+    doc.comments.push({
+      id: "c-1",
+      author: "Alice",
+      timestamp: "",
+      text: "Before",
+      resolved: false,
+      line: 4,
+    });
+
+    const comment = editComment(doc, "c-1", { text: "After" });
+
+    expect(comment.text).toBe("After");
+    expect(comment.line).toBe(4);
+    expect(doc.comments[0].text).toBe("After");
+  });
+
+  it("rejects edits from a different author when actor is provided", () => {
+    const doc = makeDoc();
+    doc.comments.push({
+      id: "c-1",
+      author: "Alice",
+      timestamp: "",
+      text: "Before",
+      resolved: false,
+    });
+
+    expect(() =>
+      editComment(doc, "c-1", { text: "After", actor: "Bob" })
+    ).toThrow("Only the comment author can edit this comment.");
+  });
+
+  it("rejects empty replacement text", () => {
+    const doc = makeDoc();
+    doc.comments.push({
+      id: "c-1",
+      author: "Alice",
+      timestamp: "",
+      text: "Before",
+      resolved: false,
+    });
+
+    expect(() =>
+      editComment(doc, "c-1", { text: "   " })
+    ).toThrow("Comment text cannot be empty.");
+  });
+
+  it("throws for unknown comment ids", () => {
+    expect(() =>
+      editComment(makeDoc(), "missing", { text: "After" })
+    ).toThrow("Unknown comment 'missing'.");
   });
 });
 
