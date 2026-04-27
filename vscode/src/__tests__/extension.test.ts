@@ -36,9 +36,6 @@ const mockInlineProvider = {
   update: vi.fn(),
   updateActiveEditor: vi.fn(),
 };
-const mockSelectionCommentCodeLensProvider = {
-  dispose: vi.fn(),
-};
 const mockReanchorController = {
   onReanchorComplete: undefined as undefined | ((uri: Uri) => void),
   register: vi.fn().mockReturnValue({ dispose: () => {} }),
@@ -87,14 +84,6 @@ vi.mock("../decorations/InlineDecorationProvider.js", () => ({
 vi.mock("../providers/HoverProvider.js", () => ({
   MrsfHoverProvider: class {
     dispose(): void {}
-  },
-}));
-
-vi.mock("../providers/SelectionCommentCodeLensProvider.js", () => ({
-  SelectionCommentCodeLensProvider: class {
-    constructor() {
-      return mockSelectionCommentCodeLensProvider;
-    }
   },
 }));
 

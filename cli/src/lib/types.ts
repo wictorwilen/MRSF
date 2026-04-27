@@ -170,6 +170,12 @@ export interface AddCommentOptions {
   extensions?: CommentExtensions;
 }
 
+export interface EditCommentOptions {
+  text: string;
+  /** Optional actor identity for author-based edit permission checks. */
+  actor?: string;
+}
+
 export interface CommentFilter {
   open?: boolean;
   resolved?: boolean;

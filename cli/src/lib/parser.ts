@@ -221,7 +221,7 @@ export async function readDocumentLines(
   filePath: string,
 ): Promise<string[]> {
   const content = await readFile(path.resolve(filePath), "utf-8");
-  const lines = content.split("\n");
+  const lines = content.replace(/\r\n?/g, "\n").split("\n");
   // Prepend empty element so lines[1] = first line (1-based)
   return ["", ...lines];
 }

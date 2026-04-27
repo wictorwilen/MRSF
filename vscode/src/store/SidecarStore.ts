@@ -13,6 +13,7 @@ import {
   type MrsfDocument,
   type Comment,
   type AddCommentOptions,
+  type EditCommentOptions,
   type ReanchorResult,
   type ReanchorOptions,
   type CommentFilter,
@@ -22,6 +23,7 @@ import {
   readDocumentLines,
   writeSidecar,
   addComment as cliAddComment,
+  editComment as cliEditComment,
   populateSelectedText,
   resolveComment as cliResolveComment,
   unresolveComment as cliUnresolveComment,
@@ -347,6 +349,28 @@ export class SidecarStore implements vscode.Disposable {
   }
 
   /**
+   * Edit an existing comment by ID.
+   */
+  async editComment(
+    documentUri: vscode.Uri,
+    commentId: string,
+    opts: EditCommentOptions,
+  ): Promise<Comment> {
+    let entry = this.cache.get(documentUri.fsPath);
+    if (!entry) {
+      await this.load(documentUri);
+      entry = this.cache.get(documentUri.fsPath);
+    }
+    if (!entry) {
+      throw new Error("No review sidecar found for this file.");
+    }
+
+    const comment = cliEditComment(entry.doc, commentId, opts);
+    await this.save(documentUri);
+    return comment;
+  }
+
+  /**
    * Resolve a comment by ID.
    */
   async resolveComment(
@@ -356,7 +380,7 @@ export class SidecarStore implements vscode.Disposable {
   ): Promise<boolean> {
     const entry = this.cache.get(documentUri.fsPath);
     if (!entry) return false;
-    const result = resolveComment(entry.doc, commentId, cascade);
+    const result = cliResolveComment(entry.doc, commentId, cascade);
     if (result) await this.save(documentUri);
     return result;
   }
@@ -370,7 +394,7 @@ export class SidecarStore implements vscode.Disposable {
   ): Promise<boolean> {
     const entry = this.cache.get(documentUri.fsPath);
     if (!entry) return false;
-    const result = unresolveComment(entry.doc, commentId);
+    const result = cliUnresolveComment(entry.doc, commentId);
     if (result) await this.save(documentUri);
     return result;
   }
@@ -385,7 +409,7 @@ export class SidecarStore implements vscode.Disposable {
   ): Promise<boolean> {
     const entry = this.cache.get(documentUri.fsPath);
     if (!entry) return false;
-    const result = removeComment(entry.doc, commentId, cascade);
+    const result = cliRemoveComment(entry.doc, commentId, { cascade });
     if (result) {
       await this.save(documentUri);
       this._onDidDelete.fire(documentUri);
