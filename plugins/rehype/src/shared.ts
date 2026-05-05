@@ -6,7 +6,7 @@
 
 import type { Root } from "hast";
 import type { MrsfPluginOptions, CommentLoader } from "./types.js";
-import { resolveComments } from "@mrsf/plugin-shared";
+import { resolveComments } from "./comments.js";
 import { transformTree } from "./transform.js";
 
 /**

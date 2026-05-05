@@ -3,7 +3,7 @@
  */
 
 import { Marked, type MarkedExtension, type Token, type Tokens } from "marked";
-import { resolveComments } from "@mrsf/plugin-shared";
+import { resolveComments } from "./comments.js";
 import type { CommentLoader, CommentThread, LineMap, MrsfPluginOptions } from "./types.js";
 
 type TokenWithMrsf = Token & {

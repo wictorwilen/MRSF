@@ -18,24 +18,41 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const sharedSrc = resolve(__dirname, "shared", "src");
 
-const plugins = ["rehype", "markdown-it", "marked", "marp"];
-const files = ["types.ts", "html.ts", "gutter.ts", "controller.ts"];
+const generatedHeader = (file) =>
+  "/* ---------------------------------------------------------------\n" +
+  " * AUTO-GENERATED — DO NOT EDIT\n" +
+  " *\n" +
+  ` * Source: plugins/shared/src/${file}\n` +
+  " * Run `node plugins/sync-types.mjs` to regenerate.\n" +
+  " * --------------------------------------------------------------- */\n\n";
 
-for (const file of files) {
+function syncSharedFile(file, destination) {
   const source = readFileSync(resolve(sharedSrc, file), "utf-8");
-  const header =
-    "/* ---------------------------------------------------------------\n" +
-    " * AUTO-GENERATED — DO NOT EDIT\n" +
-    " *\n" +
-    ` * Source: plugins/shared/src/${file}\n` +
-    " * Run `node plugins/sync-types.mjs` to regenerate.\n" +
-    " * --------------------------------------------------------------- */\n\n";
+  mkdirSync(dirname(destination), { recursive: true });
+  writeFileSync(destination, generatedHeader(file) + source, "utf-8");
+}
 
-  for (const plugin of plugins) {
+const renderingPlugins = ["rehype", "markdown-it", "marked", "marp"];
+const renderingFiles = ["types.ts", "comments.ts", "html.ts", "gutter.ts", "controller.ts"];
+
+for (const file of renderingFiles) {
+  for (const plugin of renderingPlugins) {
     const dest = resolve(__dirname, plugin, "src", file);
-    mkdirSync(dirname(dest), { recursive: true });
-    writeFileSync(dest, header + source, "utf-8");
+    syncSharedFile(file, dest);
   }
 
-  console.log(`  synced ${file} → ${plugins.map((p) => p + "/src/").join(", ")}`);
+  console.log(`  synced ${file} → ${renderingPlugins.map((p) => p + "/src/").join(", ")}`);
+}
+
+const pluginSpecificCopies = [
+  { plugin: "monaco", files: ["gutter.ts"] },
+  { plugin: "milkdown", files: ["types.ts", "html.ts", "gutter.ts"] },
+];
+
+for (const { plugin, files } of pluginSpecificCopies) {
+  for (const file of files) {
+    syncSharedFile(file, resolve(__dirname, plugin, "src", "shared", file));
+  }
+
+  console.log(`  synced shared helpers → ${plugin}/src/shared/`);
 }

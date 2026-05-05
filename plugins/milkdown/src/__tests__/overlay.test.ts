@@ -6,12 +6,15 @@ import type { Comment } from "@mrsf/cli/browser";
 import { MilkdownMrsfOverlay } from "../ui/overlay.js";
 import type { ReviewState, ReviewThread } from "../types.js";
 
-vi.mock("@mrsf/plugin-shared", () => ({
+vi.mock("../shared/gutter.js", () => ({
   createMrsfGutterBadgePresentation: ({ line, commentCount }: { line: number; commentCount: number }) => ({
     ariaLabel: `Line ${line}`,
     title: `Comments: ${commentCount}`,
     label: String(commentCount),
   }),
+}));
+
+vi.mock("../shared/html.js", () => ({
   renderThreadHtml: (thread: { comment: { id: string } }) => `
     <div class="tooltip-thread">
       <button data-mrsf-action="resolve" data-mrsf-comment-id="${thread.comment.id}">Resolve</button>

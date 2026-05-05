@@ -1,6 +1,6 @@
 {
   "name": "@mrsf/marked-mrsf",
-  "version": "0.4.9",
+  "version": "0.4.10",
   "description": "Marked plugin for rendering Sidemark/MRSF review comments",
   "type": "module",
   "main": "./dist/index.js",
@@ -68,11 +68,10 @@
     "LICENSE"
   ],
   "dependencies": {
-    "@mrsf/cli": "^0.3.0",
+    "@mrsf/cli": "^0.4.2",
     "marked": "^16.4.2"
   },
   "devDependencies": {
-    "@mrsf/plugin-shared": "file:../shared",
     "@types/node": "^22.13.10",
     "@vitest/coverage-v8": "^3.2.4",
     "esbuild": "^0.27.3",

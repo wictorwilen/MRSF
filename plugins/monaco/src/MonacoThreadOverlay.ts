@@ -2,7 +2,7 @@ import type * as monaco from "monaco-editor";
 import {
   resolveMrsfGutterAddButtonPresentation,
   resolveMrsfGutterBadgePresentation,
-} from "@mrsf/plugin-shared";
+} from "./shared/gutter.js";
 import type {
   MonacoThreadOverlayDisplayOptions,
   ReviewState,

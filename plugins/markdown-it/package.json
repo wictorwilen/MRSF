@@ -1,6 +1,6 @@
 {
   "name": "@mrsf/markdown-it-mrsf",
-  "version": "0.4.10",
+  "version": "0.4.11",
   "description": "markdown-it plugin for rendering Sidemark/MRSF (Markdown Review Sidecar Format) review comments",
   "type": "module",
   "main": "./dist/index.js",
@@ -70,10 +70,9 @@
     "LICENSE"
   ],
   "dependencies": {
-    "@mrsf/cli": "^0.3.0"
+    "@mrsf/cli": "^0.4.2"
   },
   "devDependencies": {
-    "@mrsf/plugin-shared": "file:../shared",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^22.13.10",
     "@vitest/coverage-v8": "^3.2.4",

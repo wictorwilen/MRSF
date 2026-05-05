@@ -1,5 +1,6 @@
-import { createMrsfGutterBadgePresentation, renderThreadHtml } from "@mrsf/plugin-shared";
-import type { CommentThread, SlimComment } from "@mrsf/plugin-shared";
+import { createMrsfGutterBadgePresentation } from "../shared/gutter.js";
+import { renderThreadHtml } from "../shared/html.js";
+import type { CommentThread, SlimComment } from "../shared/types.js";
 import type { EditorView } from "@milkdown/prose/view";
 import type { MilkdownMrsfController } from "../MilkdownMrsfController.js";
 import type { MilkdownMrsfComposeResult, MilkdownMrsfControllerOptions, ReviewState, ReviewThread } from "../types.js";

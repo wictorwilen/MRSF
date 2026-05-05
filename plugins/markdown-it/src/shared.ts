@@ -6,7 +6,7 @@
 
 import type MarkdownIt from "markdown-it";
 import type { MrsfPluginOptions, CommentLoader } from "./types.js";
-import { resolveComments } from "@mrsf/plugin-shared";
+import { resolveComments } from "./comments.js";
 import { installCoreRule } from "./rules/core.js";
 import { installRendererRules } from "./rules/renderer.js";
 

@@ -1,6 +1,6 @@
 {
   "name": "@mrsf/marp-mrsf",
-  "version": "0.4.9",
+  "version": "0.4.10",
   "description": "Marpit/Marp plugin for rendering Sidemark/MRSF review comments",
   "type": "module",
   "main": "./dist/index.js",
@@ -69,12 +69,11 @@
     "LICENSE"
   ],
   "dependencies": {
-    "@mrsf/cli": "^0.3.0"
+    "@mrsf/cli": "^0.4.2"
   },
   "devDependencies": {
     "@marp-team/marp-core": "^4.3.0",
     "@marp-team/marpit": "^3.2.1",
-    "@mrsf/plugin-shared": "file:../shared",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^22.13.10",
     "@vitest/coverage-v8": "^3.2.4",
