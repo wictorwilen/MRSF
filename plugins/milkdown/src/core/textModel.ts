@@ -6,7 +6,10 @@ import { normalizeRange } from "./positions.js";
 interface ProsemirrorTextModel {
   text: string;
   posToOffset: number[];
+  lineStarts: number[];
 }
+
+const PROSEMIRROR_TEXT_MODEL_CACHE = new WeakMap<ProsemirrorNode, ProsemirrorTextModel>();
 
 function isTableContainer(node: ProsemirrorNode): boolean {
   return node.type.name === "table";
@@ -33,6 +36,11 @@ function separatorBetweenSiblings(parent: ProsemirrorNode, previous: Prosemirror
 }
 
 function createProsemirrorTextModel(doc: ProsemirrorNode): ProsemirrorTextModel {
+  const cached = PROSEMIRROR_TEXT_MODEL_CACHE.get(doc);
+  if (cached) {
+    return cached;
+  }
+
   const maxPos = doc.content.size;
   const posToOffset = new Array<number>(maxPos + 1);
   const parts: string[] = [];
@@ -101,10 +109,22 @@ function createProsemirrorTextModel(doc: ProsemirrorNode): ProsemirrorTextModel 
     lastSeen = current;
   }
 
-  return {
-    text: parts.join(""),
+  const text = parts.join("");
+  const model: ProsemirrorTextModel = {
+    text,
     posToOffset,
+    lineStarts: createLineIndex(text),
   };
+  PROSEMIRROR_TEXT_MODEL_CACHE.set(doc, model);
+  return model;
+}
+
+export function getProsemirrorTextModel(doc: ProsemirrorNode): {
+  text: string;
+  lineStarts: readonly number[];
+} {
+  const model = createProsemirrorTextModel(doc);
+  return { text: model.text, lineStarts: model.lineStarts };
 }
 
 export function getDocumentText(doc: ProsemirrorNode): string {
@@ -129,14 +149,13 @@ export function geometryFromText(text: string): DocumentGeometry {
   };
 }
 
-export function offsetToPoint(offset: number, text: string): EditorPoint {
-  const clamped = Math.max(0, Math.min(offset, text.length));
-  const starts = createLineIndex(text);
+function offsetToPointWithStarts(offset: number, textLength: number, starts: readonly number[]): EditorPoint {
+  const clamped = Math.max(0, Math.min(offset, textLength));
 
   let low = 0;
   let high = starts.length - 1;
   while (low <= high) {
-    const mid = Math.floor((low + high) / 2);
+    const mid = (low + high) >>> 1;
     const current = starts[mid];
     const next = starts[mid + 1] ?? Number.MAX_SAFE_INTEGER;
     if (clamped < current) {
@@ -154,12 +173,19 @@ export function offsetToPoint(offset: number, text: string): EditorPoint {
   return { lineIndex: lastLine, column: clamped - starts[lastLine] };
 }
 
-export function pointToOffset(point: EditorPoint, text: string): number {
-  const starts = createLineIndex(text);
+function pointToOffsetWithStarts(point: EditorPoint, textLength: number, starts: readonly number[]): number {
   const lineIndex = Math.max(0, Math.min(point.lineIndex, starts.length - 1));
   const lineStart = starts[lineIndex];
-  const lineEnd = starts[lineIndex + 1] != null ? starts[lineIndex + 1] - 1 : text.length;
+  const lineEnd = starts[lineIndex + 1] != null ? starts[lineIndex + 1] - 1 : textLength;
   return Math.min(lineStart + Math.max(0, point.column), lineEnd);
+}
+
+export function offsetToPoint(offset: number, text: string, lineStarts?: readonly number[]): EditorPoint {
+  return offsetToPointWithStarts(offset, text.length, lineStarts ?? createLineIndex(text));
+}
+
+export function pointToOffset(point: EditorPoint, text: string, lineStarts?: readonly number[]): number {
+  return pointToOffsetWithStarts(point, text.length, lineStarts ?? createLineIndex(text));
 }
 
 export function diffTextChange(before: string, after: string): EditorContentChange[] {
@@ -222,12 +248,15 @@ export function textOffsetToPmPos(doc: ProsemirrorNode, targetOffset: number): n
 }
 
 export function selectionToEditorSelection(selection: Selection, doc: ProsemirrorNode): EditorSelection {
-  const text = getDocumentText(doc);
-  const startOffset = pmPosToTextOffset(doc, selection.from);
-  const endOffset = pmPosToTextOffset(doc, selection.to);
+  const model = createProsemirrorTextModel(doc);
+  const docSize = doc.content.size;
+  const fromPos = Math.max(0, Math.min(selection.from, docSize));
+  const toPos = Math.max(0, Math.min(selection.to, docSize));
+  const startOffset = model.posToOffset[fromPos] ?? model.text.length;
+  const endOffset = model.posToOffset[toPos] ?? model.text.length;
   return normalizeRange({
-    start: offsetToPoint(startOffset, text),
-    end: offsetToPoint(endOffset, text),
+    start: offsetToPoint(startOffset, model.text, model.lineStarts),
+    end: offsetToPoint(endOffset, model.text, model.lineStarts),
   });
 }
 

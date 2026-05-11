@@ -44,7 +44,25 @@ function cloneDocument(document: MrsfDocument): MrsfDocument {
   };
 }
 
-function createProjectedDocument(document: MrsfDocument, documentLines: string[]): MrsfDocument {
+/**
+ * Lightweight projection that just clones the source document. Used on every
+ * incremental update where the comments' anchor positions are already correct
+ * (live edits feed through `applyLineShifts`, metadata mutations like
+ * resolve/edit do not move text). This avoids the multi-second cost of
+ * `reanchorDocumentLines` (which performs fuzzy/Levenshtein matching for
+ * every comment against every window of the document) on every keystroke or
+ * UI action.
+ */
+function projectFromCurrentPositions(document: MrsfDocument): MrsfDocument {
+  return cloneDocument(document);
+}
+
+/**
+ * Full reanchor projection. Only used on initial load and explicit
+ * `reanchor()` calls — the cases where the on-disk document may have drifted
+ * from where the comments think they live.
+ */
+function projectWithReanchor(document: MrsfDocument, documentLines: string[]): MrsfDocument {
   const projected = cloneDocument(document);
   const results = reanchorDocumentLines(projected, ["", ...documentLines]);
   applyReanchorResults(projected, results);
@@ -106,7 +124,7 @@ export class ReviewStore {
     const document = loaded ?? createEmptyDocument(documentPath, resourceId);
     const documentLines = splitDocumentLines(documentText);
     const geometry = options.geometry ?? geometryFromLines(documentLines);
-    const projectedDocument = createProjectedDocument(document, documentLines);
+    const projectedDocument = projectWithReanchor(document, documentLines);
     const snapshot = projectDecorationSnapshot(projectedDocument, {
       showResolved: this.options.showResolved,
       geometry,
@@ -134,7 +152,7 @@ export class ReviewStore {
   refresh(resourceId: string, documentText: string, geometry?: DocumentGeometry): ReviewState {
     const state = this.requireState(resourceId);
     state.documentLines = splitDocumentLines(documentText);
-    state.projectedDocument = createProjectedDocument(state.document, state.documentLines);
+    state.projectedDocument = projectFromCurrentPositions(state.document);
     state.snapshot = projectDecorationSnapshot(state.projectedDocument, {
       showResolved: this.options.showResolved,
       geometry: geometry ?? geometryFromLines(state.documentLines),
@@ -152,7 +170,10 @@ export class ReviewStore {
     const nextGeometry = geometry ?? geometryFromLines(state.documentLines);
 
     if (!singleLineOnly) {
-      state.projectedDocument = createProjectedDocument(state.document, state.documentLines);
+      // Multi-line edit (Enter, paste, multi-paragraph delete, …): keep the
+      // already-shifted projected document and just re-snapshot. Skipping the
+      // full `reanchorDocumentLines` here saves 100 ms – several seconds per
+      // keystroke on documents with many comments.
       state.snapshot = projectDecorationSnapshot(state.projectedDocument, {
         showResolved: this.options.showResolved,
         geometry: nextGeometry,
@@ -315,7 +336,10 @@ export class ReviewStore {
   }
 
   private recomputeState(state: ReviewState, geometry?: DocumentGeometry): void {
-    state.projectedDocument = createProjectedDocument(state.document, state.documentLines);
+    // Comment metadata changed (add/edit/delete/resolve). The document text
+    // hasn't moved, so a full reanchor would just churn through the same
+    // anchors. Cloning is enough to give consumers an independent snapshot.
+    state.projectedDocument = projectFromCurrentPositions(state.document);
     state.snapshot = projectDecorationSnapshot(state.projectedDocument, {
       showResolved: this.options.showResolved,
       geometry: geometry ?? geometryFromLines(state.documentLines),

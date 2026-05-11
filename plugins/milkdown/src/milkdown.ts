@@ -8,7 +8,7 @@ import { buildInlineDecorations } from "./core/decorations.js";
 import { getSelectedText, getDocumentText, geometryFromText, selectionToEditorSelection } from "./core/textModel.js";
 import { MilkdownMrsfController } from "./MilkdownMrsfController.js";
 import type { MilkdownMrsfHostAdapter } from "./host/HostAdapter.js";
-import type { EditorSelection, MilkdownMrsfControllerOptions } from "./types.js";
+import type { DecorationSnapshot, EditorSelection, MilkdownMrsfControllerOptions } from "./types.js";
 import { MilkdownMrsfOverlay } from "./ui/overlay.js";
 
 type Cleanup = () => void | Promise<void>;
@@ -49,8 +49,19 @@ export interface MilkdownMrsfPluginOptions extends MilkdownMrsfControllerOptions
 export const milkdownMrsfControllerCtx = (milkdownCtx as { createSlice: <T>(value: T, name: string) => unknown }).createSlice<MilkdownMrsfController | null>(null, "milkdownMrsfController");
 const editorViewCtx = (milkdownCore as { editorViewCtx: unknown }).editorViewCtx;
 const prosePluginsCtx = (milkdownCore as { prosePluginsCtx: unknown }).prosePluginsCtx;
-const inlineDecorationKey = new PluginKey("MRSF_MILKDOWN_INLINE_HIGHLIGHTS");
+const inlineDecorationKey = new PluginKey<InlineDecorationPluginState>("MRSF_MILKDOWN_INLINE_HIGHLIGHTS");
 const lifecyclePluginKey = new PluginKey("MRSF_MILKDOWN_LIFECYCLE");
+
+interface InlineDecorationPluginState {
+  decorations: DecorationSet;
+  snapshot: DecorationSnapshot | null;
+  enabled: boolean;
+}
+
+interface InlineDecorationMeta {
+  refresh?: boolean;
+  enabled?: boolean;
+}
 
 export function createMilkdownMrsfPlugin(
   host: MilkdownMrsfHostAdapter,
@@ -67,9 +78,18 @@ export function createMilkdownMrsfPlugin(
     let initialLoadStarted = false;
     let refreshScheduled = false;
     let decorationsEnabled = false;
+    let lastDispatchedSnapshot: DecorationSnapshot | null | undefined;
 
     const requestDecorationRefresh = (): void => {
       if (options.inlineHighlights === false || !activeView || refreshScheduled) {
+        return;
+      }
+
+      const snapshot = controller?.getState()?.snapshot ?? null;
+      // Skip dispatch if the snapshot reference hasn't changed since the last
+      // dispatch — the existing decorations are still valid (they get mapped
+      // through transactions automatically).
+      if (snapshot === lastDispatchedSnapshot) {
         return;
       }
 
@@ -80,7 +100,8 @@ export function createMilkdownMrsfPlugin(
           return;
         }
 
-        const transaction = activeView.state.tr.setMeta(inlineDecorationKey, { refresh: true });
+        lastDispatchedSnapshot = controller?.getState()?.snapshot ?? null;
+        const transaction = activeView.state.tr.setMeta(inlineDecorationKey, { refresh: true } satisfies InlineDecorationMeta);
         activeView.dispatch(transaction);
       });
     };
@@ -124,18 +145,71 @@ export function createMilkdownMrsfPlugin(
       });
     };
 
-    const inlineDecorationPlugin = new Plugin({
+    const buildSnapshotDecorations = (doc: ProsemirrorNode, snapshot: DecorationSnapshot | null): DecorationSet => {
+      if (options.inlineHighlights === false || !snapshot) {
+        return DecorationSet.empty;
+      }
+      // The text argument is unused now (the cached PM model carries it),
+      // but keep the public function signature intact.
+      return buildInlineDecorations(doc, snapshot, "");
+    };
+
+    const inlineDecorationPlugin = new Plugin<InlineDecorationPluginState>({
       key: inlineDecorationKey,
-      props: {
-        decorations(state) {
-          if (options.inlineHighlights === false || !decorationsEnabled) {
-            return DecorationSet.empty;
+      state: {
+        init: (_config, state) => {
+          const snapshot = controller?.getState()?.snapshot ?? null;
+          return {
+            decorations: decorationsEnabled
+              ? buildSnapshotDecorations(state.doc, snapshot)
+              : DecorationSet.empty,
+            snapshot,
+            enabled: decorationsEnabled,
+          };
+        },
+        apply: (tr, value, _oldState, newState) => {
+          const meta = tr.getMeta(inlineDecorationKey) as InlineDecorationMeta | undefined;
+          let next = value;
+
+          if (meta?.enabled !== undefined && meta.enabled !== next.enabled) {
+            next = { ...next, enabled: meta.enabled };
           }
 
-          const nextController = ctx.get<MilkdownMrsfController | null>(milkdownMrsfControllerCtx);
-          const snapshot = nextController?.getState()?.snapshot ?? null;
-          const text = getDocumentText(state.doc);
-          return buildInlineDecorations(state.doc, snapshot, text);
+          if (meta?.refresh) {
+            const snapshot = controller?.getState()?.snapshot ?? null;
+            next = {
+              decorations: next.enabled
+                ? buildSnapshotDecorations(newState.doc, snapshot)
+                : DecorationSet.empty,
+              snapshot,
+              enabled: next.enabled,
+            };
+            return next;
+          }
+
+          if (tr.docChanged) {
+            // Map existing decorations forward through the transaction. This
+            // is O(decorations + ops), not O(decorations × |doc|) like a
+            // full rebuild would be.
+            next = {
+              ...next,
+              decorations: next.decorations.map(tr.mapping, tr.doc),
+            };
+          }
+
+          return next;
+        },
+      },
+      props: {
+        decorations(state) {
+          if (options.inlineHighlights === false) {
+            return DecorationSet.empty;
+          }
+          const pluginState = inlineDecorationKey.getState(state);
+          if (!pluginState || !pluginState.enabled) {
+            return DecorationSet.empty;
+          }
+          return pluginState.decorations;
         },
       },
     });
@@ -178,7 +252,14 @@ export function createMilkdownMrsfPlugin(
           }
 
           decorationsEnabled = true;
-          requestDecorationRefresh();
+          // Force a refresh now that decorations are enabled.
+          lastDispatchedSnapshot = undefined;
+          const enableTr = activeView.state.tr.setMeta(inlineDecorationKey, {
+            enabled: true,
+            refresh: true,
+          } satisfies InlineDecorationMeta);
+          lastDispatchedSnapshot = controller?.getState()?.snapshot ?? null;
+          activeView.dispatch(enableTr);
         });
 
         return {
@@ -198,6 +279,7 @@ export function createMilkdownMrsfPlugin(
             activeView = null;
             refreshScheduled = false;
             decorationsEnabled = false;
+            lastDispatchedSnapshot = undefined;
             controller?.dispose();
             controller = null;
             ctx.set(milkdownMrsfControllerCtx, null);
@@ -226,6 +308,7 @@ export function createMilkdownMrsfPlugin(
         activeView = null;
         refreshScheduled = false;
         decorationsEnabled = false;
+        lastDispatchedSnapshot = undefined;
         controller?.dispose();
         controller = null;
         ctx.set(milkdownMrsfControllerCtx, null);

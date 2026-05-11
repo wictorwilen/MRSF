@@ -4,3 +4,4 @@ dist/
 /.vitepress
 *.vsix
 coverage/
+tmp/

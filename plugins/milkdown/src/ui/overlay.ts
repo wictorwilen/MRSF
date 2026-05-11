@@ -4,7 +4,7 @@ import type { CommentThread, SlimComment } from "../shared/types.js";
 import type { EditorView } from "@milkdown/prose/view";
 import type { MilkdownMrsfController } from "../MilkdownMrsfController.js";
 import type { MilkdownMrsfComposeResult, MilkdownMrsfControllerOptions, ReviewState, ReviewThread } from "../types.js";
-import { createLineIndex, getDocumentText, getSelectedText, pointToOffset, selectionToEditorSelection, textOffsetToPmPos } from "../core/textModel.js";
+import { getProsemirrorTextModel, getSelectedText, pointToOffset, selectionToEditorSelection, textOffsetToPmPos } from "../core/textModel.js";
 import { openMilkdownMrsfConfirmDialog, openMilkdownMrsfFormDialog } from "./dialogs.js";
 
 interface DialogComposeResult {
@@ -26,7 +26,7 @@ interface OverlayEntry {
 
 interface OverlayContext {
   text: string;
-  lineStarts: number[];
+  lineStarts: readonly number[];
 }
 
 function getLineStartOffset(lineStarts: readonly number[], lineNumber: number): number | null {
@@ -38,10 +38,10 @@ function getLineStartOffset(lineStarts: readonly number[], lineNumber: number): 
 }
 
 function createOverlayContext(view: EditorView): OverlayContext {
-  const text = getDocumentText(view.state.doc);
+  const model = getProsemirrorTextModel(view.state.doc);
   return {
-    text,
-    lineStarts: createLineIndex(text),
+    text: model.text,
+    lineStarts: model.lineStarts,
   };
 }
 

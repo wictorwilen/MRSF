@@ -1,6 +1,6 @@
 {
   "name": "@mrsf/milkdown-mrsf",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Experimental Milkdown editor plugin for MRSF review comments",
   "type": "module",
   "main": "./dist/index.js",
