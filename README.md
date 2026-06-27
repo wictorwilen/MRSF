@@ -352,6 +352,19 @@ Then open the printed local Vite URL and navigate to `/` to switch between direc
 
 See [`plugins/milkdown/README.md`](plugins/milkdown/README.md).
 
+## Stability & Versioning
+
+The MRSF specification is currently **v1.0 Draft**. Published packages follow [Semantic Versioning](https://semver.org/); while packages remain pre-1.0, minor releases may include breaking changes and consumers should read package changelogs before upgrading.
+
+Package changelogs:
+
+- [`@mrsf/cli`](cli/CHANGELOG.md)
+- [`@mrsf/mcp`](mcp/CHANGELOG.md)
+- [`@mrsf/markdown-it-mrsf`](plugins/markdown-it/CHANGELOG.md)
+- [`@mrsf/rehype-mrsf`](plugins/rehype/CHANGELOG.md)
+
+Tools target `mrsf_version` `"1.0"`. Consumers SHOULD tolerate unknown future minor versions and unknown `x_`-prefixed extension fields by preserving them when reading and writing sidecars. Consumers SHOULD warn, rather than silently proceed, when they encounter an unknown major version.
+
 ## 🧪 Status
 
 **Draft**: this specification and tooling are open for feedback and improvement.

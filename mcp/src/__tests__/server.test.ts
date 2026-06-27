@@ -14,7 +14,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createMrsfServer } from "../server.js";
 import fs from "node:fs/promises";
 import path from "node:path";
-import os from "node:os";
+import { createHash, randomUUID } from "node:crypto";
 
 // ---------------------------------------------------------------------------
 // Test fixtures
@@ -52,7 +52,10 @@ comments:
 
 /** Set up a temp workspace with a markdown file and sidecar. */
 async function createFixture() {
-  tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "mrsf-mcp-test-"));
+  const workspaceRoot = path.resolve(import.meta.dirname ?? ".", "../../.test-workspace");
+  await fs.mkdir(workspaceRoot, { recursive: true });
+  tmpDir = path.join(workspaceRoot, `mrsf-mcp-test-${randomUUID()}`);
+  await fs.mkdir(tmpDir, { recursive: true });
   await resetFixture();
 }
 
@@ -60,6 +63,10 @@ async function createFixture() {
 async function resetFixture() {
   await fs.writeFile(path.join(tmpDir, "test.md"), FIXTURE_MD);
   await fs.writeFile(path.join(tmpDir, "test.md.review.yaml"), FIXTURE_SIDECAR);
+}
+
+async function fileHash(filePath: string): Promise<string> {
+  return createHash("sha256").update(await fs.readFile(filePath)).digest("hex");
 }
 
 // ---------------------------------------------------------------------------
@@ -331,6 +338,34 @@ describe("mrsf_add", () => {
     const added = comments.find((c: { text: string }) => c.text === "Comment with extensions");
     expect(added.x_source).toBe("mcp");
     expect(added.x_rank).toBe(2);
+  });
+
+  it("uses inline documentText to populate selected_text from the live buffer", async () => {
+    await resetFixture();
+
+    const liveBuffer = "# Hello World\n\nThis line only exists in the editor buffer.\n\nLine four.\nLine five.\n";
+    const result = await client.callTool({
+      name: "mrsf_add",
+      arguments: {
+        document: "test.md",
+        text: "Comment against unsaved buffer",
+        author: "Test",
+        line: 3,
+        documentText: liveBuffer,
+        cwd: tmpDir,
+      },
+    });
+    expect(result.isError).not.toBe(true);
+
+    const listResult = await client.callTool({
+      name: "mrsf_list",
+      arguments: { files: ["test.md.review.yaml"], cwd: tmpDir },
+    });
+    const listText = (listResult.content as Array<{ text: string }>)[0].text;
+    const comments = JSON.parse(listText)[0].comments;
+    const added = comments.find((c: { text: string }) => c.text === "Comment against unsaved buffer");
+    expect(added.selected_text).toBe("This line only exists in the editor buffer.");
+    expect(added.selected_text).not.toBe("This is a test document.");
   });
 
   it("rejects extension keys that do not start with x_", async () => {
@@ -641,6 +676,63 @@ describe("mrsf_update", () => {
       },
     });
     expect(result.isError).toBe(true);
+  });
+
+  it("returns version-mismatch conflict without modifying the sidecar", async () => {
+    const sidecarPath = path.join(tmpDir, "test.md.review.yaml");
+    const beforeHash = await fileHash(sidecarPath);
+    const beforeContent = await fs.readFile(sidecarPath, "utf-8");
+
+    const result = await client.callTool({
+      name: "mrsf_update",
+      arguments: {
+        document: "test.md.review.yaml",
+        id: "c-parent",
+        text: "This must not be written",
+        expectedVersion: "not-the-current-version",
+        cwd: tmpDir,
+      },
+    });
+
+    expect(result.isError).toBe(true);
+    const data = JSON.parse((result.content as Array<{ text: string }>)[0].text);
+    expect(data.status).toBe("conflict");
+    expect(data.code).toBe("version-mismatch");
+    expect(data.expectedVersion).toBe("not-the-current-version");
+    expect(data.currentVersion).toBe(beforeHash);
+    expect(await fs.readFile(sidecarPath, "utf-8")).toBe(beforeContent);
+  });
+
+  it("returns a matching on-disk version and accepts it for the next mutation", async () => {
+    const sidecarPath = path.join(tmpDir, "test.md.review.yaml");
+
+    const updateResult = await client.callTool({
+      name: "mrsf_update",
+      arguments: {
+        document: "test.md.review.yaml",
+        id: "c-parent",
+        text: "Updated with version",
+        cwd: tmpDir,
+      },
+    });
+    expect(updateResult.isError).not.toBe(true);
+    const updateData = JSON.parse((updateResult.content as Array<{ text: string }>)[0].text);
+    expect(updateData.version).toMatch(/^[a-f0-9]{64}$/);
+    expect(updateData.version).toBe(await fileHash(sidecarPath));
+
+    const resolveResult = await client.callTool({
+      name: "mrsf_resolve",
+      arguments: {
+        document: "test.md.review.yaml",
+        id: "c-parent",
+        expectedVersion: updateData.version,
+        cwd: tmpDir,
+      },
+    });
+    expect(resolveResult.isError).not.toBe(true);
+    const resolveData = JSON.parse((resolveResult.content as Array<{ text: string }>)[0].text);
+    expect(resolveData.changed).toContain("c-parent");
+    expect(resolveData.version).toBe(await fileHash(sidecarPath));
   });
 });
 

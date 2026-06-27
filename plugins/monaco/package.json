@@ -1,6 +1,6 @@
 {
   "name": "@mrsf/monaco-mrsf",
-  "version": "0.4.9",
+  "version": "0.4.11",
   "description": "Monaco editor plugin for rendering and editing Sidemark/MRSF (Markdown Review Sidecar Format) review comments",
   "type": "module",
   "main": "./dist/index.js",
@@ -62,7 +62,7 @@
     "LICENSE"
   ],
   "dependencies": {
-    "@mrsf/cli": "^0.4.2"
+    "@mrsf/cli": "^0.5.0"
   },
   "peerDependencies": {
     "monaco-editor": ">=0.45 <1"

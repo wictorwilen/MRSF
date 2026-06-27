@@ -1,27 +1,32 @@
 {
   "name": "@mrsf/rehype-mrsf",
-  "version": "0.4.12",
+  "version": "0.5.0",
   "description": "rehype plugin for rendering Sidemark/MRSF (Markdown Review Sidecar Format) review comments",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "browser": {
+        "types": "./dist/browser.d.ts",
         "import": "./dist/browser.js",
-        "types": "./dist/browser.d.ts"
+        "require": "./dist/browser.cjs"
       },
       "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.cjs"
     },
     "./browser": {
+      "types": "./dist/browser.d.ts",
+      "browser": "./dist/browser.js",
       "import": "./dist/browser.js",
-      "types": "./dist/browser.d.ts"
+      "require": "./dist/browser.cjs"
     },
     "./style.css": "./dist/style.css",
     "./controller": {
+      "types": "./dist/controller.d.ts",
       "import": "./dist/controller.js",
-      "types": "./dist/controller.d.ts"
+      "require": "./dist/controller.cjs"
     }
   },
   "engines": {
@@ -67,12 +72,14 @@
     "dist/**/*.js",
     "dist/**/*.js.map",
     "dist/**/*.d.ts",
+    "dist/**/*.cjs",
+    "dist/**/*.cjs.map",
     "dist/style.css",
     "README.md",
     "LICENSE"
   ],
   "dependencies": {
-    "@mrsf/cli": "^0.4.2",
+    "@mrsf/cli": "^0.5.0",
     "unist-util-visit": "^5.0.0"
   },
   "peerDependencies": {
@@ -95,5 +102,10 @@
     "typescript": "^5.8.2",
     "unified": "^11.0.5",
     "vitest": "^3.2.4"
-  }
+  },
+  "sideEffects": [
+    "./dist/controller.js",
+    "./dist/controller.cjs",
+    "./dist/style.css"
+  ]
 }

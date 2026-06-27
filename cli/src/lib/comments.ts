@@ -2,7 +2,6 @@
  * MRSF Comment Operations — CRUD for sidecar comments.
  */
 
-import { randomUUID } from "node:crypto";
 import type {
   AddCommentOptions,
   Comment,
@@ -12,6 +11,7 @@ import type {
   EditCommentOptions,
   MrsfDocument,
 } from "./types.js";
+import { newCommentId } from "./identity.js";
 import { computeHash } from "./writer.js";
 import { getCurrentCommit, findRepoRoot, isGitAvailable } from "./git.js";
 
@@ -83,7 +83,7 @@ export async function addComment(
   opts: AddCommentOptions,
   repoRoot?: string,
 ): Promise<Comment> {
-  const id = opts.id ?? randomUUID();
+  const id = opts.id ?? newCommentId();
   const timestamp = opts.timestamp ?? new Date().toISOString();
 
   // Auto-detect commit from HEAD when git is available

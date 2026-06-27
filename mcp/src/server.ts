@@ -12,6 +12,7 @@ import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import path from "node:path";
 import fs from "node:fs/promises";
+import { createHash } from "node:crypto";
 
 /** Injected by esbuild at build time from package.json "version". */
 declare const PKG_VERSION: string;
@@ -37,6 +38,7 @@ import {
 
   // Re-anchoring
   reanchorDocument,
+  reanchorDocumentText,
   applyReanchorResults,
   reanchorFile,
 
@@ -124,6 +126,14 @@ const addCommentInputSchema = {
   extensions: commentExtensionsInputSchema.optional(),
 } as const;
 
+const documentTextInput = z.string().optional().describe(
+  "Inline document content to use instead of reading from disk. Use this when the editor has unsaved changes so selected_text/anchoring reflect the live buffer.",
+);
+
+const expectedVersionInput = z.string().optional().describe(
+  "Optimistic-concurrency guard: the sidecar content hash the caller last observed. If it no longer matches the current sidecar, the write is rejected with a conflict so the caller can re-read and retry.",
+);
+
 function toolAnnotations(options: {
   title: string;
   readOnlyHint: boolean;
@@ -161,6 +171,44 @@ async function withFileLock<T>(filePath: string, fn: () => Promise<T>): Promise<
   }
 }
 
+async function sidecarVersion(sidecarPath: string): Promise<string | null> {
+  try {
+    const bytes = await fs.readFile(sidecarPath);
+    return createHash("sha256").update(bytes).digest("hex");
+  } catch (err) {
+    if (isNotFoundError(err)) return null;
+    throw err;
+  }
+}
+
+async function versionConflictResponse(
+  sidecarPath: string,
+  expectedVersion: string,
+) {
+  const currentVersion = await sidecarVersion(sidecarPath);
+  return {
+    content: [{
+      type: "text" as const,
+      text: JSON.stringify({
+        status: "conflict",
+        code: "version-mismatch",
+        message: `Sidecar version mismatch for ${sidecarPath}. Re-read the sidecar and retry with the latest version.`,
+        currentVersion,
+        expectedVersion,
+      }, null, 2),
+    }],
+    isError: true,
+  };
+}
+
+async function hasVersionConflict(sidecarPath: string, expectedVersion?: string): Promise<boolean> {
+  return expectedVersion !== undefined && (await sidecarVersion(sidecarPath)) !== expectedVersion;
+}
+
+function isNotFoundError(err: unknown): boolean {
+  return err instanceof Error && "code" in err && err.code === "ENOENT";
+}
+
 // ---------------------------------------------------------------------------
 // Tools
 // ---------------------------------------------------------------------------
@@ -194,7 +242,7 @@ function registerTools(server: McpServer): void {
         return {
           content: [{
             type: "text",
-            text: JSON.stringify({ sidecarPath, documentPath: docPath }, null, 2),
+            text: JSON.stringify({ sidecarPath, documentPath: docPath, version: await sidecarVersion(sidecarPath) }, null, 2),
           }],
         };
       } catch (err) {
@@ -272,25 +320,98 @@ function registerTools(server: McpServer): void {
         threshold: z.number().min(0).max(1).optional().describe("Fuzzy match threshold 0.0–1.0 (default 0.6)"),
         updateText: z.boolean().optional().describe("Also replace selected_text with current document text"),
         force: z.boolean().optional().describe("Firmly anchor high-confidence results: update commit to HEAD and clear audit fields"),
+        documentText: documentTextInput,
+        expectedVersion: expectedVersionInput,
         cwd: z.string().optional().describe("Working directory"),
       },
     },
-    async ({ files, dryRun, threshold, updateText, force, cwd }) => {
+    async ({ files, dryRun, threshold, updateText, force, documentText, expectedVersion, cwd }) => {
       try {
         const workDir = cwd ?? process.cwd();
         const sidecarPaths = await resolveSidecarPaths(files ?? [], workDir);
 
-        const allResults: Array<{ file: string; results: ReanchorResult[]; changed: number }> = [];
+        if (documentText !== undefined && sidecarPaths.length !== 1) {
+          return {
+            content: [{
+              type: "text",
+              text: "documentText can only be used when exactly one sidecar/document is targeted.",
+            }],
+            isError: true,
+          };
+        }
+
+        const allResults: Array<{ file: string; results: ReanchorResult[]; changed: number; version: string | null }> = [];
+        const enforceExpectedVersion = sidecarPaths.length === 1 ? expectedVersion : undefined;
+        const expectedVersionNote = expectedVersion !== undefined && sidecarPaths.length !== 1
+          ? "expectedVersion ignored because multiple sidecars were targeted."
+          : undefined;
 
         for (const sp of sidecarPaths) {
-          const { results, changed } = await withFileLock(sp, () => reanchorFile(sp, {
-            dryRun,
-            threshold,
-            updateText,
-            force,
-            cwd: workDir,
-          }));
-          allResults.push({ file: sp, results, changed });
+          const result = await withFileLock(sp, async () => {
+            if (!dryRun && await hasVersionConflict(sp, enforceExpectedVersion)) {
+              return versionConflictResponse(sp, enforceExpectedVersion!);
+            }
+
+            if (documentText !== undefined) {
+              const doc = await parseSidecar(sp);
+              const results = reanchorDocumentText(doc, documentText, { threshold });
+              let changed = 0;
+
+              if (!dryRun) {
+                const repoRoot = await findRepoRoot(workDir);
+                const headCommit = repoRoot ? await getCurrentCommit(repoRoot) : undefined;
+                changed = applyReanchorResults(doc, results, {
+                  updateText,
+                  force,
+                  headCommit: headCommit ?? undefined,
+                });
+                if (changed > 0) {
+                  await writeSidecar(sp, doc);
+                }
+              }
+
+              return {
+                content: [{
+                  type: "text" as const,
+                  text: JSON.stringify({
+                    file: sp,
+                    results,
+                    changed,
+                    version: await sidecarVersion(sp),
+                  }, null, 2),
+                }],
+              };
+            }
+
+            const { results, changed } = await reanchorFile(sp, {
+              dryRun,
+              threshold,
+              updateText,
+              force,
+              cwd: workDir,
+            });
+            return {
+              content: [{
+                type: "text" as const,
+                text: JSON.stringify({
+                  file: sp,
+                  results,
+                  changed,
+                  version: await sidecarVersion(sp),
+                }, null, 2),
+              }],
+            };
+          });
+
+          if ("isError" in result && result.isError) return result;
+
+          const parsed = JSON.parse(result.content[0].text) as {
+            file: string;
+            results: ReanchorResult[];
+            changed: number;
+            version: string | null;
+          };
+          allResults.push(parsed);
         }
 
         const totalChanged = allResults.reduce((sum, r) => sum + r.changed, 0);
@@ -305,6 +426,7 @@ function registerTools(server: McpServer): void {
               totalChanged,
               totalOrphaned,
               dryRun: dryRun ?? false,
+              note: expectedVersionNote,
               files: allResults,
             }, null, 2),
           }],
@@ -331,10 +453,12 @@ function registerTools(server: McpServer): void {
       inputSchema: {
         document: z.string().describe("Path to the Markdown document"),
         ...addCommentInputSchema,
+        documentText: documentTextInput,
+        expectedVersion: expectedVersionInput,
         cwd: z.string().optional().describe("Working directory"),
       },
     },
-    async ({ document, text, author, line, end_line, start_column, end_column, type, severity, reply_to, extensions, cwd }) => {
+    async ({ document, text, author, line, end_line, start_column, end_column, type, severity, reply_to, extensions, documentText, expectedVersion, cwd }) => {
       try {
         const workDir = cwd ?? process.cwd();
         const docPath = path.resolve(workDir, document);
@@ -342,6 +466,10 @@ function registerTools(server: McpServer): void {
         const sidecarPath = await discoverSidecar(docPath, { cwd: root ?? workDir });
 
         return await withFileLock(sidecarPath, async () => {
+        if (await hasVersionConflict(sidecarPath, expectedVersion)) {
+          return versionConflictResponse(sidecarPath, expectedVersion!);
+        }
+
         // Parse existing or create new sidecar
         let doc: MrsfDocument;
         try {
@@ -373,7 +501,9 @@ function registerTools(server: McpServer): void {
         // Populate selected_text from document content
         if (comment.line != null) {
           try {
-            const lines = (await fs.readFile(docPath, "utf-8")).split("\n");
+            const lines = documentText !== undefined
+              ? documentText.split("\n")
+              : (await fs.readFile(docPath, "utf-8")).split("\n");
             populateSelectedText(comment, lines);
           } catch {
             // Document not readable — skip text population
@@ -391,6 +521,7 @@ function registerTools(server: McpServer): void {
               end_line: comment.end_line ?? null,
               status: "added",
               sidecarPath,
+              version: await sidecarVersion(sidecarPath),
             }, null, 2),
           }],
         };
@@ -417,10 +548,12 @@ function registerTools(server: McpServer): void {
       inputSchema: {
         document: z.string().describe("Path to the Markdown document"),
         comments: z.array(z.object(addCommentInputSchema)).describe("Array of comments to add"),
+        documentText: documentTextInput,
+        expectedVersion: expectedVersionInput,
         cwd: z.string().optional().describe("Working directory"),
       },
     },
-    async ({ document, comments, cwd }) => {
+    async ({ document, comments, documentText, expectedVersion, cwd }) => {
       try {
         const workDir = cwd ?? process.cwd();
         const docPath = path.resolve(workDir, document);
@@ -428,6 +561,10 @@ function registerTools(server: McpServer): void {
         const sidecarPath = await discoverSidecar(docPath, { cwd: root ?? workDir });
 
         return await withFileLock(sidecarPath, async () => {
+        if (await hasVersionConflict(sidecarPath, expectedVersion)) {
+          return versionConflictResponse(sidecarPath, expectedVersion!);
+        }
+
         // Parse existing or create new sidecar
         let doc: MrsfDocument;
         try {
@@ -446,7 +583,9 @@ function registerTools(server: McpServer): void {
         // Read document lines once for populating selected_text
         let docLines: string[] | null = null;
         try {
-          docLines = (await fs.readFile(docPath, "utf-8")).split("\n");
+          docLines = documentText !== undefined
+            ? documentText.split("\n")
+            : (await fs.readFile(docPath, "utf-8")).split("\n");
         } catch {
           // Document not readable — skip text population
         }
@@ -481,6 +620,7 @@ function registerTools(server: McpServer): void {
               sidecarPath,
               added: added.map((c) => ({ id: c.id, line: c.line, end_line: c.end_line })),
               total: added.length,
+              version: await sidecarVersion(sidecarPath),
             }, null, 2),
           }],
         };
@@ -514,15 +654,21 @@ function registerTools(server: McpServer): void {
         start_column: z.number().int().min(0).optional().describe("New starting column (0-based)"),
         end_column: z.number().int().min(0).optional().describe("New ending column"),
         extensions: commentExtensionsInputSchema.optional(),
+        documentText: documentTextInput,
+        expectedVersion: expectedVersionInput,
         cwd: z.string().optional().describe("Working directory"),
       },
     },
-    async ({ document, id, text, type: commentType, severity, line, end_line, start_column, end_column, extensions, cwd }) => {
+    async ({ document, id, text, type: commentType, severity, line, end_line, start_column, end_column, extensions, documentText, expectedVersion, cwd }) => {
       try {
         const workDir = cwd ?? process.cwd();
         const [sp] = await resolveSidecarPaths([document], workDir);
 
         return await withFileLock(sp, async () => {
+        if (await hasVersionConflict(sp, expectedVersion)) {
+          return versionConflictResponse(sp, expectedVersion!);
+        }
+
         const doc = await parseSidecar(sp);
         const comment = doc.comments.find((c) => c.id === id);
 
@@ -551,7 +697,9 @@ function registerTools(server: McpServer): void {
         if (comment.line != null && (updated.includes("line") || updated.includes("end_line"))) {
           try {
             const docPath = path.resolve(workDir, sidecarToDocument(sp));
-            const lines = (await fs.readFile(docPath, "utf-8")).split("\n");
+            const lines = documentText !== undefined
+              ? documentText.split("\n")
+              : (await fs.readFile(docPath, "utf-8")).split("\n");
             populateSelectedText(comment, lines);
           } catch {
             // skip
@@ -567,6 +715,7 @@ function registerTools(server: McpServer): void {
               id,
               updated,
               sidecarPath: sp,
+              version: await sidecarVersion(sp),
             }, null, 2),
           }],
         };
@@ -598,15 +747,20 @@ function registerTools(server: McpServer): void {
         type: z.string().optional().describe("Resolve all comments of this type"),
         severity: z.enum(["low", "medium", "high"]).optional().describe("Resolve all comments of this severity"),
         unresolve: z.boolean().optional().describe("Set to true to unresolve instead"),
+        expectedVersion: expectedVersionInput,
         cwd: z.string().optional().describe("Working directory"),
       },
     },
-    async ({ document, id, ids, author, type: commentType, severity, unresolve, cwd }) => {
+    async ({ document, id, ids, author, type: commentType, severity, unresolve, expectedVersion, cwd }) => {
       try {
         const workDir = cwd ?? process.cwd();
         const [sp] = await resolveSidecarPaths([document], workDir);
 
         return await withFileLock(sp, async () => {
+        if (await hasVersionConflict(sp, expectedVersion)) {
+          return versionConflictResponse(sp, expectedVersion!);
+        }
+
         const doc = await parseSidecar(sp);
 
         // Build the set of target IDs
@@ -648,6 +802,7 @@ function registerTools(server: McpServer): void {
               changed: resolved,
               notFound: notFound.length > 0 ? notFound : undefined,
               sidecarPath: sp,
+              version: await sidecarVersion(sp),
             }, null, 2),
           }],
         };
@@ -693,7 +848,7 @@ function registerTools(server: McpServer): void {
         const workDir = cwd ?? process.cwd();
         const sidecarPaths = await resolveSidecarPaths(files ?? [], workDir);
 
-        const allComments: Array<{ file: string; comments: Comment[] }> = [];
+        const allComments: Array<{ file: string; version: string | null; comments: Comment[] }> = [];
 
         for (const sp of sidecarPaths) {
           const doc = await parseSidecar(sp);
@@ -710,7 +865,7 @@ function registerTools(server: McpServer): void {
             });
           }
 
-          allComments.push({ file: sp, comments });
+          allComments.push({ file: sp, version: await sidecarVersion(sp), comments });
         }
 
         if (wantSummary) {
@@ -718,7 +873,10 @@ function registerTools(server: McpServer): void {
           return {
             content: [{
               type: "text",
-              text: JSON.stringify(summarize(flat), null, 2),
+              text: JSON.stringify({
+                ...summarize(flat),
+                files: allComments.map(({ file, version }) => ({ file, version })),
+              }, null, 2),
             }],
           };
         }
@@ -726,7 +884,8 @@ function registerTools(server: McpServer): void {
         if (format === "compact") {
           const lines: string[] = [];
           for (const { file, comments } of allComments) {
-            lines.push(`── ${path.basename(file)} (${comments.length}) ──`);
+            const version = allComments.find((entry) => entry.file === file)?.version;
+            lines.push(`── ${path.basename(file)} (${comments.length})${version ? ` version ${version}` : ""} ──`);
             for (const c of comments) {
               const ln = c.line != null ? `L${c.line}` : "  –";
               const sev = (c.severity ?? "–").padEnd(6);
@@ -779,8 +938,10 @@ function registerTools(server: McpServer): void {
         const repoRoot = await findRepoRoot(workDir);
 
         const allResults: StatusResult[] = [];
+        const filesWithVersions: Array<{ file: string; version: string | null }> = [];
 
         for (const sp of sidecarPaths) {
+          filesWithVersions.push({ file: sp, version: await sidecarVersion(sp) });
           const doc = await parseSidecar(sp);
           const docPath = sidecarToDocument(sp);
           let lines: string[];
@@ -814,7 +975,7 @@ function registerTools(server: McpServer): void {
         return {
           content: [{
             type: "text",
-            text: JSON.stringify({ counts, results: allResults }, null, 2),
+            text: JSON.stringify({ counts, results: allResults, files: filesWithVersions }, null, 2),
           }],
         };
       } catch (err) {
@@ -838,10 +999,11 @@ function registerTools(server: McpServer): void {
       inputSchema: {
         oldDocument: z.string().describe("Old path to the Markdown document"),
         newDocument: z.string().describe("New path to the Markdown document"),
+        expectedVersion: expectedVersionInput,
         cwd: z.string().optional().describe("Working directory"),
       },
     },
-    async ({ oldDocument, newDocument, cwd }) => {
+    async ({ oldDocument, newDocument, expectedVersion, cwd }) => {
       try {
         const workDir = cwd ?? process.cwd();
         const oldDocPath = path.resolve(workDir, oldDocument);
@@ -852,6 +1014,10 @@ function registerTools(server: McpServer): void {
         const oldSidecarPath = await discoverSidecar(oldDocPath, { cwd: effectiveRoot });
 
         return await withFileLock(oldSidecarPath, async () => {
+        if (await hasVersionConflict(oldSidecarPath, expectedVersion)) {
+          return versionConflictResponse(oldSidecarPath, expectedVersion!);
+        }
+
         const doc = await parseSidecar(oldSidecarPath);
 
         doc.document = path.basename(newDocPath);
@@ -871,6 +1037,7 @@ function registerTools(server: McpServer): void {
               oldSidecar: oldSidecarPath,
               newSidecar: newSidecarPath,
               document: doc.document,
+              version: await sidecarVersion(newSidecarPath),
             }, null, 2),
           }],
         };
@@ -901,15 +1068,20 @@ function registerTools(server: McpServer): void {
         cascade: z.boolean().optional().describe(
           "When true, also remove direct replies instead of promoting them (default: false)",
         ),
+        expectedVersion: expectedVersionInput,
         cwd: z.string().optional().describe("Working directory"),
       },
     },
-    async ({ document, id, cascade, cwd }) => {
+    async ({ document, id, cascade, expectedVersion, cwd }) => {
       try {
         const workDir = cwd ?? process.cwd();
         const [sp] = await resolveSidecarPaths([document], workDir);
 
         return await withFileLock(sp, async () => {
+        if (await hasVersionConflict(sp, expectedVersion)) {
+          return versionConflictResponse(sp, expectedVersion!);
+        }
+
         const doc = await parseSidecar(sp);
 
         const ok = removeComment(doc, id, cascade ? { cascade: true } : undefined);
@@ -931,6 +1103,7 @@ function registerTools(server: McpServer): void {
               deleted: true,
               cascade: cascade ?? false,
               sidecarPath: sp,
+              version: await sidecarVersion(sp),
             }, null, 2),
           }],
         };
@@ -960,15 +1133,20 @@ function registerTools(server: McpServer): void {
         strategy: z.enum(["salvage", "reset"]).optional().describe(
           "Repair strategy: 'salvage' (default) attempts to recover comments; 'reset' starts fresh",
         ),
+        expectedVersion: expectedVersionInput,
         cwd: z.string().optional().describe("Working directory"),
       },
     },
-    async ({ document, strategy, cwd }) => {
+    async ({ document, strategy, expectedVersion, cwd }) => {
       try {
         const workDir = cwd ?? process.cwd();
         const [sp] = await resolveSidecarPaths([document], workDir);
 
         return await withFileLock(sp, async () => {
+        if (await hasVersionConflict(sp, expectedVersion)) {
+          return versionConflictResponse(sp, expectedVersion!);
+        }
+
         const effectiveStrategy = strategy ?? "salvage";
 
         if (effectiveStrategy === "reset") {
@@ -988,6 +1166,7 @@ function registerTools(server: McpServer): void {
                 sidecarPath: sp,
                 result: "Sidecar reset to empty.",
                 commentsRecovered: 0,
+                version: await sidecarVersion(sp),
               }, null, 2),
             }],
           };
@@ -1010,6 +1189,7 @@ function registerTools(server: McpServer): void {
                 commentsSkipped: result.partialComments
                   ? (result.partialComments.length < result.doc.comments.length ? 0 : undefined)
                   : undefined,
+                version: await sidecarVersion(sp),
               }, null, 2),
             }],
           };
@@ -1031,6 +1211,7 @@ function registerTools(server: McpServer): void {
               sidecarPath: sp,
               result: `Could not salvage any comments: ${result.error}. File reset to empty.`,
               commentsRecovered: 0,
+              version: await sidecarVersion(sp),
             }, null, 2),
           }],
         };
@@ -1070,6 +1251,7 @@ function registerTools(server: McpServer): void {
           description: "Find the Sidemark (MRSF) sidecar for a given Markdown document.",
           parameters: {
             document: { type: "string", required: true, description: "Path to the Markdown document" },
+            version: { type: "string | null", required: false, description: "Returned sidecar content hash for optimistic concurrency" },
             cwd: { type: "string", required: false, description: "Working directory (defaults to process.cwd())" },
           },
         },
@@ -1089,6 +1271,9 @@ function registerTools(server: McpServer): void {
             threshold: { type: "number (0.0–1.0)", required: false, description: "Fuzzy match threshold (default 0.6)" },
             updateText: { type: "boolean", required: false, description: "Replace selected_text with current document text" },
             force: { type: "boolean", required: false, description: "Firmly anchor high-confidence results" },
+            documentText: { type: "string", required: false, description: "Inline document content for unsaved editor buffers; requires exactly one target" },
+            expectedVersion: { type: "string", required: false, description: "Reject write if the current sidecar hash differs" },
+            version: { type: "string | null", required: false, description: "Returned sidecar content hash after the operation" },
             cwd: { type: "string", required: false, description: "Working directory" },
           },
         },
@@ -1105,6 +1290,9 @@ function registerTools(server: McpServer): void {
             type: { type: "string", required: false, description: "Comment type: suggestion, issue, question, accuracy, style, clarity" },
             severity: { type: "enum: low | medium | high", required: false, description: "Severity level" },
             reply_to: { type: "string", required: false, description: "Parent comment ID for threading" },
+            documentText: { type: "string", required: false, description: "Inline document content for unsaved editor buffers" },
+            expectedVersion: { type: "string", required: false, description: "Reject write if the current sidecar hash differs" },
+            version: { type: "string | null", required: false, description: "Returned sidecar content hash after the operation" },
             cwd: { type: "string", required: false, description: "Working directory" },
           },
         },
@@ -1113,6 +1301,9 @@ function registerTools(server: McpServer): void {
           parameters: {
             document: { type: "string", required: true, description: "Path to the Markdown document" },
             comments: { type: "object[]", required: true, description: "Array of comment objects, each with: text (required), author (required), line, end_line, start_column, end_column, type, severity, reply_to" },
+            documentText: { type: "string", required: false, description: "Inline document content for unsaved editor buffers" },
+            expectedVersion: { type: "string", required: false, description: "Reject write if the current sidecar hash differs" },
+            version: { type: "string | null", required: false, description: "Returned sidecar content hash after the operation" },
             cwd: { type: "string", required: false, description: "Working directory" },
           },
         },
@@ -1128,6 +1319,9 @@ function registerTools(server: McpServer): void {
             end_line: { type: "integer (≥ 1)", required: false, description: "New ending line number (inclusive)" },
             start_column: { type: "integer (≥ 0)", required: false, description: "New starting column (0-based)" },
             end_column: { type: "integer (≥ 0)", required: false, description: "New ending column" },
+            documentText: { type: "string", required: false, description: "Inline document content for unsaved editor buffers when line anchors change" },
+            expectedVersion: { type: "string", required: false, description: "Reject write if the current sidecar hash differs" },
+            version: { type: "string | null", required: false, description: "Returned sidecar content hash after the operation" },
             cwd: { type: "string", required: false, description: "Working directory" },
           },
         },
@@ -1141,6 +1335,8 @@ function registerTools(server: McpServer): void {
             type: { type: "string", required: false, description: "Resolve all comments of this type" },
             severity: { type: "enum: low | medium | high", required: false, description: "Resolve all comments of this severity" },
             unresolve: { type: "boolean", required: false, description: "Set to true to unresolve instead" },
+            expectedVersion: { type: "string", required: false, description: "Reject write if the current sidecar hash differs" },
+            version: { type: "string | null", required: false, description: "Returned sidecar content hash after the operation" },
             cwd: { type: "string", required: false, description: "Working directory" },
           },
         },
@@ -1155,6 +1351,7 @@ function registerTools(server: McpServer): void {
             severity: { type: "enum: low | medium | high", required: false, description: "Filter by severity" },
             format: { type: "enum: full | compact", required: false, description: "Output format: 'full' (default) returns JSON; 'compact' returns a scannable text table" },
             summary: { type: "boolean", required: false, description: "Return summary statistics instead of full comments" },
+            version: { type: "string | null", required: false, description: "Returned per-sidecar content hash" },
             cwd: { type: "string", required: false, description: "Working directory" },
           },
         },
@@ -1162,6 +1359,7 @@ function registerTools(server: McpServer): void {
           description: "Check the anchor health of all comments in Sidemark (MRSF) sidecars.",
           parameters: {
             files: { type: "string[]", required: false, description: "Sidecar or Markdown file paths. If omitted, discovers all." },
+            version: { type: "string | null", required: false, description: "Returned per-sidecar content hash" },
             cwd: { type: "string", required: false, description: "Working directory" },
           },
         },
@@ -1170,6 +1368,8 @@ function registerTools(server: McpServer): void {
           parameters: {
             oldDocument: { type: "string", required: true, description: "Old path to the Markdown document" },
             newDocument: { type: "string", required: true, description: "New path to the Markdown document" },
+            expectedVersion: { type: "string", required: false, description: "Reject write if the current sidecar hash differs" },
+            version: { type: "string | null", required: false, description: "Returned new sidecar content hash after the operation" },
             cwd: { type: "string", required: false, description: "Working directory" },
           },
         },
@@ -1179,6 +1379,8 @@ function registerTools(server: McpServer): void {
             document: { type: "string", required: true, description: "Path to the Markdown document or its sidecar" },
             id: { type: "string", required: true, description: "Comment ID to delete" },
             cascade: { type: "boolean", required: false, description: "Also remove direct replies instead of promoting them" },
+            expectedVersion: { type: "string", required: false, description: "Reject write if the current sidecar hash differs" },
+            version: { type: "string | null", required: false, description: "Returned sidecar content hash after the operation" },
             cwd: { type: "string", required: false, description: "Working directory" },
           },
         },
@@ -1187,6 +1389,8 @@ function registerTools(server: McpServer): void {
           parameters: {
             document: { type: "string", required: true, description: "Path to the Markdown document or its sidecar" },
             strategy: { type: "enum: salvage | reset", required: false, description: "Repair strategy: 'salvage' (default) or 'reset'" },
+            expectedVersion: { type: "string", required: false, description: "Reject write if the current sidecar hash differs" },
+            version: { type: "string | null", required: false, description: "Returned sidecar content hash after the operation" },
             cwd: { type: "string", required: false, description: "Working directory" },
           },
         },

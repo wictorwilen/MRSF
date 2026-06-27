@@ -1,27 +1,32 @@
 {
   "name": "@mrsf/markdown-it-mrsf",
-  "version": "0.4.11",
+  "version": "0.5.0",
   "description": "markdown-it plugin for rendering Sidemark/MRSF (Markdown Review Sidecar Format) review comments",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "browser": {
+        "types": "./dist/browser.d.ts",
         "import": "./dist/browser.js",
-        "types": "./dist/browser.d.ts"
+        "require": "./dist/browser.cjs"
       },
       "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.cjs"
     },
     "./browser": {
+      "types": "./dist/browser.d.ts",
+      "browser": "./dist/browser.js",
       "import": "./dist/browser.js",
-      "types": "./dist/browser.d.ts"
+      "require": "./dist/browser.cjs"
     },
     "./style.css": "./dist/style.css",
     "./controller": {
+      "types": "./dist/controller.d.ts",
       "import": "./dist/controller.js",
-      "types": "./dist/controller.d.ts"
+      "require": "./dist/controller.cjs"
     }
   },
   "engines": {
@@ -65,12 +70,14 @@
     "dist/**/*.js",
     "dist/**/*.js.map",
     "dist/**/*.d.ts",
+    "dist/**/*.cjs",
+    "dist/**/*.cjs.map",
     "dist/style.css",
     "README.md",
     "LICENSE"
   ],
   "dependencies": {
-    "@mrsf/cli": "^0.4.2"
+    "@mrsf/cli": "^0.5.0"
   },
   "devDependencies": {
     "@types/markdown-it": "^14.1.2",
@@ -80,5 +87,10 @@
     "markdown-it": "^14.1.0",
     "typescript": "^5.8.2",
     "vitest": "^3.2.4"
-  }
+  },
+  "sideEffects": [
+    "./dist/controller.js",
+    "./dist/controller.cjs",
+    "./dist/style.css"
+  ]
 }

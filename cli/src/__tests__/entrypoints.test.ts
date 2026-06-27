@@ -10,6 +10,8 @@ describe("library entrypoints", () => {
     const git = await import("../lib/git.js");
     const reanchor = await import("../lib/reanchor.js");
     const comments = await import("../lib/comments.js");
+    const identity = await import("../lib/identity.js");
+    const validateCore = await import("../lib/validate-core.js");
 
     expect(api.findWorkspaceRoot).toBe(discovery.findWorkspaceRoot);
     expect(api.parseSidecar).toBe(parser.parseSidecar);
@@ -17,6 +19,9 @@ describe("library entrypoints", () => {
     expect(api.validateFile).toBe(validator.validateFile);
     expect(api.findRepoRoot).toBe(git.findRepoRoot);
     expect(api.reanchorFile).toBe(reanchor.reanchorFile);
+    expect(api.resolveAnchor).toBe(reanchor.resolveAnchor);
+    expect(api.validateDocument).toBe(validateCore.validateDocument);
+    expect(api.newCommentId).toBe(identity.newCommentId);
     expect(api.addComment).toBe(comments.addComment);
     expect(api.summarize).toBe(comments.summarize);
   });
@@ -24,7 +29,9 @@ describe("library entrypoints", () => {
   it("browser re-exports the browser-safe API surface", async () => {
     const browser = await import("../browser.js");
     const fuzzy = await import("../lib/fuzzy.js");
+    const identity = await import("../lib/identity.js");
     const reanchorCore = await import("../lib/reanchor-core.js");
+    const validateCore = await import("../lib/validate-core.js");
 
     expect(browser.combinedScore).toBe(fuzzy.combinedScore);
     expect(browser.exactMatch).toBe(fuzzy.exactMatch);
@@ -33,6 +40,9 @@ describe("library entrypoints", () => {
     expect(browser.applyReanchorResults).toBe(reanchorCore.applyReanchorResults);
     expect(browser.reanchorComment).toBe(reanchorCore.reanchorComment);
     expect(browser.reanchorDocumentLines).toBe(reanchorCore.reanchorDocumentLines);
+    expect(browser.resolveAnchor).toBe(reanchorCore.resolveAnchor);
     expect(browser.toReanchorLines).toBe(reanchorCore.toReanchorLines);
+    expect(browser.validateDocument).toBe(validateCore.validateDocument);
+    expect(browser.newCommentId).toBe(identity.newCommentId);
   });
 });

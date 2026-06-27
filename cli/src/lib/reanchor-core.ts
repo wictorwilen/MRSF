@@ -1,4 +1,5 @@
 import type {
+  AnchorPosition,
   Comment,
   DiffHunk,
   MrsfDocument,
@@ -264,6 +265,91 @@ export function reanchorDocumentText(
   opts: { threshold?: number } = {},
 ): ReanchorResult[] {
   return reanchorDocumentLines(doc, toReanchorLines(documentText), opts);
+}
+
+export function resolveAnchor(
+  comment: Comment,
+  documentText: string,
+  opts: { threshold?: number } = {},
+): AnchorPosition {
+  const normalizedText = documentText.replace(/\r\n/g, "\n");
+  const documentLines = toReanchorLines(documentText);
+  const result = reanchorComment(comment, documentLines, opts);
+
+  if (result.status === "orphaned") {
+    return {
+      status: "orphaned",
+      score: result.score,
+      reason: result.reason,
+    };
+  }
+
+  const line = result.newLine ?? comment.line;
+  if (line == null) {
+    return {
+      status: result.status,
+      score: result.score,
+      reason: result.reason,
+    };
+  }
+
+  const rawLines = normalizedText.split("\n");
+  const lineStarts = computeLineStarts(rawLines);
+  const endLine = result.newEndLine ?? comment.end_line ?? line;
+  const startColumn = result.newStartColumn ?? comment.start_column ?? 0;
+  const endColumn = result.newEndColumn ?? comment.end_column;
+  const from = offsetFor(lineStarts, rawLines, line, startColumn);
+  const selectedText = comment.selected_text?.replace(/\r\n/g, "\n");
+  const to =
+    endColumn != null
+      ? offsetFor(lineStarts, rawLines, endLine, endColumn)
+      : selectedText
+        ? from + selectedText.length
+        : offsetFor(lineStarts, rawLines, endLine, rawLines[endLine - 1]?.length ?? 0);
+
+  return {
+    status: result.status,
+    score: result.score,
+    from,
+    to,
+    line,
+    endLine,
+    startColumn,
+    endColumn: endColumn ?? columnForOffset(lineStarts, rawLines, endLine, to),
+    reason: result.reason,
+  };
+}
+
+function computeLineStarts(lines: string[]): number[] {
+  const starts = [0];
+  let offset = 0;
+  for (const line of lines) {
+    starts.push(offset);
+    offset += line.length + 1;
+  }
+  return starts;
+}
+
+function offsetFor(
+  lineStarts: number[],
+  lines: string[],
+  line: number,
+  column: number,
+): number {
+  const start = lineStarts[line] ?? 0;
+  const maxColumn = lines[line - 1]?.length ?? 0;
+  return start + Math.max(0, Math.min(column, maxColumn));
+}
+
+function columnForOffset(
+  lineStarts: number[],
+  lines: string[],
+  line: number,
+  offset: number,
+): number {
+  const start = lineStarts[line] ?? 0;
+  const maxColumn = lines[line - 1]?.length ?? 0;
+  return Math.max(0, Math.min(offset - start, maxColumn));
 }
 
 export function applyReanchorResults(

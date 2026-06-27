@@ -69,6 +69,7 @@ export type DiagnosticSeverity = "error" | "warning";
 
 export interface ValidationDiagnostic {
   severity: DiagnosticSeverity;
+  code: string;
   message: string;
   /** Path within the document, e.g. "/comments/0/end_line". */
   path?: string;
@@ -108,6 +109,24 @@ export interface ReanchorResult {
   /** Previous selected_text before update (for audit / --update-text). */
   previousSelectedText?: string;
   /** Human-readable explanation of the resolution. */
+  reason: string;
+}
+
+export interface AnchorPosition {
+  status: ReanchorStatus;
+  score: number;
+  /** Absolute 0-based character offset in normalized document text (start). */
+  from?: number;
+  /** Absolute 0-based character offset in normalized document text (end, exclusive). */
+  to?: number;
+  /** 1-based start line. */
+  line?: number;
+  /** 1-based end line. */
+  endLine?: number;
+  /** 0-based start column. */
+  startColumn?: number;
+  /** 0-based end column. */
+  endColumn?: number;
   reason: string;
 }
 

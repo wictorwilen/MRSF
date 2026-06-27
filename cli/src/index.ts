@@ -14,6 +14,9 @@ import * as fuzzy from "./lib/fuzzy.js";
 import * as git from "./lib/git.js";
 import * as reanchor from "./lib/reanchor.js";
 import * as comments from "./lib/comments.js";
+import * as identity from "./lib/identity.js";
+import * as validateCore from "./lib/validate-core.js";
+import { mrsfSchema } from "./lib/schema.js";
 
 // Types
 export type {
@@ -27,6 +30,7 @@ export type {
   ValidationResult,
   ReanchorStatus,
   ReanchorResult,
+  AnchorPosition,
   FuzzyCandidate,
   DiffHunk,
   AddCommentOptions,
@@ -68,6 +72,8 @@ export const writeSidecar = writer.writeSidecar;
 // Validation
 export const validate = validator.validate;
 export const validateFile = validator.validateFile;
+export const validateDocument = validateCore.validateDocument;
+export { mrsfSchema };
 
 // Fuzzy matching
 export const exactMatch = fuzzy.exactMatch;
@@ -94,6 +100,7 @@ export const reanchorComment = reanchor.reanchorComment;
 export const reanchorDocumentLines = reanchor.reanchorDocumentLines;
 export const reanchorDocumentText = reanchor.reanchorDocumentText;
 export const toReanchorLines = reanchor.toReanchorLines;
+export const resolveAnchor = reanchor.resolveAnchor;
 export const reanchorDocument = reanchor.reanchorDocument;
 export const applyReanchorResults = reanchor.applyReanchorResults;
 export const reanchorFile = reanchor.reanchorFile;
@@ -110,3 +117,9 @@ export const filterComments = comments.filterComments;
 export const getThreads = comments.getThreads;
 export const summarize = comments.summarize;
 export type { CommentSummary, RemoveCommentOptions } from "./lib/comments.js";
+
+// Identity
+export const formatAuthor = identity.formatAuthor;
+export const parseAuthor = identity.parseAuthor;
+export const newCommentId = identity.newCommentId;
+export type { ParsedAuthor } from "./lib/identity.js";

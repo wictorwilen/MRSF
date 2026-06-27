@@ -1,18 +1,21 @@
 {
   "name": "@mrsf/cli",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "CLI and library for the Markdown Review Sidecar Format (MRSF)",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.cjs"
     },
     "./browser": {
+      "types": "./dist/browser.d.ts",
+      "browser": "./dist/browser.js",
       "import": "./dist/browser.js",
-      "types": "./dist/browser.d.ts"
+      "require": "./dist/browser.cjs"
     }
   },
   "bin": {
@@ -22,7 +25,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node esbuild.config.mjs",
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -57,6 +60,8 @@
   "files": [
     "dist/**/*.js",
     "dist/**/*.d.ts",
+    "dist/**/*.cjs",
+    "dist/**/*.cjs.map",
     "mrsf.schema.json",
     "README.md",
     "LICENSE"
@@ -78,6 +83,9 @@
     "@types/uuid": "^10.0.0",
     "@vitest/coverage-v8": "^4.0.18",
     "typescript": "^5.8.2",
-    "vitest": "^4.0.18"
-  }
+    "vitest": "^4.0.18",
+    "esbuild": "^0.27.3"
+  },
+  "module": "./dist/index.js",
+  "sideEffects": false
 }

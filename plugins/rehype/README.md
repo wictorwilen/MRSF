@@ -180,6 +180,12 @@ Override CSS custom properties:
 
 See the [full list of variables](https://github.com/wictorwilen/MRSF/blob/main/plugins/shared/src/style.css).
 
+## Security / XSS
+
+Per the MRSF specification, comment `text` is plain text, not HTML or Markdown. The renderer HTML-escapes comment `text`, `author`, `selected_text`, and `id` before emitting HTML, so untrusted comment content cannot inject markup through MRSF.
+
+`@mrsf/rehype-mrsf` runs inside the host unified/rehype pipeline. If the host enables `allowDangerousHtml` for other content, that is the host application's responsibility; MRSF's own comment fields remain escaped. Hosts should keep Markdown sanitization enabled for non-MRSF content.
+
 ## License
 
 MIT

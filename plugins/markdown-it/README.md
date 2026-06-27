@@ -206,6 +206,10 @@ All rendered elements follow a strict data-attribute contract:
 - `data-mrsf-action` — action type (`add`, `resolve`, `unresolve`, `reply`, `edit`, `delete`, `navigate`)
 - `data-mrsf-start-line`, `data-mrsf-end-line`, `data-mrsf-start-column`, `data-mrsf-end-column` — optional selection anchors when present
 
+## Security / XSS
+
+Per the MRSF specification, comment `text` is plain text, not HTML or Markdown. The renderer HTML-escapes comment `text`, `author`, `selected_text`, and `id` before emitting HTML, so untrusted comment content cannot inject markup through MRSF. Hosts should keep their Markdown pipeline's sanitization enabled for non-MRSF content.
+
 ## License
 
 [MIT](../LICENSE)

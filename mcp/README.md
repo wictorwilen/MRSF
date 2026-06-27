@@ -90,6 +90,34 @@ The server exposes the following MCP tools:
 | `mrsf_repair` | Repair or reset a corrupted sidecar |
 | `mrsf_help` | List all tools and their parameter schemas |
 
+## Working with live editor buffers
+
+When an editor has unsaved Markdown changes, pass `documentText` to `mrsf_add`, `mrsf_add_batch`, `mrsf_update`, or `mrsf_reanchor`. The server uses that inline text for `selected_text` population and anchoring instead of reading the document from disk. For `mrsf_reanchor`, `documentText` requires exactly one target sidecar/document.
+
+Mutating tools return a sidecar content hash as `version`. Pass the latest value back as `expectedVersion` on the next write to reject stale edits:
+
+```json
+{
+  "document": "guide.md",
+  "id": "c-123",
+  "text": "Updated comment",
+  "expectedVersion": "last-observed-sha256"
+}
+```
+
+If the sidecar changed, the tool returns `isError: true` with:
+
+```json
+{
+  "status": "conflict",
+  "code": "version-mismatch",
+  "currentVersion": "new-sha256",
+  "expectedVersion": "last-observed-sha256"
+}
+```
+
+Recommended client pattern: read or discover the sidecar to get `version`, make one mutation with `expectedVersion`, then re-read or use the returned `version` before any follow-up mutation.
+
 ### Tool Details
 
 #### `mrsf_discover`
@@ -100,6 +128,8 @@ Find the Sidemark (MRSF) sidecar for a Markdown document.
 | --- | --- | --- | --- |
 | `document` | string | ✔ | Path to the Markdown document |
 | `cwd` | string | | Working directory (defaults to process.cwd()) |
+
+Returns `version`, the current sidecar content hash.
 
 #### `mrsf_validate`
 
@@ -122,7 +152,11 @@ Re-anchor comments after document edits.
 | `threshold` | number | | Fuzzy match threshold 0.0–1.0 (default 0.6) |
 | `updateText` | boolean | | Also replace `selected_text` with current document text |
 | `force` | boolean | | Firmly anchor high-confidence results: update commit to HEAD and clear audit fields |
+| `documentText` | string | | Inline document content for unsaved editor buffers (single target only) |
+| `expectedVersion` | string | | Reject write if the current sidecar hash differs |
 | `cwd` | string | | Working directory |
+
+Returns `version` for each processed sidecar.
 
 #### `mrsf_add`
 
@@ -141,7 +175,11 @@ Add a review comment to a Sidemark (MRSF) sidecar.
 | `severity` | `"low"` \| `"medium"` \| `"high"` | | Severity level |
 | `reply_to` | string | | Parent comment ID for threading |
 | `extensions` | object | | Tool-specific `x_*` extension fields; keys must start with `x_` |
+| `documentText` | string | | Inline document content for unsaved editor buffers |
+| `expectedVersion` | string | | Reject write if the current sidecar hash differs |
 | `cwd` | string | | Working directory |
+
+Returns `version`, the new sidecar content hash.
 
 #### `mrsf_add_batch`
 
@@ -151,7 +189,11 @@ Add multiple review comments to a Sidemark (MRSF) sidecar in one atomic write.
 | --- | --- | --- | --- |
 | `document` | string | ✔ | Path to the Markdown document |
 | `comments` | object[] | ✔ | Array of comments: each needs `text` and `author`, optional `line`, `end_line`, `start_column`, `end_column`, `type`, `severity`, `reply_to`, `extensions` |
+| `documentText` | string | | Inline document content for unsaved editor buffers |
+| `expectedVersion` | string | | Reject write if the current sidecar hash differs |
 | `cwd` | string | | Working directory |
+
+Returns `version`, the new sidecar content hash.
 
 #### `mrsf_update`
 
@@ -169,9 +211,13 @@ Update fields of an existing comment by ID (only provided fields are changed).
 | `start_column` | number | | New starting column (0-based) |
 | `end_column` | number | | New ending column |
 | `extensions` | object | | Merge tool-specific `x_*` fields into the comment |
+| `documentText` | string | | Inline document content for unsaved editor buffers when line anchors change |
+| `expectedVersion` | string | | Reject write if the current sidecar hash differs |
 | `cwd` | string | | Working directory |
 
 `extensions` values are stored on disk as flat `x_*` fields on the comment, not as a nested object.
+
+Returns `version`, the new sidecar content hash.
 
 #### `mrsf_resolve`
 
@@ -186,7 +232,10 @@ Resolve or unresolve comments. Provide a single `id`, an array of `ids`, or filt
 | `type` | string | | Resolve all comments of this type |
 | `severity` | `"low"` \| `"medium"` \| `"high"` | | Resolve all comments of this severity |
 | `unresolve` | boolean | | Set to true to unresolve instead |
+| `expectedVersion` | string | | Reject write if the current sidecar hash differs |
 | `cwd` | string | | Working directory |
+
+Returns `version`, the current sidecar content hash.
 
 #### `mrsf_list`
 
@@ -204,6 +253,8 @@ List and filter comments across Sidemark (MRSF) sidecars.
 | `summary` | boolean | | Return summary statistics instead of full comments |
 | `cwd` | string | | Working directory |
 
+Full and summary JSON outputs include each sidecar's `version`.
+
 #### `mrsf_status`
 
 Check anchor health of all comments in Sidemark (MRSF) sidecars.
@@ -213,6 +264,8 @@ Check anchor health of all comments in Sidemark (MRSF) sidecars.
 | `files` | string[] | | Sidecar or Markdown file paths. If omitted, discovers all sidecars. |
 | `cwd` | string | | Working directory |
 
+Returns sidecar `version` values in the `files` array.
+
 #### `mrsf_rename`
 
 Update sidecar after a document rename/move.
@@ -221,7 +274,10 @@ Update sidecar after a document rename/move.
 | --- | --- | --- | --- |
 | `oldDocument` | string | ✔ | Old path to the Markdown document |
 | `newDocument` | string | ✔ | New path to the Markdown document |
+| `expectedVersion` | string | | Reject write if the current old sidecar hash differs |
 | `cwd` | string | | Working directory |
+
+Returns `version`, the new sidecar content hash.
 
 #### `mrsf_delete`
 
@@ -232,7 +288,10 @@ Delete a comment by ID from a sidecar. By default, direct replies are promoted (
 | `document` | string | ✔ | Path to the Markdown document or its sidecar |
 | `id` | string | ✔ | Comment ID to delete |
 | `cascade` | boolean | | When true, also remove direct replies instead of promoting them (default: false) |
+| `expectedVersion` | string | | Reject write if the current sidecar hash differs |
 | `cwd` | string | | Working directory |
+
+Returns `version`, the new sidecar content hash.
 
 #### `mrsf_repair`
 
@@ -242,7 +301,10 @@ Repair or reset a corrupted sidecar. Use `salvage` strategy to attempt recoverin
 | --- | --- | --- | --- |
 | `document` | string | ✔ | Path to the Markdown document or its sidecar |
 | `strategy` | `"salvage"` \| `"reset"` | | Repair strategy: `salvage` (default) attempts to recover comments; `reset` starts fresh |
+| `expectedVersion` | string | | Reject write if the current sidecar hash differs |
 | `cwd` | string | | Working directory |
+
+Returns `version`, the new sidecar content hash.
 
 #### `mrsf_help`
 

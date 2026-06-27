@@ -66,6 +66,7 @@ describe("validate", () => {
     );
     expect(result.valid).toBe(false);
     expect(result.errors.some((e) => e.message.includes("Duplicate"))).toBe(true);
+    expect(result.errors.map((e) => e.code)).toContain("duplicate-id");
   });
 
   it("detects end_line < line", async () => {
@@ -199,6 +200,7 @@ describe("validate", () => {
       }),
     );
     expect(result.warnings.some((w) => w.message.includes("mismatch"))).toBe(true);
+    expect(result.warnings.map((w) => w.code)).toContain("hash-mismatch");
   });
 
   it("passes when selected_text_hash is correct", async () => {
@@ -292,6 +294,7 @@ describe("validateFile", () => {
   it("returns error for non-existent file", async () => {
     const result = await validateFile(path.join(tmpDir, "nonexistent.review.yaml"));
     expect(result.valid).toBe(false);
+    expect(result.errors[0].code).toBe("parse-error");
     expect(result.errors[0].message).toContain("Failed to parse");
   });
 

@@ -46,6 +46,7 @@ export {
   reanchorComment,
   reanchorDocumentLines,
   reanchorDocumentText,
+  resolveAnchor,
   toReanchorLines,
 } from "./reanchor-core.js";
 

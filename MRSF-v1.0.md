@@ -8,6 +8,8 @@ The Markdown Review Sidecar Format (MRSF), also known as Sidemark, defines a str
 ## Status of This Memo
 This document is a draft and work in progress. It is published for community review and comment. Feedback and proposed changes are welcome via issues and pull requests.
 
+Compatibility is negotiated through the top-level `mrsf_version` field. Conforming tools MUST preserve and round-trip unknown `x_*` extension fields, MAY accept newer minor versions when the major version is known, and SHOULD warn when doing so. Tools MUST reject unknown major versions, SHOULD warn when doing so, and MUST NOT silently treat them as fully compatible.
+
 ## 1. Introduction
 MRSF specifies how to persist review comments for Markdown documents in a sidecar file. The format aims to be:
 - Minimally invasive to source Markdown

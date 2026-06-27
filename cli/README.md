@@ -36,6 +36,35 @@ npm run build
 node dist/bin.js --help
 ```
 
+## Browser / Embedder API (`@mrsf/cli/browser`)
+
+Use `@mrsf/cli/browser` in Vite, Electron renderers, and editor extensions that
+need side-effect-free MRSF helpers without Node built-ins. This entrypoint does
+not import `fs`, git helpers, or other Node-only APIs, and is designed to be
+tree-shakeable.
+
+Key exports include:
+
+- Types: `MrsfDocument`, `Comment`, `AnchorPosition`
+- Anchoring: `resolveAnchor`, `reanchorComment`, `reanchorDocumentText`,
+  `toReanchorLines`, `applyReanchorResults`
+- Validation: `validateDocument`, `mrsfSchema`
+- Identity: `formatAuthor`, `parseAuthor`, `newCommentId`
+- Pure fuzzy helpers: `exactMatch`, `normalizedMatch`, `fuzzySearch`,
+  `combinedScore`
+
+Example editor decoration flow:
+
+```ts
+import { resolveAnchor, type Comment } from "@mrsf/cli/browser";
+
+function decorationRange(comment: Comment, text: string) {
+  const anchor = resolveAnchor(comment, text);
+  if (anchor.from == null || anchor.to == null) return undefined;
+  return { from: anchor.from, to: anchor.to };
+}
+```
+
 ## Commands
 
 ### `mrsf validate [files...]`

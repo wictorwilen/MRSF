@@ -32,6 +32,14 @@ await esbuild.build({
   platform: "node",
 });
 
+await esbuild.build({
+  ...shared,
+  format: "cjs",
+  entryPoints: ["src/index.ts"],
+  outfile: "dist/index.cjs",
+  platform: "node",
+});
+
 // Browser entry — comments / loader only, no Node.js APIs
 await esbuild.build({
   ...shared,
@@ -40,11 +48,28 @@ await esbuild.build({
   platform: "neutral",
 });
 
+await esbuild.build({
+  ...shared,
+  format: "cjs",
+  entryPoints: ["src/browser.ts"],
+  outfile: "dist/browser.cjs",
+  platform: "neutral",
+});
+
 // Client-side controller (auto-init event dispatcher) — self-contained
 await esbuild.build({
   ...shared,
   entryPoints: ["src/controller.ts"],
   outfile: "dist/controller.js",
+  platform: "browser",
+  external: [],
+});
+
+await esbuild.build({
+  ...shared,
+  format: "cjs",
+  entryPoints: ["src/controller.ts"],
+  outfile: "dist/controller.cjs",
   platform: "browser",
   external: [],
 });
