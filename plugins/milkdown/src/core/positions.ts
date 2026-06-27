@@ -91,3 +91,34 @@ export function isInlineComment(comment: Comment): boolean {
 export function isDocumentLevelComment(comment: Comment): boolean {
   return comment.line == null && comment.selected_text == null;
 }
+
+/**
+ * Returns true when a comment that nominally has columns (i.e. `isInlineComment`
+ * is true) actually spans multiple full lines — start at column 0 of the first
+ * line and end at or past the end of the final selected line. Such selections
+ * are visually line/paragraph comments and should NOT be rendered with the
+ * yellow inline highlight; only the line and gutter treatments apply.
+ *
+ * Single-line selections are always considered inline, even if their
+ * start_column/end_column happen to coincide with the line's bounds — the
+ * reviewer is highlighting specific text within that line.
+ *
+ * Without geometry we cannot tell, so we are conservative and return false
+ * (keep inline highlighting).
+ */
+export function isWholeLineSelection(comment: Comment, geometry?: DocumentGeometry): boolean {
+  if (!isInlineComment(comment)) return false;
+  if (comment.start_column !== 0) return false;
+  if (comment.line == null) return false;
+  if (!geometry) return false;
+
+  const startLineIndex = comment.line - 1;
+  const endLineIndex = (comment.end_line ?? comment.line) - 1;
+  if (startLineIndex === endLineIndex) return false;
+  if (startLineIndex < 0 || endLineIndex < 0) return false;
+  if (startLineIndex >= geometry.lineCount || endLineIndex >= geometry.lineCount) return false;
+  if (startLineIndex > endLineIndex) return false;
+
+  const endLineLength = geometry.getLineLength(endLineIndex);
+  return (comment.end_column ?? 0) >= endLineLength;
+}

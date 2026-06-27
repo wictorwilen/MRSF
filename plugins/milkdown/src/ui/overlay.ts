@@ -3,7 +3,9 @@ import { renderThreadHtml } from "../shared/html.js";
 import type { CommentThread, SlimComment } from "../shared/types.js";
 import type { EditorView } from "@milkdown/prose/view";
 import type { MilkdownMrsfController } from "../MilkdownMrsfController.js";
-import type { MilkdownMrsfComposeResult, MilkdownMrsfControllerOptions, ReviewState, ReviewThread } from "../types.js";
+import type { EditorPoint, MilkdownMrsfComposeResult, MilkdownMrsfControllerOptions, ReviewState, ReviewThread } from "../types.js";
+import { collectPmTextBlocks, type PmTextBlock, resolveSelectedTextRanges } from "../core/textMatch.js";
+import { IDENTITY_SOURCE_LINE_MAP, type SourceLineMap, getCachedSourceLineMap } from "../core/sourceLineMap.js";
 import { getProsemirrorTextModel, getSelectedText, pointToOffset, selectionToEditorSelection, textOffsetToPmPos } from "../core/textModel.js";
 import { openMilkdownMrsfConfirmDialog, openMilkdownMrsfFormDialog } from "./dialogs.js";
 
@@ -27,26 +29,73 @@ interface OverlayEntry {
 interface OverlayContext {
   text: string;
   lineStarts: readonly number[];
+  /**
+   * Maps markdown source line indices (the spec coordinate system used by
+   * comment.line / inlineRange.range.start.lineIndex) to PM-text-model line
+   * indices that the cached PM model and `coordsAtPos` understand.
+   * Identity when no source text is available — preserves legacy behaviour.
+   */
+  sourceLineMap: SourceLineMap;
+  /**
+   * One entry per textblock in the PM doc. Used to anchor inline highlights
+   * by matching `selected_text` against `textContent` so highlights stay
+   * scoped to a single block instead of spanning across paragraphs/headings.
+   */
+  pmTextBlocks: PmTextBlock[];
 }
 
-function getLineStartOffset(lineStarts: readonly number[], lineNumber: number): number | null {
-  if (lineNumber < 1) {
+function getLineStartOffset(
+  lineStarts: readonly number[],
+  sourceLineNumber: number,
+  sourceLineMap: SourceLineMap,
+): number | null {
+  if (sourceLineNumber < 1) {
     return null;
   }
-
-  return lineStarts[lineNumber - 1] ?? null;
+  // Snapshot lines are 1-based markdown source lines; lineStarts is indexed
+  // by 0-based PM-text lines. Translate before indexing.
+  const pmLineIndex = sourceLineMap.identity
+    ? sourceLineNumber - 1
+    : sourceLineMap.srcToPm(sourceLineNumber - 1);
+  return lineStarts[pmLineIndex] ?? null;
 }
 
-function createOverlayContext(view: EditorView): OverlayContext {
+function createOverlayContext(view: EditorView, sourceText?: string): OverlayContext {
   const model = getProsemirrorTextModel(view.state.doc);
+  const sourceLineMap = sourceText != null
+    ? getCachedSourceLineMap(view.state.doc, sourceText, model.posToOffset, model.lineStarts)
+    : IDENTITY_SOURCE_LINE_MAP;
+
+  const totalLines = model.lineStarts.length;
+  const offsetToLine = (offset: number): number => {
+    let low = 0;
+    let high = totalLines - 1;
+    while (low <= high) {
+      const mid = (low + high) >>> 1;
+      const start = model.lineStarts[mid];
+      const next = model.lineStarts[mid + 1] ?? Number.MAX_SAFE_INTEGER;
+      if (offset < start) { high = mid - 1; continue; }
+      if (offset >= next) { low = mid + 1; continue; }
+      return mid;
+    }
+    return Math.max(0, totalLines - 1);
+  };
+
   return {
     text: model.text,
     lineStarts: model.lineStarts,
+    sourceLineMap,
+    pmTextBlocks: collectPmTextBlocks(view.state.doc, offsetToLine, model.posToOffset),
   };
 }
 
-function getLinePosition(view: EditorView, container: HTMLElement, context: OverlayContext, lineNumber: number): { top: number; height: number } | null {
-  const lineStartOffset = getLineStartOffset(context.lineStarts, lineNumber);
+function getLinePosition(
+  view: EditorView,
+  container: HTMLElement,
+  context: OverlayContext,
+  sourceLineNumber: number,
+): { top: number; height: number } | null {
+  const lineStartOffset = getLineStartOffset(context.lineStarts, sourceLineNumber, context.sourceLineMap);
   if (lineStartOffset == null) {
     return null;
   }
@@ -243,7 +292,7 @@ export class MilkdownMrsfOverlay {
       return;
     }
 
-    const context = createOverlayContext(this.view);
+    const context = createOverlayContext(this.view, state.sourceText);
     const entries = state.snapshot.threadsByLine.flatMap(({ line, threads }) => {
       if (threads.length === 0) {
         return [];
@@ -467,7 +516,8 @@ export class MilkdownMrsfOverlay {
       return;
     }
 
-    const selection = selectionToEditorSelection(this.view.state.selection, this.view.state.doc);
+    const sourceText = this.getState()?.sourceText;
+    const selection = selectionToEditorSelection(this.view.state.selection, this.view.state.doc, { sourceText });
     const selectedText = getSelectedText(this.view.state as Parameters<typeof getSelectedText>[0]);
     if (!selectedText.trim()) {
       this.hideAddButton();
@@ -695,30 +745,161 @@ export class MilkdownMrsfOverlay {
     context: OverlayContext,
     inlineRange: ReviewState["snapshot"]["inlineRanges"][number],
   ): Array<{ top: number; left: number; width: number; height: number }> {
-    const startLine = inlineRange.range.start.lineIndex;
-    const endLine = inlineRange.range.end.lineIndex;
+    const containerRect = this.container.getBoundingClientRect();
+
+    // Primary path: resolve selectedText into PM ranges via text matching.
+    // Each range is scoped to a single block, so the DOM Range we hand to
+    // the browser never spans across paragraph/heading/list-item siblings.
+    const selectedText = inlineRange.selectedText;
+    if (selectedText && selectedText.length > 0) {
+      const hintPmLine = context.sourceLineMap.identity
+        ? inlineRange.range.start.lineIndex
+        : context.sourceLineMap.srcToPm(inlineRange.range.start.lineIndex);
+
+      const ranges = resolveSelectedTextRanges(selectedText, context.pmTextBlocks, hintPmLine);
+      if (ranges.length > 0) {
+        const segments: Array<{ top: number; left: number; width: number; height: number }> = [];
+        for (const range of ranges) {
+          const rangeRects = this.collectClientRects(range.from, range.to);
+          for (const rect of rangeRects) {
+            if (rect.width <= 0 || rect.height <= 0) continue;
+            segments.push({
+              top: rect.top - containerRect.top + this.container.scrollTop,
+              left: rect.left - containerRect.left + this.container.scrollLeft,
+              width: rect.width,
+              height: rect.height,
+            });
+          }
+        }
+        if (segments.length > 0) {
+          return segments;
+        }
+        // Text-matched ranges produced no client rects (jsdom or unmounted
+        // node). Fall through to coordinate-based fallback below.
+      }
+    }
+
+    // Fallback: derive PM positions from translated source-line coordinates.
+    const translatedRange = this.translateRange(context, inlineRange.range);
+    const startOffset = pointToOffset(translatedRange.start, context.text, context.lineStarts);
+    const endOffset = pointToOffset(translatedRange.end, context.text, context.lineStarts);
+    if (endOffset <= startOffset) {
+      return [];
+    }
+
+    let from: number;
+    let to: number;
+    try {
+      from = textOffsetToPmPos(this.view.state.doc, startOffset);
+      to = textOffsetToPmPos(this.view.state.doc, Math.max(endOffset, startOffset + 1));
+    } catch {
+      return [];
+    }
+    if (to <= from) {
+      return [];
+    }
+
+    const rangeRects = this.collectClientRects(from, to);
+    if (rangeRects.length > 0) {
+      const segments: Array<{ top: number; left: number; width: number; height: number }> = [];
+      for (const rect of rangeRects) {
+        if (rect.width <= 0 || rect.height <= 0) {
+          continue;
+        }
+        segments.push({
+          top: rect.top - containerRect.top + this.container.scrollTop,
+          left: rect.left - containerRect.left + this.container.scrollLeft,
+          width: rect.width,
+          height: rect.height,
+        });
+      }
+      if (segments.length > 0) {
+        return segments;
+      }
+    }
+
+    return this.fallbackCoordSegments(context, inlineRange, containerRect);
+  }
+
+  private collectClientRects(from: number, to: number): DOMRect[] {
+    const ownerDocument = this.view.dom.ownerDocument;
+    if (!ownerDocument) {
+      return [];
+    }
+
+    const view = this.view as unknown as { domAtPos?: (pos: number) => { node: Node; offset: number } };
+    if (typeof view.domAtPos !== "function") {
+      return [];
+    }
+
+    let startDom: { node: Node; offset: number };
+    let endDom: { node: Node; offset: number };
+    try {
+      startDom = view.domAtPos(from);
+      endDom = view.domAtPos(to);
+    } catch {
+      return [];
+    }
+
+    let range: Range;
+    try {
+      range = ownerDocument.createRange();
+      range.setStart(startDom.node, startDom.offset);
+      range.setEnd(endDom.node, endDom.offset);
+    } catch {
+      return [];
+    }
+
+    const list = range.getClientRects();
+    const result: DOMRect[] = [];
+    for (let i = 0; i < list.length; i += 1) {
+      const rect = list.item(i);
+      if (rect) {
+        result.push(rect);
+      }
+    }
+    return result;
+  }
+
+  private fallbackCoordSegments(
+    context: OverlayContext,
+    inlineRange: ReviewState["snapshot"]["inlineRanges"][number],
+    containerRect: DOMRect,
+  ): Array<{ top: number; left: number; width: number; height: number }> {
+    const translatedRange = this.translateRange(context, inlineRange.range);
+    const startLine = translatedRange.start.lineIndex;
+    const endLine = translatedRange.end.lineIndex;
     const segments: Array<{ top: number; left: number; width: number; height: number }> = [];
 
     for (let lineIndex = startLine; lineIndex <= endLine; lineIndex += 1) {
       const lineStart = lineIndex === startLine
-        ? inlineRange.range.start
+        ? translatedRange.start
         : { lineIndex, column: 0 };
       const lineEnd = lineIndex === endLine
-        ? inlineRange.range.end
+        ? translatedRange.end
         : { lineIndex, column: this.getLineLength(context, lineIndex) };
 
-      const startOffset = pointToOffset(lineStart, context.text);
-      const endOffset = pointToOffset(lineEnd, context.text);
+      const startOffset = pointToOffset(lineStart, context.text, context.lineStarts);
+      const endOffset = pointToOffset(lineEnd, context.text, context.lineStarts);
       if (endOffset <= startOffset) {
         continue;
       }
 
+      let from: number;
+      let to: number;
       try {
-        const from = textOffsetToPmPos(this.view.state.doc, startOffset);
-        const to = textOffsetToPmPos(this.view.state.doc, endOffset);
+        from = textOffsetToPmPos(this.view.state.doc, startOffset);
+        to = textOffsetToPmPos(this.view.state.doc, endOffset);
+      } catch {
+        continue;
+      }
+
+      try {
         const fromCoords = this.view.coordsAtPos(from);
         const toCoords = this.view.coordsAtPos(Math.max(from + 1, to));
-        const containerRect = this.container.getBoundingClientRect();
+        // Per-line rectangle from line start to line end. We do NOT take
+        // min/max across lines — that's what produced the giant bounding-box
+        // square. The width comes from this single line's start→end coords.
         const top = Math.min(fromCoords.top, toCoords.top) - containerRect.top + this.container.scrollTop;
         const left = Math.min(fromCoords.left, toCoords.left) - containerRect.left + this.container.scrollLeft;
         const right = Math.max(fromCoords.left, toCoords.left) - containerRect.left + this.container.scrollLeft;
@@ -750,6 +931,31 @@ export class MilkdownMrsfOverlay {
     }
 
     return Math.max(0, nextLineStart - lineStart - 1);
+  }
+
+  /**
+   * Translate an EditorRange whose lineIndex values are markdown source line
+   * indices (the spec / snapshot coordinate system) into the PM-text-model
+   * coordinate system that `lineStarts`/`pointToOffset` understand. When the
+   * SourceLineMap is identity (no source text available), this is a no-op.
+   */
+  private translateRange(
+    context: OverlayContext,
+    range: ReviewState["snapshot"]["inlineRanges"][number]["range"],
+  ): { start: EditorPoint; end: EditorPoint } {
+    if (context.sourceLineMap.identity) {
+      return { start: range.start, end: range.end };
+    }
+    return {
+      start: {
+        lineIndex: context.sourceLineMap.srcToPm(range.start.lineIndex),
+        column: range.start.column,
+      },
+      end: {
+        lineIndex: context.sourceLineMap.srcToPm(range.end.lineIndex),
+        column: range.end.column,
+      },
+    };
   }
 
   private renderGutterItem(entry: OverlayEntry): HTMLElement {

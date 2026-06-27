@@ -57,7 +57,8 @@ export async function runCrepeAddComment(
     return;
   }
 
-  const selection = selectionToEditorSelection(view.state.selection, view.state.doc);
+  const sourceText = controller.getState()?.sourceText;
+  const selection = selectionToEditorSelection(view.state.selection, view.state.doc, { sourceText });
   const selectedText = getSelectedText(view.state as Parameters<typeof getSelectedText>[0]);
   const draft = await Promise.resolve(
     options.composeAdd?.({ selection, selectedText })

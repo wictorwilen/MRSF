@@ -20,14 +20,14 @@ function makeDoc(text: string) {
   return schema.node("doc", undefined, [schema.node("paragraph", undefined, [schema.text(text)])]);
 }
 
-function makeSnapshot(startColumn = 0, endColumn = 5): DecorationSnapshot {
+function makeSnapshot(startColumn = 0, endColumn = 5, selectedText = "alpha"): DecorationSnapshot {
   return {
     threadsByLine: [],
     gutterMarks: [],
     inlineRanges: [{
       commentId: "c1",
       line: 1,
-      selectedText: "alpha",
+      selectedText,
       resolved: false,
       severity: "medium",
       range: {
@@ -50,13 +50,27 @@ describe("decorations", () => {
     expect(buildInlineDecorations(doc, makeSnapshot(), "alpha", { inlineHighlights: false }).find()).toEqual([]);
   });
 
+  it("matches selected_text and highlights it regardless of the stored column range", () => {
+    const doc = makeDoc("alpha");
+
+    // Primary path: when selected_text matches a PM block, the highlight is
+    // scoped to the matched text, so even a zero-width or out-of-bounds column
+    // range still produces the correct decoration.
+    const decorations = buildInlineDecorations(doc, makeSnapshot(3, 3, "alpha"), "alpha").find();
+    expect(decorations).toHaveLength(1);
+    expect(decorations[0]?.from).toBeLessThan(decorations[0]?.to ?? 0);
+  });
+
   it("skips invalid ranges and builds decorations for valid ranges", () => {
     const doc = makeDoc("alpha");
 
-    expect(buildInlineDecorations(doc, makeSnapshot(3, 3), "alpha").find()).toEqual([]);
-    expect(buildInlineDecorations(doc, makeSnapshot(6, 7), "alpha").find()).toEqual([]);
+    // Fallback path: with no selected_text to match, decorations fall back to
+    // the stored column range, which must skip zero-width and out-of-bounds
+    // ranges.
+    expect(buildInlineDecorations(doc, makeSnapshot(3, 3, ""), "alpha").find()).toEqual([]);
+    expect(buildInlineDecorations(doc, makeSnapshot(6, 7, ""), "alpha").find()).toEqual([]);
 
-    const decorations = buildInlineDecorations(doc, makeSnapshot(0, 5), "alpha").find();
+    const decorations = buildInlineDecorations(doc, makeSnapshot(0, 5, ""), "alpha").find();
     expect(decorations).toHaveLength(1);
     expect(decorations[0]?.from).toBeLessThan(decorations[0]?.to ?? 0);
   });

@@ -137,6 +137,7 @@ export class ReviewStore {
       sidecarPath,
       documentPath,
       documentLines,
+      sourceText: documentText,
       snapshot,
       loaded: true,
       dirty: false,

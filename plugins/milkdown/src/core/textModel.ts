@@ -2,6 +2,8 @@ import type { Node as ProsemirrorNode } from "@milkdown/prose/model";
 import type { EditorState, Selection } from "@milkdown/prose/state";
 import type { DocumentGeometry, EditorContentChange, EditorPoint, EditorRange, EditorSelection } from "../types.js";
 import { normalizeRange } from "./positions.js";
+import { getCachedSourceLineMap } from "./sourceLineMap.js";
+import { locateSelectionInSource } from "./textMatch.js";
 
 interface ProsemirrorTextModel {
   text: string;
@@ -122,9 +124,10 @@ function createProsemirrorTextModel(doc: ProsemirrorNode): ProsemirrorTextModel 
 export function getProsemirrorTextModel(doc: ProsemirrorNode): {
   text: string;
   lineStarts: readonly number[];
+  posToOffset: readonly number[];
 } {
   const model = createProsemirrorTextModel(doc);
-  return { text: model.text, lineStarts: model.lineStarts };
+  return { text: model.text, lineStarts: model.lineStarts, posToOffset: model.posToOffset };
 }
 
 export function getDocumentText(doc: ProsemirrorNode): string {
@@ -247,17 +250,49 @@ export function textOffsetToPmPos(doc: ProsemirrorNode, targetOffset: number): n
   return best;
 }
 
-export function selectionToEditorSelection(selection: Selection, doc: ProsemirrorNode): EditorSelection {
+export function selectionToEditorSelection(
+  selection: Selection,
+  doc: ProsemirrorNode,
+  options: { sourceText?: string } = {},
+): EditorSelection {
   const model = createProsemirrorTextModel(doc);
   const docSize = doc.content.size;
   const fromPos = Math.max(0, Math.min(selection.from, docSize));
   const toPos = Math.max(0, Math.min(selection.to, docSize));
   const startOffset = model.posToOffset[fromPos] ?? model.text.length;
   const endOffset = model.posToOffset[toPos] ?? model.text.length;
-  return normalizeRange({
+  const range = normalizeRange({
     start: offsetToPoint(startOffset, model.text, model.lineStarts),
     end: offsetToPoint(endOffset, model.text, model.lineStarts),
   });
+
+  // Preferred path: locate the selected PM text directly inside the markdown
+  // source. This sidesteps both coordinate systems entirely — the comment
+  // gets the line number where its text actually appears in the file, which
+  // is exactly what `comment.line` is per MRSF spec.
+  if (options.sourceText != null) {
+    const selectedText = model.text.slice(startOffset, endOffset);
+    if (selectedText.length > 0) {
+      const located = locateSelectionInSource(selectedText, options.sourceText);
+      if (located) {
+        return {
+          start: { lineIndex: located.startLineIndex, column: located.startColumn },
+          end: { lineIndex: located.endLineIndex, column: located.endColumn },
+        };
+      }
+    }
+
+    // Fallback: line-map translation (less accurate, used when text match
+    // fails — e.g. selection spans inline marks or odd whitespace).
+    const map = getCachedSourceLineMap(doc, options.sourceText, model.posToOffset, model.lineStarts);
+    if (!map.identity) {
+      return {
+        start: { lineIndex: map.pmToSrc(range.start.lineIndex), column: range.start.column },
+        end: { lineIndex: map.pmToSrc(range.end.lineIndex), column: range.end.column },
+      };
+    }
+  }
+  return range;
 }
 
 export function getSelectedText(state: EditorState): string {

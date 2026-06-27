@@ -115,6 +115,16 @@ export interface ReviewState {
   sidecarPath: string | null;
   documentPath: string | null;
   documentLines: string[];
+  /**
+   * The original markdown source text as provided by the host at load time
+   * (or via the most recent host re-read). Used to build the
+   * SourceLineMap that translates between markdown source line numbers
+   * (the spec coordinate system) and PM-text-model line indices (what
+   * decorations need). Stays anchored to the on-disk markdown — live PM
+   * edits do NOT mutate this; the map staleness is bounded by how much
+   * the user has edited since the last sidecar load/save.
+   */
+  sourceText: string;
   snapshot: DecorationSnapshot;
   loaded: boolean;
   dirty: boolean;

@@ -149,9 +149,10 @@ export function createMilkdownMrsfPlugin(
       if (options.inlineHighlights === false || !snapshot) {
         return DecorationSet.empty;
       }
+      const sourceText = controller?.getState()?.sourceText;
       // The text argument is unused now (the cached PM model carries it),
       // but keep the public function signature intact.
-      return buildInlineDecorations(doc, snapshot, "");
+      return buildInlineDecorations(doc, snapshot, "", { sourceText });
     };
 
     const inlineDecorationPlugin = new Plugin<InlineDecorationPluginState>({
@@ -343,7 +344,11 @@ export function getMilkdownMrsfSelection(editor: MilkdownEditorLike): EditorSele
     }
 
     const view = ctx.get<MilkdownEditorViewLike>(editorViewCtx);
-    return selectionToEditorSelection(view.state.selection, view.state.doc);
+    const controller = ctx.isInjected(milkdownMrsfControllerCtx)
+      ? ctx.get<MilkdownMrsfController | null>(milkdownMrsfControllerCtx)
+      : null;
+    const sourceText = controller?.getState()?.sourceText;
+    return selectionToEditorSelection(view.state.selection, view.state.doc, { sourceText });
   });
 }
 
@@ -370,10 +375,11 @@ export function getMilkdownMrsfDecorationState(editor: MilkdownEditorLike) {
     const view = ctx.get<MilkdownEditorViewLike>(editorViewCtx);
     const snapshot = controller?.getState()?.snapshot ?? null;
     const text = getDocumentText(view.state.doc);
+    const sourceText = controller?.getState()?.sourceText;
 
     return {
       snapshot,
-      decorations: buildInlineDecorations(view.state.doc, snapshot, text),
+      decorations: buildInlineDecorations(view.state.doc, snapshot, text, { sourceText }),
     };
   });
 }
