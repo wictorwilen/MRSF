@@ -3,6 +3,9 @@
   "version": "0.3.8",
   "description": "Experimental Milkdown editor plugin for MRSF review comments",
   "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

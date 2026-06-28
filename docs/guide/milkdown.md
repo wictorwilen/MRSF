@@ -20,6 +20,7 @@ The current package supports both direct Milkdown and Crepe on top of the same r
 - add, reply, edit, resolve, delete, save, reload, and reanchor flows
 - live line tracking while the editor content changes
 - selection helpers and controller accessors for host-side UI
+- `builtinUi: false` opt-out to drive a fully custom UI from the controller
 
 ## Install
 
@@ -159,6 +160,46 @@ Crepe helpers:
 
 Use these to wire host-side buttons, side panels, explicit save controls, or custom dialogs without rebuilding the anchoring and projection logic yourself.
 
+## Event & Callback Surface
+
+For fully custom UIs the host stays in sync through two surfaces.
+
+**Subscription callbacks** (plugin/controller options):
+
+| Option | Fires when | Payload |
+| --- | --- | --- |
+| `onStateChange(event)` | Any review-state change — the single hook a custom thread UI re-renders from. | `{ resourceId, state, dirty, hasPendingShifts, source }`, `source ∈ "load" \| "external" \| "refresh" \| "content" \| "save" \| "reanchor"`. `state` is the full `ReviewState`. |
+| `onCommentSelect(commentId)` | A comment/thread is activated (select/navigate). | `commentId: string` |
+| `onSaveRequest(request)` | A save is requested; call `request.defaultSave()` for the normal sidecar write. | `{ resourceId, state, reason, defaultSave }` |
+| `composeAdd(ctx)` | Host supplies a new comment body instead of the add dialog; `null` cancels. | `{ selection, selectedText }` → `{ text, severity?, type? } \| null` |
+| `composeReply(ctx)` / `composeEdit(ctx)` | Host supplies reply/edit text instead of the dialog; `null` cancels. | `{ comment, thread }` → `{ text, severity?, type? } \| null` |
+| `confirmDelete(ctx)` | Host confirms a delete instead of the confirm dialog. | `{ comment, thread }` → `boolean` |
+
+**Controller methods** (from `getMilkdownMrsfController` / `getCrepeMrsfController`):
+
+- Read: `getState()`, `getThreadsAtLine(line)`, `getThreadForComment(commentId)`, `getCommentById(commentId)`
+- Mutate: `addComment(draft)`, `addCommentFromSelection(...)`, `reply(parentId, draft)`, `edit(commentId, draft)`, `resolve(commentId)`, `unresolve(commentId)`, `toggleResolved(commentId)`, `remove(commentId)`
+- Lifecycle: `load(options)`, `reloadFromHost(documentText?)`, `refresh(documentText)`, `applyChanges(changes, documentText)`, `save(options)`, `reanchor(options)`, `dispose()`
+
+Decoration-state changes are observed via `getMilkdownMrsfDecorationState` / `getCrepeMrsfDecorationState`, updating in lockstep with `onStateChange`.
+
+## Custom UIs (`builtinUi: false`)
+
+By default the package renders its own review chrome (gutter/thread overlay, inline & thread tooltips, the selection add button, and the add/edit/reply/delete dialogs). Set `builtinUi: false` to suppress all of it and drive a fully custom UI from the controller, while anchoring, live line-tracking, the decoration state, the controller, and the callbacks above stay active:
+
+```ts
+editor.use(
+  createMilkdownMrsfPlugin(host, {
+    resourceId: "doc-1",
+    builtinUi: false,
+    onStateChange: (event) => renderMyThreads(event.state),
+    onCommentSelect: (id) => focusMyThread(id),
+  }),
+);
+```
+
+The `compose*` / `confirmDelete` callbacks replace individual dialogs whether or not `builtinUi` is enabled. This is the Milkdown analogue of the rehype plugin's `window.mrsfDisableBuiltinUi` and works identically for Crepe.
+
 ## Visual Behavior
 
 The package uses the same display vocabulary as the other MRSF plugins:
@@ -195,6 +236,14 @@ Choose `@mrsf/milkdown-mrsf` when you need editor-native MRSF support inside a M
 | Tiptap rich-text editor integration | `@mrsf/tiptap-mrsf` |
 | Turnkey desktop editor experience | VS Code extension |
 | Static or rendered HTML output | Marked, markdown-it, or rehype plugins |
+
+## Bundling & Peer Dependencies
+
+For hosts bundling `@mrsf/milkdown-mrsf` into an Electron/Vite/webpack app:
+
+- **Module format:** ESM-only. The package is `"type": "module"` and its `exports` map exposes only `import`/`types` conditions — no CommonJS (`require`) entry. Two builds ship: the default `.` (Node/neutral) and a `browser` condition plus `./browser` subpath. Styles are a separate side-effecting import at `@mrsf/milkdown-mrsf/style.css`.
+- **Tree-shaking / side effects:** declares `"sideEffects": ["**/*.css"]`, so the JavaScript is side-effect-free and dead-code-eliminates cleanly; only imported CSS is retained.
+- **`@milkdown/*` peer range:** `>=7 <8` for `@milkdown/core`, `@milkdown/ctx`, `@milkdown/crepe`, `@milkdown/kit`, `@milkdown/plugin-listener`, and `@milkdown/prose` — covering the whole 7.x line **including 7.21.x**. `@milkdown/core`, `@milkdown/crepe`, and `@milkdown/kit` are optional in `peerDependenciesMeta`. Pin one 7.x version across all `@milkdown/*` packages to avoid duplicate-instance/runtime mismatches.
 
 ## More
 
