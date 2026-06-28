@@ -184,6 +184,21 @@ export interface MilkdownMrsfControllerOptions {
   liveTracking?: MilkdownMrsfLiveTrackingMode;
   showSelectionAddButton?: boolean;
   defaultAuthor?: string;
+  /**
+   * Render the package's built-in review UI. Defaults to `true`.
+   *
+   * Set to `false` to drive a fully custom UI from a host application that has
+   * its own design system. When disabled, the plugin suppresses the built-in
+   * gutter/thread overlays, inline & thread tooltips, the selection add button,
+   * and the modal add/edit/reply/delete dialogs — while keeping anchoring,
+   * live line-tracking, the decoration state (inline highlights), the
+   * controller, and all callbacks (`onStateChange`, `onCommentSelect`,
+   * `onSaveRequest`) active. The host renders its own thread UI from
+   * `getCrepeMrsfController` / `getCrepeMrsfDecorationState` and calls the
+   * controller methods directly. This is the Milkdown analogue of the rehype
+   * plugin's `window.mrsfDisableBuiltinUi`.
+   */
+  builtinUi?: boolean;
   onStateChange?: (event: MilkdownMrsfStateChangeEvent) => void;
   onSaveRequest?: (request: MilkdownMrsfPluginSaveRequest) => void | Promise<void>;
   interactive?: boolean;

@@ -220,21 +220,23 @@ export function createMilkdownMrsfPlugin(
       view: (view) => {
         activeView = view as unknown as MilkdownEditorViewLike;
         decorationsEnabled = false;
-        overlay = new MilkdownMrsfOverlay(
-          view,
-          () => controller?.getState() ?? null,
-          () => controller,
-          {
-            inlineHighlights: options.inlineHighlights,
-            interactive: options.interactive,
-            showSelectionAddButton: options.showSelectionAddButton,
-            onCommentSelect: options.onCommentSelect,
-            composeAdd: options.composeAdd,
-            composeReply: options.composeReply,
-            composeEdit: options.composeEdit,
-            confirmDelete: options.confirmDelete,
-          },
-        );
+        overlay = options.builtinUi === false
+          ? null
+          : new MilkdownMrsfOverlay(
+              view,
+              () => controller?.getState() ?? null,
+              () => controller,
+              {
+                inlineHighlights: options.inlineHighlights,
+                interactive: options.interactive,
+                showSelectionAddButton: options.showSelectionAddButton,
+                onCommentSelect: options.onCommentSelect,
+                composeAdd: options.composeAdd,
+                composeReply: options.composeReply,
+                composeEdit: options.composeEdit,
+                confirmDelete: options.confirmDelete,
+              },
+            );
         const nextController = ensureController();
 
         if (options.autoLoad !== false) {
@@ -246,7 +248,7 @@ export function createMilkdownMrsfPlugin(
           }
         }
 
-        overlay.update();
+        overlay?.update();
         requestAnimationFrame(() => {
           if (!activeView || activeView !== (view as unknown as MilkdownEditorViewLike)) {
             return;

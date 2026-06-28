@@ -108,4 +108,71 @@ describe("Milkdown integration", () => {
     await controller?.save({ reason: "test" });
     expect(sidecar.comments[0]?.start_column).toBe(12);
   });
+
+  it("suppresses the built-in overlay UI when builtinUi is false but keeps anchoring + decorations", async () => {
+    const sidecar: MrsfDocument = {
+      mrsf_version: "1.0",
+      document: "example.md",
+      comments: [
+        {
+          id: "c1",
+          author: "A",
+          timestamp: "2025-01-01T00:00:00.000Z",
+          text: "Comment",
+          resolved: false,
+          line: 1,
+          start_column: 6,
+          end_column: 11,
+          selected_text: "world",
+        },
+      ],
+    };
+
+    const host: MilkdownMrsfHostAdapter = {
+      async getDocumentText() {
+        return "hello world";
+      },
+      async getDocumentPath() {
+        return "example.md";
+      },
+      async discoverSidecar() {
+        return "/tmp/example.review.yaml";
+      },
+      async readSidecar() {
+        return structuredClone(sidecar);
+      },
+      async writeSidecar() {
+        /* no-op */
+      },
+    };
+
+    const root = document.createElement("div");
+    document.body.appendChild(root);
+
+    editor = Editor.make()
+      .config((ctx) => {
+        ctx.set(rootCtx, root);
+        ctx.set(defaultValueCtx, "hello world");
+      })
+      .use(commonmark)
+      .use(createMilkdownMrsfPlugin(host, {
+        resourceId: "example",
+        defaultAuthor: "Tester",
+        builtinUi: false,
+      }));
+
+    await editor.create();
+
+    const controller = getMilkdownMrsfController(editor);
+    expect(controller).not.toBeNull();
+
+    // Anchoring + decoration state remain active.
+    await waitFor(() => (controller?.getState()?.snapshot.inlineRanges.length ?? 0) === 1);
+    await waitFor(() => getMilkdownMrsfDecorationState(editor!).decorations.find().length > 0);
+    expect(controller?.getState()?.snapshot.gutterMarks).toHaveLength(1);
+
+    // The built-in overlay chrome (gutter / overlay root) is not rendered.
+    expect(document.querySelector(".mrsf-gutter")).toBeNull();
+    expect(document.querySelector(".mrsf-overlay-root")).toBeNull();
+  });
 });

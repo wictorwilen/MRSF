@@ -51,7 +51,7 @@ export function addCrepeMrsfToolbarItem(
 export async function runCrepeAddComment(
   view: EditorView,
   controller: MilkdownMrsfController | null,
-  options: Pick<MilkdownMrsfControllerOptions, "composeAdd" | "onCommentSelect">,
+  options: Pick<MilkdownMrsfControllerOptions, "composeAdd" | "onCommentSelect" | "builtinUi">,
 ): Promise<void> {
   if (!controller) {
     return;
@@ -62,12 +62,14 @@ export async function runCrepeAddComment(
   const selectedText = getSelectedText(view.state as Parameters<typeof getSelectedText>[0]);
   const draft = await Promise.resolve(
     options.composeAdd?.({ selection, selectedText })
-      ?? openMilkdownMrsfFormDialog({
+      ?? (options.builtinUi === false
+        ? null
+        : openMilkdownMrsfFormDialog({
         action: "add",
         selectionText: selectedText || null,
         targetDocument: view.dom.ownerDocument,
         themeSource: view.dom,
-      }),
+      })),
   );
 
   if (!draft?.text?.trim()) {

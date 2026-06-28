@@ -53,6 +53,7 @@ function createCrepeMenuBridgePlugin(options: MilkdownMrsfPluginOptions): CrepeP
             interactive: options.interactive,
             onCommentSelect: options.onCommentSelect,
             composeAdd: options.composeAdd,
+            builtinUi: options.builtinUi,
           },
         );
 
@@ -99,7 +100,7 @@ export function createCrepeMrsfFeature(host: MilkdownMrsfHostAdapter, options: M
 }
 
 export function createCrepeMrsfToolbarConfig(
-  options: Pick<MilkdownMrsfPluginOptions, "interactive" | "composeAdd" | "onCommentSelect">,
+  options: Pick<MilkdownMrsfPluginOptions, "interactive" | "composeAdd" | "onCommentSelect" | "builtinUi">,
 ): ToolbarFeatureConfig {
   return {
     buildToolbar: (builder) => {
@@ -113,6 +114,7 @@ export function createCrepeMrsfToolbarConfig(
         void runCrepeAddComment(view, controller, {
           composeAdd: options.composeAdd,
           onCommentSelect: options.onCommentSelect,
+          builtinUi: options.builtinUi,
         });
       });
     },

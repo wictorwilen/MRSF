@@ -11,7 +11,7 @@ export class CrepeMrsfMenuBridge {
   constructor(
     view: EditorView,
     private readonly getController: () => MilkdownMrsfController | null,
-    private readonly options: Pick<MilkdownMrsfControllerOptions, "interactive" | "onCommentSelect" | "composeAdd">,
+    private readonly options: Pick<MilkdownMrsfControllerOptions, "interactive" | "onCommentSelect" | "composeAdd" | "builtinUi">,
   ) {
     this.view = view;
 
