@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-06-28
+
+### Added
+- `builtinUi?: boolean` option (default `true`) on the plugin/controller options. Setting `builtinUi: false` suppresses all built-in review chrome — the gutter/thread overlay, inline and thread tooltips, the selection add button, and the modal add/edit/reply/delete dialogs (including the Crepe toolbar fallback) — while keeping anchoring, live line-tracking, the decoration state, the controller, and all callbacks active. The Milkdown analogue of the rehype plugin's `window.mrsfDisableBuiltinUi` (issue #14).
+- `"sideEffects": ["**/*.css"]` manifest declaration so bundlers treat the JS as tree-shakeable while retaining CSS (issue #16).
+- Documented bundling guarantees (ESM-only exports map, neutral vs. browser builds, separate `style.css`, `sideEffects`, `@milkdown/*` peer range `>=7 <8` covering 7.21.x) and the full controller event/callback surface for custom UIs (issues #16, #19).
+
+### Changed
+- Widened the `@mrsf/cli` dependency range to `^0.5.0 || ^0.6.0`.
+
 ## [0.3.8] - 2026-06-27
 
 ### Added

@@ -1,6 +1,6 @@
 {
   "name": "@mrsf/milkdown-mrsf",
-  "version": "0.3.8",
+  "version": "0.4.0",
   "description": "Experimental Milkdown editor plugin for MRSF review comments",
   "type": "module",
   "sideEffects": [
@@ -70,7 +70,7 @@
     "LICENSE"
   ],
   "dependencies": {
-    "@mrsf/cli": "^0.5.0"
+    "@mrsf/cli": "^0.5.0 || ^0.6.0"
   },
   "peerDependencies": {
     "@milkdown/ctx": ">=7 <8",
