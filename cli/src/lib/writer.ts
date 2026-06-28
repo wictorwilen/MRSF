@@ -15,8 +15,9 @@ import { readFile, writeFile, rename, unlink } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { createHash, randomBytes } from "node:crypto";
 import path from "node:path";
-import { Document, Parser, CST, parse as yamlParse } from "yaml";
+import { Parser, CST, parse as yamlParse } from "yaml";
 import type { MrsfDocument, Comment } from "./types.js";
+import { toYaml, toJson } from "./serialize.js";
 
 /* ------------------------------------------------------------------ */
 /*  Per-file write serialization                                       */
@@ -394,20 +395,9 @@ function deepEqual(a: unknown, b: unknown): boolean {
 /*  Public API                                                         */
 /* ------------------------------------------------------------------ */
 
-/**
- * Serialize an MrsfDocument to YAML (for new files / non-round-trip use).
- */
-export function toYaml(doc: MrsfDocument): string {
-  const yamlDoc = new Document(doc);
-  return yamlDoc.toString({ lineWidth: 0 });
-}
-
-/**
- * Serialize an MrsfDocument to JSON.
- */
-export function toJson(doc: MrsfDocument): string {
-  return JSON.stringify(doc, null, 2) + "\n";
-}
+// `toYaml` / `toJson` now live in the Node-free serialize module; re-exported
+// here so existing `@mrsf/cli` import paths keep working.
+export { toYaml, toJson } from "./serialize.js";
 
 /**
  * Write an MrsfDocument to disk.

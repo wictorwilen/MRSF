@@ -2,6 +2,7 @@ import * as fuzzy from "./lib/fuzzy.js";
 import * as identity from "./lib/identity.js";
 import * as reanchorCore from "./lib/reanchor-core.js";
 import * as validateCore from "./lib/validate-core.js";
+import * as serialize from "./lib/serialize.js";
 import { mrsfSchema } from "./lib/schema.js";
 
 export type {
@@ -12,8 +13,18 @@ export type {
   MrsfDocument,
   ReanchorResult,
   ReanchorStatus,
+  ValidationDiagnostic,
+  ValidationResult,
+  DiagnosticSeverity,
 } from "./lib/types.js";
 export type { ParsedAuthor } from "./lib/identity.js";
+export type { LenientParseResult } from "./lib/serialize.js";
+
+// Parse / serialize (pure string ⇄ document; no filesystem or argv deps).
+export const parseSidecarContent = serialize.parseSidecarContent;
+export const parseSidecarContentLenient = serialize.parseSidecarContentLenient;
+export const toYaml = serialize.toYaml;
+export const toJson = serialize.toJson;
 
 export const combinedScore = fuzzy.combinedScore;
 export const exactMatch = fuzzy.exactMatch;

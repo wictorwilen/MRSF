@@ -20,6 +20,40 @@ import {
 } from "@mrsf/cli";
 ```
 
+## Entry points
+
+`@mrsf/cli` ships two entry points so server-side hosts and browser/editor adapters can depend on a small, Node-free surface instead of the full CLI:
+
+| Entry | Import | Contents | Node deps |
+|-------|--------|----------|-----------|
+| **Full** | `@mrsf/cli` | Everything below: filesystem discovery, file parsing/writing, git integration, re-anchoring, validation, comment management. | Yes (`node:fs`, `node:path`, `node:crypto`, git) |
+| **Core / browser** | `@mrsf/cli/browser` | Pure, dependency-light **parse / serialize / validate + types** and the re-anchoring/fuzzy engine. No filesystem, argv, or git. | None |
+
+The **core/browser entry** is the lightweight surface for Node host adapters, server-side integrations, and in-browser editors that already hold the sidecar text in memory. It exports:
+
+```ts
+import {
+  // parse / serialize (string ⇄ document)
+  parseSidecarContent,
+  parseSidecarContentLenient,
+  toYaml,
+  toJson,
+  // validation
+  validateDocument,
+  // re-anchoring + fuzzy matching engine
+  resolveAnchor,
+  reanchorComment,
+  reanchorDocumentText,
+  // types
+  type MrsfDocument,
+  type Comment,
+  type ValidationResult,
+  type ValidationDiagnostic,
+} from "@mrsf/cli/browser";
+```
+
+Use the full `@mrsf/cli` entry when you need to discover, read, or write sidecar **files** on disk (those helpers are filesystem-bound and intentionally excluded from the browser entry). The two entries share the same document model and validation logic, so a document parsed in the browser can be written by a Node host without conversion.
+
 ## Discovery
 
 Functions for finding sidecar files and loading configuration.
@@ -98,7 +132,29 @@ Recompute `selected_text_hash` if `selected_text` is present.
 
 ### `validate(doc: MrsfDocument, options?: ValidateOptions): ValidationResult`
 
-Validate an in-memory `MrsfDocument` against the JSON Schema and MRSF rules. Returns diagnostics with severity levels.
+Validate an in-memory `MrsfDocument` against the JSON Schema and MRSF rules. Returns **structured, machine-readable diagnostics** — not plain strings — so hosts can render them in a problems panel and map them to document locations.
+
+```ts
+interface ValidationResult {
+  valid: boolean;                  // true when errors.length === 0
+  errors: ValidationDiagnostic[];  // schema violations + blocking rule failures
+  warnings: ValidationDiagnostic[];// non-blocking advisories
+}
+
+interface ValidationDiagnostic {
+  severity: "error" | "warning";
+  code: string;        // stable, machine-readable code, e.g. "schema-violation"
+  message: string;     // human-readable description
+  path?: string;       // JSON-pointer into the document, e.g. "/comments/0/end_line"
+  commentId?: string;  // the comment id this diagnostic relates to, if applicable
+}
+```
+
+A host can map each diagnostic to a location using `path` (a JSON pointer such as `/comments/2/selected_text`) or `commentId`, surface `message` to the user, and group/filter by `code` and `severity`.
+
+Stable `code` values currently emitted: `schema-violation`, `duplicate-id`, `end-line-before-line`, `end-column-before-start-column`, `selected-text-too-long`, `text-too-long`, `hash-mismatch`, `unresolved-reply-to`, `missing-selected-text`.
+
+> `validateDocument` (exported from both `mrsf` and `mrsf/browser`) is the pure, synchronous core used by `validate`; it takes the document (and optionally a schema) and returns the same `ValidationResult`.
 
 ### `validateFile(sidecarPath: string, options?: ValidateOptions): Promise<ValidationResult>`
 
