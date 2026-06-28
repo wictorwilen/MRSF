@@ -118,6 +118,32 @@ If the sidecar changed, the tool returns `isError: true` with:
 
 Recommended client pattern: read or discover the sidecar to get `version`, make one mutation with `expectedVersion`, then re-read or use the returned `version` before any follow-up mutation.
 
+## Concurrency & write-conflict semantics
+
+When an interactive editor and an agent (this MCP server) can both write the same sidecar, the following contract applies.
+
+**Within a single process (the `@mrsf/cli` library `writeSidecar`):**
+
+- Writes to the same sidecar path are **serialized** through a per-file queue, so concurrent calls never interleave a read-modify-write cycle.
+- Every write is **atomic** (write to a temp file in the same directory, then `rename`), so readers never observe a half-written file.
+- The YAML writer round-trips at the CST level, preserving unrelated formatting/comments, but it persists the **writer's full in-memory document** — there is no field-level merge of concurrent edits. At this layer the effective semantics are **last-write-wins** for the document state held in memory.
+
+**Across processes (editor ⇄ MCP agent) — optimistic concurrency:**
+
+- The library itself has **no** cross-process `expectedVersion`/etag guard; two separate processes doing read-modify-write can still race and lose comments.
+- The MCP tools add an **optimistic-concurrency guard** on top: every read/mutation returns a `version` (a SHA-256 hash of the sidecar contents). Pass the last-observed value back as `expectedVersion` on the next mutation. If the on-disk sidecar changed in the meantime, the tool returns `isError: true` with `{ "status": "conflict", "code": "version-mismatch", "currentVersion", "expectedVersion" }` and performs **no write**.
+- The library does **not** merge concurrent comment additions; reconciliation is the caller's responsibility, driven by `version`.
+
+**Recommended pattern for a host that both watches and writes the sidecar:**
+
+1. Track the latest `version` you have observed for each sidecar.
+2. **Watch** the sidecar file for external changes (e.g. the agent writing) and **reload** your in-memory document when it changes, adopting the new `version`.
+3. Always send `expectedVersion` on MCP mutations (`mrsf_add`, `mrsf_add_batch`, `mrsf_update`, `mrsf_resolve`, `mrsf_rename`, `mrsf_delete`, and single-target `mrsf_reanchor`).
+4. On a `version-mismatch`, reload the sidecar, re-apply your pending change against the fresh state, and retry with the new `expectedVersion`.
+5. Serialize your own writes (editor save vs. agent action) rather than firing both concurrently; the `version` guard turns an unavoidable race into a detectable conflict rather than silent data loss.
+
+> `expectedVersion` is honored only when a mutation targets exactly one sidecar. For batch/multi-target `mrsf_reanchor` it is ignored (the response notes this), so coordinate those per-file.
+
 ### Tool Details
 
 #### `mrsf_discover`

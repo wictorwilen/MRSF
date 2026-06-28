@@ -120,6 +120,8 @@ Serialize an `MrsfDocument` to pretty-printed JSON string.
 
 Write an `MrsfDocument` to disk. Format is inferred from the file extension (`.yaml` or `.json`).
 
+Writes to the same path are **serialized** through a per-file queue and are **atomic** (temp file + `rename`). The YAML path round-trips at the CST level to preserve unrelated formatting/comments, but it persists the in-memory document as-is — there is no field-level merge, so the effective semantics are last-write-wins. There is no cross-process version guard at this layer; for concurrent editor ⇄ agent writers, use the MCP server's optimistic-concurrency (`version` / `expectedVersion`) guard. See [Concurrency & write-conflict semantics](../mcp/#concurrency-write-conflict-semantics).
+
 ### `computeHash(text: string): string`
 
 Compute the SHA-256 hex digest of a string (used for `selected_text_hash`).
