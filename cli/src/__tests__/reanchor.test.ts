@@ -141,6 +141,101 @@ describe("reanchorComment — exact match", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Step 1a: proximity guard (issue #13) — in-place edits must not teleport
+// ---------------------------------------------------------------------------
+
+describe("reanchorComment — §7.4 step 1a proximity guard", () => {
+  // "source" anchored on line 1; a second identical token sits far away on line 8.
+  const docWithFarDuplicate = (firstLine: string) =>
+    lines1(
+      firstLine,
+      "",
+      "filler a",
+      "filler b",
+      "filler c",
+      "filler d",
+      "",
+      "See the other source for details.",
+    );
+
+  it("keeps a comment at its original position when the anchored text is edited in place", () => {
+    // Original anchor edited in place: "source" → "sourZZZe" on line 1.
+    // The only remaining exact match of "source" is far away on line 8.
+    const lines = docWithFarDuplicate("The data sourZZZe is here.");
+    const comment = makeComment({
+      selected_text: "source",
+      line: 1,
+      start_column: 9,
+      end_column: 15,
+    });
+
+    const result = reanchorComment(comment, lines);
+
+    expect(result.newLine).toBe(1); // stays put, does NOT teleport to line 8
+    expect(result.status).not.toBe("anchored");
+    expect(result.status).toBe("fuzzy");
+    expect(result.score).toBeLessThan(1.0);
+    // anchored_text records the (edited) text now at the stored span, not "source".
+    expect(result.anchoredText).not.toBe("source");
+    expect(result.anchoredText).toBe("sourZZ");
+    expect(result.previousSelectedText).toBe("source");
+  });
+
+  it("still relocates a lone exact match within the proximity window", () => {
+    // Duplicate is close (within ±5 lines): treat as a genuine move.
+    const lines = lines1(
+      "The data sourZZZe is here.",
+      "",
+      "See the other source for details.",
+    );
+    const comment = makeComment({
+      selected_text: "source",
+      line: 1,
+      start_column: 9,
+      end_column: 15,
+    });
+
+    const result = reanchorComment(comment, lines);
+
+    expect(result.status).toBe("anchored");
+    expect(result.newLine).toBe(3);
+    expect(result.score).toBe(1.0);
+  });
+
+  it("relocates a far lone exact match when the original line was removed", () => {
+    // Original line no longer exists (document shrank): far relocation is a
+    // legitimate contextual re-anchor, not a teleport.
+    const lines = lines1("filler", "", "See the other source for details.");
+    const comment = makeComment({
+      selected_text: "source",
+      line: 12, // beyond document bounds
+    });
+
+    const result = reanchorComment(comment, lines);
+
+    expect(result.status).toBe("anchored");
+    expect(result.newLine).toBe(3);
+    expect(result.score).toBe(1.0);
+  });
+
+  it("honours a custom proximity window", () => {
+    const lines = docWithFarDuplicate("The data sourZZZe is here.");
+    const comment = makeComment({
+      selected_text: "source",
+      line: 1,
+      start_column: 9,
+      end_column: 15,
+    });
+
+    // A wide window (≥7) tolerates the line-8 relocation.
+    const result = reanchorComment(comment, lines, { proximityWindow: 20 });
+
+    expect(result.status).toBe("anchored");
+    expect(result.newLine).toBe(8);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Step 4: Orphan
 // ---------------------------------------------------------------------------
 

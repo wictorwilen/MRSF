@@ -71,6 +71,7 @@ export async function reanchorDocument(
 ): Promise<ReanchorResult[]> {
   const results: ReanchorResult[] = [];
   const threshold = opts.threshold ?? DEFAULT_THRESHOLD;
+  const proximityWindow = opts.proximityWindow;
 
   // Determine git context
   let diffHunks: DiffHunk[] | undefined;
@@ -95,6 +96,7 @@ export async function reanchorDocument(
             diffHunks: hunks,
             threshold,
             commitIsStale: true,
+            proximityWindow,
           });
           results.push(result);
           continue;
@@ -102,7 +104,7 @@ export async function reanchorDocument(
 
         // non-stale or no commit
         results.push(
-          reanchorComment(comment, documentLines, { threshold, commitIsStale: false }),
+          reanchorComment(comment, documentLines, { threshold, commitIsStale: false, proximityWindow }),
         );
       }
 
@@ -110,7 +112,7 @@ export async function reanchorDocument(
     }
   }
 
-  return reanchorDocumentLines(doc, documentLines, { threshold });
+  return reanchorDocumentLines(doc, documentLines, { threshold, proximityWindow });
 }
 
 /**

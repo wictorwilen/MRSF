@@ -2,6 +2,7 @@ import type {
   AnchorPosition,
   Comment,
   DiffHunk,
+  FuzzyCandidate,
   MrsfDocument,
   ReanchorResult,
 } from "./types.js";
@@ -14,6 +15,16 @@ import {
 export const HIGH_THRESHOLD = 0.8;
 export const DEFAULT_THRESHOLD = 0.6;
 
+/**
+ * Default proximity window (in lines) for the §7.4 step 1a relocation guard.
+ *
+ * A lone exact match of `selected_text` that lands farther than this many
+ * lines from the comment's original `line` — while the text at the original
+ * position has changed — is treated as an in-place edit rather than a
+ * confident relocation. See {@link isImplausibleExactRelocation}.
+ */
+export const DEFAULT_PROXIMITY_WINDOW = 5;
+
 export function toReanchorLines(documentText: string): string[] {
   return ["", ...documentText.replace(/\r\n/g, "\n").split("\n")];
 }
@@ -25,9 +36,11 @@ export function reanchorComment(
     diffHunks?: DiffHunk[];
     threshold?: number;
     commitIsStale?: boolean;
+    proximityWindow?: number;
   } = {},
 ): ReanchorResult {
   const threshold = opts.threshold ?? DEFAULT_THRESHOLD;
+  const proximityWindow = opts.proximityWindow ?? DEFAULT_PROXIMITY_WINDOW;
   const commentId = comment.id;
   const selectedText = comment.selected_text;
 
@@ -96,31 +109,59 @@ export function reanchorComment(
   if (selectedText) {
     const exactCandidates = exactMatch(documentLines, selectedText);
 
+    // Pick the best exact candidate: the only one, or — when several remain —
+    // the one nearest to the original line (§7.4 step 1b).
+    let chosen: FuzzyCandidate | undefined;
+    let chosenReason = "";
     if (exactCandidates.length === 1) {
-      const candidate = exactCandidates[0];
-      return {
-        commentId,
-        status: "anchored",
-        score: 1.0,
-        newLine: candidate.line,
-        newEndLine: candidate.endLine,
-        newStartColumn: candidate.startColumn,
-        newEndColumn: candidate.endColumn,
-        reason: "Exact text match (unique).",
-      };
+      chosen = exactCandidates[0];
+      chosenReason = "Exact text match (unique).";
+    } else if (exactCandidates.length > 1 && comment.line != null) {
+      chosen = closestToLine(exactCandidates, comment.line);
+      chosenReason = `Exact text match (${exactCandidates.length} occurrences; chose nearest to original line ${comment.line}).`;
     }
 
-    if (exactCandidates.length > 1 && comment.line != null) {
-      const best = closestToLine(exactCandidates, comment.line);
+    if (chosen) {
+      // §7.4 step 1a proximity guard: a lone/closest exact match that lands far
+      // from the original position — while the text at the original position no
+      // longer equals selected_text — most likely indicates an in-place edit of
+      // the anchored text, not a genuine relocation. Keep the comment at its
+      // original position and flag it for re-anchoring instead of teleporting it
+      // onto an unrelated identical token with full confidence.
+      if (isImplausibleExactRelocation(comment, chosen, documentLines, proximityWindow)) {
+        const textAtOrigin = extractText(
+          documentLines,
+          comment.line as number,
+          comment.end_line,
+          comment.start_column,
+          comment.end_column,
+        );
+        return {
+          commentId,
+          status: "fuzzy",
+          score: 0.5,
+          newLine: comment.line,
+          newEndLine: comment.end_line,
+          newStartColumn: comment.start_column,
+          newEndColumn: comment.end_column,
+          anchoredText: textAtOrigin ?? undefined,
+          previousSelectedText: selectedText,
+          reason:
+            `Lone exact match at line ${chosen.line} is beyond the proximity window ` +
+            `(±${proximityWindow}) of original line ${comment.line} and the text at the ` +
+            `original position changed; kept at original position, needs re-anchoring.`,
+        };
+      }
+
       return {
         commentId,
         status: "anchored",
         score: 1.0,
-        newLine: best.line,
-        newEndLine: best.endLine,
-        newStartColumn: best.startColumn,
-        newEndColumn: best.endColumn,
-        reason: `Exact text match (${exactCandidates.length} occurrences; chose nearest to original line ${comment.line}).`,
+        newLine: chosen.line,
+        newEndLine: chosen.endLine,
+        newStartColumn: chosen.startColumn,
+        newEndColumn: chosen.endColumn,
+        reason: chosenReason,
       };
     }
 
@@ -254,7 +295,7 @@ export function reanchorComment(
 export function reanchorDocumentLines(
   doc: MrsfDocument,
   documentLines: string[],
-  opts: { threshold?: number } = {},
+  opts: { threshold?: number; proximityWindow?: number } = {},
 ): ReanchorResult[] {
   return doc.comments.map((comment) => reanchorComment(comment, documentLines, opts));
 }
@@ -262,7 +303,7 @@ export function reanchorDocumentLines(
 export function reanchorDocumentText(
   doc: MrsfDocument,
   documentText: string,
-  opts: { threshold?: number } = {},
+  opts: { threshold?: number; proximityWindow?: number } = {},
 ): ReanchorResult[] {
   return reanchorDocumentLines(doc, toReanchorLines(documentText), opts);
 }
@@ -270,7 +311,7 @@ export function reanchorDocumentText(
 export function resolveAnchor(
   comment: Comment,
   documentText: string,
-  opts: { threshold?: number } = {},
+  opts: { threshold?: number; proximityWindow?: number } = {},
 ): AnchorPosition {
   const normalizedText = documentText.replace(/\r\n/g, "\n");
   const documentLines = toReanchorLines(documentText);
@@ -460,6 +501,48 @@ function closestToLine<T extends { line: number }>(candidates: T[], targetLine: 
   return candidates.reduce((best, candidate) =>
     Math.abs(candidate.line - targetLine) < Math.abs(best.line - targetLine) ? candidate : best,
   );
+}
+
+/**
+ * §7.4 step 1a relocation guard.
+ *
+ * Returns true when a chosen exact-match candidate is an *implausible*
+ * full-confidence relocation: the original `line` still exists in the document,
+ * the candidate is farther than `proximityWindow` lines away, and the text now
+ * at the original position no longer equals `selected_text`. This is the
+ * signature of an in-place edit of the anchored text (which removed the
+ * original occurrence) rather than a genuine move of the selection.
+ *
+ * When the original line no longer exists (the document shrank or the section
+ * was removed) or no positional anchor is available, relocation is treated as a
+ * legitimate §7.4 step 3 contextual re-anchor and this returns false.
+ */
+function isImplausibleExactRelocation(
+  comment: Comment,
+  candidate: FuzzyCandidate,
+  lines: string[],
+  proximityWindow: number,
+): boolean {
+  if (comment.line == null) return false;
+
+  // Original position must still exist to be a viable fallback anchor.
+  if (comment.line <= 0 || comment.line >= lines.length) return false;
+
+  // A nearby match is plausibly the same (or an adjacent) edit region.
+  if (Math.abs(candidate.line - comment.line) <= proximityWindow) return false;
+
+  // If the text at the original position still equals selected_text, the
+  // original occurrence is intact and relocation is not a teleport.
+  const textAtOrigin = extractText(
+    lines,
+    comment.line,
+    comment.end_line,
+    comment.start_column,
+    comment.end_column,
+  );
+  if (textAtOrigin === comment.selected_text) return false;
+
+  return true;
 }
 
 function getLineShift(diffHunks: DiffHunk[], line: number): { shift: number; modified: boolean } {

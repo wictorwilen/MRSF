@@ -24,6 +24,11 @@ export function registerReanchor(program: Command): void {
     .description("Re-anchor comments to current document content")
     .option("-n, --dry-run", "Report without modifying files")
     .option("-t, --threshold <n>", "Fuzzy threshold 0.0–1.0", "0.6")
+    .option(
+      "--proximity-window <n>",
+      "Max line distance for a lone exact match to relocate with full confidence (§7.4 step 1a guard)",
+      "5",
+    )
     .option("--staged", "Only process sidecars for staged files")
     .option("--no-git", "Disable git integration")
     .option("--from <commit>", "Override from-commit for all comments")
@@ -35,6 +40,7 @@ export function registerReanchor(program: Command): void {
         opts: {
           dryRun?: boolean;
           threshold: string;
+          proximityWindow: string;
           staged?: boolean;
           git: boolean;
           from?: string;
@@ -47,6 +53,7 @@ export function registerReanchor(program: Command): void {
         const quiet = parentOpts.quiet ?? false;
         const verbose = parentOpts.verbose ?? false;
         const threshold = parseFloat(opts.threshold);
+        const proximityWindow = parseInt(opts.proximityWindow, 10);
         const noGit = !opts.git;
 
         let sidecarPaths: string[];
@@ -97,6 +104,7 @@ export function registerReanchor(program: Command): void {
 
             const results = await reanchorDocument(doc, lines, {
               threshold,
+              proximityWindow,
               noGit,
               fromCommit: opts.from,
               documentPath: docPath,

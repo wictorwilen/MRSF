@@ -247,6 +247,13 @@ export interface ReanchorOptions extends BaseOptions {
   fromCommit?: string;
   /** Update selected_text to match anchored_text (opt-in per §6.2). */
   updateText?: boolean;
+  /**
+   * Proximity window (in lines) for the §7.4 step 1a relocation guard.
+   * A lone exact match farther than this from the original line, when the
+   * original position's text has changed, is kept in place and flagged for
+   * re-anchoring rather than relocated with full confidence. Default 5.
+   */
+  proximityWindow?: number;
   /** Force-anchor: update commit to HEAD and clear audit fields for high-confidence results. */
   force?: boolean;
 }
