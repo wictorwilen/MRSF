@@ -14,18 +14,39 @@ anchor within the current document revision:
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from typing import Any
 
+from .anchor_context import (
+    AnchorContextIndex,
+    create_anchor_context_index,
+    resolve_context_anchor,
+)
+from .confidence_calibration import calibrate_anchor_evidence
 from .discovery import sidecar_to_document
-from .fuzzy import exact_match, fuzzy_search, normalized_match
+from .fuzzy import (
+    FuzzySearchIndex,
+    create_fuzzy_search_index,
+    exact_match,
+    fuzzy_search,
+    fuzzy_search_thresholds,
+    normalized_match,
+)
 from .git import (
     find_repo_root,
     get_current_commit,
     get_diff,
+    get_file_at_commit,
     get_line_shift,
     is_git_available,
 )
+from .global_reconciliation import reconcile_comment_anchors
 from .parser import parse_sidecar, read_document_lines
+from .revision_projection import (
+    RevisionProjectionIndex,
+    create_revision_projection,
+    project_comment_anchor,
+)
 from .types import (
     Comment,
     DiffHunk,
@@ -37,6 +58,7 @@ from .writer import write_sidecar
 
 HIGH_THRESHOLD = 0.8
 DEFAULT_THRESHOLD = 0.6
+DEFAULT_PROXIMITY_WINDOW = 5
 
 
 # ---------------------------------------------------------------------------
@@ -51,10 +73,26 @@ def reanchor_comment(
     diff_hunks: list[DiffHunk] | None = None,
     threshold: float = DEFAULT_THRESHOLD,
     commit_is_stale: bool = False,
+    proximity_window: int = DEFAULT_PROXIMITY_WINDOW,
+    revision_projection: RevisionProjectionIndex | None = None,
+    anchor_context: AnchorContextIndex | None = None,
+    fuzzy_search_index: FuzzySearchIndex | None = None,
+    get_fuzzy_search_index: Callable[[], FuzzySearchIndex] | None = None,
 ) -> ReanchorResult:
     """Re-anchor a single comment against the current document lines."""
     comment_id = comment.id
     selected_text = comment.selected_text
+    fuzzy_candidate_sets: dict[float, list[Any]] | None = None
+
+    def get_fuzzy_index() -> FuzzySearchIndex:
+        nonlocal fuzzy_search_index
+        if fuzzy_search_index is None:
+            fuzzy_search_index = (
+                get_fuzzy_search_index()
+                if get_fuzzy_search_index is not None
+                else create_fuzzy_search_index(document_lines)
+            )
+        return fuzzy_search_index
 
     # No selected_text and no line — nothing to anchor
     if not selected_text and comment.line is None:
@@ -116,12 +154,71 @@ def reanchor_comment(
                     ),
                 )
 
+    projected = (
+        project_comment_anchor(comment, revision_projection, threshold)
+        if selected_text and revision_projection is not None
+        else None
+    )
+    if selected_text and projected is not None and projected.exact:
+        calibrated = calibrate_anchor_evidence(comment_id, selected_text, projected)
+        if calibrated is not None:
+            return calibrated.result
+    contextual = (
+        resolve_context_anchor(comment, anchor_context)
+        if selected_text and anchor_context is not None
+        else None
+    )
+    if selected_text and (projected is not None or contextual is not None):
+        calibrated = calibrate_anchor_evidence(
+            comment_id, selected_text, projected, contextual
+        )
+        if calibrated is not None:
+            return calibrated.result
+
     # Step 1: Exact text match
     if selected_text:
         exact_candidates = exact_match(document_lines, selected_text)
 
+        if len(exact_candidates) > 1 and comment.line is None:
+            return ReanchorResult(
+                comment_id=comment_id,
+                status="ambiguous",
+                score=1.0,
+                reason=(
+                    f"Ambiguous: {len(exact_candidates)} exact matches and no position "
+                    "or source context to disambiguate them."
+                ),
+            )
+
         if len(exact_candidates) == 1:
             c = exact_candidates[0]
+            if _is_implausible_exact_relocation(
+                comment, c, document_lines, proximity_window
+            ):
+                text_at_origin = _extract_text(
+                    document_lines,
+                    comment.line or 0,
+                    comment.end_line,
+                    comment.start_column,
+                    comment.end_column,
+                )
+                return ReanchorResult(
+                    comment_id=comment_id,
+                    status="fuzzy",
+                    score=0.5,
+                    new_line=comment.line,
+                    new_end_line=comment.end_line,
+                    new_start_column=comment.start_column,
+                    new_end_column=comment.end_column,
+                    anchored_text=text_at_origin,
+                    previous_selected_text=selected_text,
+                    reason=(
+                        f"Lone exact match at line {c.line} is beyond the proximity window "
+                        f"(±{proximity_window}) of original line {comment.line} and the text "
+                        "at the original position changed; kept at original position, "
+                        "needs re-anchoring."
+                    ),
+                )
             return ReanchorResult(
                 comment_id=comment_id,
                 status="anchored",
@@ -166,12 +263,14 @@ def reanchor_comment(
                 reason="Normalized whitespace match.",
             )
 
-        fuzzy_candidates = fuzzy_search(
+        fuzzy_candidate_sets = fuzzy_search_thresholds(
             document_lines,
             selected_text,
-            HIGH_THRESHOLD,
+            [HIGH_THRESHOLD, threshold],
             comment.line,
+            get_fuzzy_index(),
         )
+        fuzzy_candidates = fuzzy_candidate_sets.get(HIGH_THRESHOLD, [])
 
         if len(fuzzy_candidates) == 1 or (
             fuzzy_candidates and fuzzy_candidates[0].score >= HIGH_THRESHOLD
@@ -236,11 +335,16 @@ def reanchor_comment(
 
     # Step 3: Lower-threshold fuzzy search
     if selected_text:
-        low_candidates = fuzzy_search(
-            document_lines,
-            selected_text,
-            threshold,
-            comment.line,
+        low_candidates = (
+            fuzzy_candidate_sets.get(threshold, [])
+            if fuzzy_candidate_sets is not None
+            else fuzzy_search(
+                document_lines,
+                selected_text,
+                threshold,
+                comment.line,
+                get_fuzzy_index(),
+            )
         )
 
         if len(low_candidates) == 1:
@@ -300,6 +404,13 @@ def reanchor_document(
 
     results: list[ReanchorResult] = []
     threshold = opts.threshold
+    fuzzy_index: FuzzySearchIndex | None = None
+
+    def get_fuzzy_index() -> FuzzySearchIndex:
+        nonlocal fuzzy_index
+        if fuzzy_index is None:
+            fuzzy_index = create_fuzzy_search_index(document_lines)
+        return fuzzy_index
 
     if not opts.no_git and is_git_available():
         effective_repo_root = repo_root or find_repo_root(opts.cwd)
@@ -308,28 +419,82 @@ def reanchor_document(
             head = get_current_commit(effective_repo_root)
 
             global_from = opts.from_commit
+            diff_cache: dict[str, list[DiffHunk]] = {}
+            projection_cache: dict[str, RevisionProjectionIndex | None] = {}
+            context_cache: dict[str, AnchorContextIndex | None] = {}
+            groups: dict[str, tuple[list[Comment], list[int], AnchorContextIndex]] = {}
 
             for comment in doc.comments:
                 comment_commit = global_from or comment.commit
                 if comment_commit and head and comment_commit != head:
-                    hunks = get_diff(comment_commit, head, rel_path, effective_repo_root)
+                    if comment_commit not in diff_cache:
+                        diff_cache[comment_commit] = get_diff(
+                            comment_commit, head, rel_path, effective_repo_root
+                        )
+                    hunks = diff_cache[comment_commit]
+                    if comment_commit not in projection_cache:
+                        source_text = get_file_at_commit(
+                            comment_commit, rel_path, effective_repo_root
+                        )
+                        if source_text is None:
+                            projection_cache[comment_commit] = None
+                            context_cache[comment_commit] = None
+                        else:
+                            source_lines = to_reanchor_lines(source_text)
+                            projection_cache[comment_commit] = create_revision_projection(
+                                source_lines, document_lines
+                            )
+                            context_cache[comment_commit] = create_anchor_context_index(
+                                source_lines, document_lines
+                            )
+                    projection = projection_cache[comment_commit]
+                    context = context_cache[comment_commit]
                     result = reanchor_comment(
                         comment,
                         document_lines,
                         diff_hunks=hunks,
                         threshold=threshold,
                         commit_is_stale=True,
+                        revision_projection=projection,
+                        anchor_context=context,
+                        get_fuzzy_search_index=get_fuzzy_index,
                     )
+                    result_index = len(results)
                     results.append(result)
+                    if context is not None:
+                        if comment_commit not in groups:
+                            groups[comment_commit] = ([], [], context)
+                        groups[comment_commit][0].append(comment)
+                        groups[comment_commit][1].append(result_index)
                     continue
 
-                results.append(reanchor_comment(comment, document_lines, threshold=threshold))
+                results.append(
+                    reanchor_comment(
+                        comment,
+                        document_lines,
+                        threshold=threshold,
+                        get_fuzzy_search_index=get_fuzzy_index,
+                    )
+                )
 
+            for comments, indexes, context in groups.values():
+                reconciled = reconcile_comment_anchors(
+                    comments, [results[index] for index in indexes], context
+                )
+                for offset, result_index in enumerate(indexes):
+                    results[result_index] = reconciled[offset]
             return results
 
     # No git — pure text-based
     for comment in doc.comments:
-        results.append(reanchor_comment(comment, document_lines, threshold=threshold))
+        results.append(
+            reanchor_comment(
+                comment,
+                document_lines,
+                threshold=threshold,
+                get_fuzzy_search_index=get_fuzzy_index,
+            )
+        )
 
     return results
 
@@ -484,3 +649,30 @@ def _extract_text(
 def _closest_to_line(candidates: list[Any], target_line: int) -> Any:
     """Pick the candidate closest to a hint line."""
     return min(candidates, key=lambda c: abs(c.line - target_line))
+
+
+def to_reanchor_lines(document_text: str) -> list[str]:
+    """Normalize line endings and return the internal 1-based line array."""
+    return ["", *document_text.replace("\r\n", "\n").split("\n")]
+
+
+def _is_implausible_exact_relocation(
+    comment: Comment,
+    candidate: Any,
+    lines: list[str],
+    proximity_window: int,
+) -> bool:
+    if comment.line is None or comment.line <= 0 or comment.line >= len(lines):
+        return False
+    if abs(candidate.line - comment.line) <= proximity_window:
+        return False
+    return (
+        _extract_text(
+            lines,
+            comment.line,
+            comment.end_line,
+            comment.start_column,
+            comment.end_column,
+        )
+        != comment.selected_text
+    )

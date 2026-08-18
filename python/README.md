@@ -161,6 +161,14 @@ matches = mrsf.fuzzy_search("search text", ["line 1", "line 2", "line 3"])
 | `reanchor_comment(comment, lines, opts)` | Re-anchor a single comment |
 | `reanchor_document(doc, lines, opts)` | Re-anchor all comments in a document |
 | `reanchor_file(path, opts)` | High-level file-based re-anchor |
+| `create_revision_projection(source, target)` | Build revision-aware line projections |
+| `create_anchor_context_index(source, target)` | Index Markdown blocks and neighboring context |
+| `reconcile_comment_anchors(comments, results, context)` | Resolve ambiguous anchors from same-section landmarks |
+| `calibrate_anchor_evidence(id, text, projection, context)` | Combine evidence into confidence bands |
+
+The Python implementation uses the same revision projection, bounded candidate
+retrieval, Markdown structure, global reconciliation, and confidence calibration
+as the TypeScript and browser implementations.
 
 ### Discovery
 
