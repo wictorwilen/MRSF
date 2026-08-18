@@ -1,0 +1,64 @@
+[
+  {
+    "id": "realistic-api-guide-revision",
+    "description": "API documentation with renamed headings, edited prose, and reordered sections.",
+    "categories": ["realistic", "api-guide", "move", "rewrite"],
+    "source": { "path": "../../documents/api-guide.before.md" },
+    "target": { "path": "../../documents/api-guide.after.md" },
+    "comments": [
+      { "id": "api-auth-heading", "anchor": { "line": 5, "selected_text": "## Authentication" }, "expected": { "status": "anchored", "ranges": [{ "line": 5 }] } },
+      { "id": "api-token-expiry", "anchor": { "line": 9, "selected_text": "Tokens expire after sixty minutes and must never be written to logs." }, "expected": { "status": "anchored", "ranges": [{ "line": 9 }] } },
+      { "id": "api-project-config", "anchor": { "line": 23, "selected_text": "Set the project region and retention period." }, "expected": { "status": "anchored", "ranges": [{ "line": 33 }] } },
+      { "id": "api-rollout-default", "anchor": { "line": 37, "selected_text": "The default rollout strategy is gradual." }, "expected": { "status": "fuzzy", "ranges": [{ "line": 21 }] } },
+      { "id": "api-audit-retention", "anchor": { "line": 41, "selected_text": "Audit events are retained independently from project logs." }, "expected": { "status": "anchored", "ranges": [{ "line": 39 }] } }
+    ]
+  },
+  {
+    "id": "realistic-deployment-runbook-revision",
+    "description": "Operational runbook with reordered checks and phases plus command blocks.",
+    "categories": ["realistic", "runbook", "move", "rewrite", "code"],
+    "source": { "path": "../../documents/runbook.before.md" },
+    "target": { "path": "../../documents/runbook.after.md" },
+    "comments": [
+      { "id": "runbook-intro", "anchor": { "line": 3, "selected_text": "Use this runbook for scheduled production releases." }, "expected": { "status": "fuzzy", "ranges": [{ "line": 3 }] } },
+      { "id": "runbook-incident-channel", "anchor": { "line": 9, "selected_text": "- The incident channel is staffed." }, "expected": { "status": "anchored", "ranges": [{ "line": 7 }] } },
+      { "id": "runbook-backup-row", "anchor": { "line": 13, "selected_text": "| Database backup | Operations | Yes |" }, "expected": { "status": "anchored", "ranges": [{ "line": 15 }] } },
+      { "id": "runbook-deploy-command", "anchor": { "line": 21, "selected_text": "acme deploy --environment production" }, "expected": { "status": "anchored", "ranges": [{ "line": 22 }] } },
+      { "id": "runbook-rollback-condition", "anchor": { "line": 28, "selected_text": "Rollback when two consecutive health checks fail." }, "expected": { "status": "fuzzy", "ranges": [{ "line": 35 }] } },
+      { "id": "runbook-verification", "anchor": { "line": 38, "selected_text": "Confirm that new requests use the released version." }, "expected": { "status": "anchored", "ranges": [{ "line": 29 }] } }
+    ]
+  },
+  {
+    "id": "realistic-architecture-revision",
+    "description": "Architecture document with renamed components and reordered guarantees.",
+    "categories": ["realistic", "architecture", "move", "rewrite"],
+    "source": { "path": "../../documents/architecture.before.md" },
+    "target": { "path": "../../documents/architecture.after.md" },
+    "comments": [
+      { "id": "architecture-intro", "anchor": { "line": 3, "selected_text": "The worker service processes durable jobs from regional queues." }, "expected": { "status": "fuzzy", "ranges": [{ "line": 3 }] } },
+      { "id": "architecture-dispatcher-heading", "anchor": { "line": 7, "selected_text": "### Dispatcher" }, "expected": { "status": "fuzzy", "ranges": [{ "line": 13 }] } },
+      { "id": "architecture-lease", "anchor": { "line": 11, "selected_text": "It records an assignment lease before publishing the job." }, "expected": { "status": "anchored", "ranges": [{ "line": 17 }] } },
+      { "id": "architecture-worker", "anchor": { "line": 15, "selected_text": "The worker executes one job at a time." }, "expected": { "status": "fuzzy", "ranges": [{ "line": 21 }] } },
+      { "id": "architecture-reaper", "anchor": { "line": 21, "selected_text": "The reaper returns expired assignments to the queue." }, "expected": { "status": "fuzzy", "ranges": [{ "line": 27 }] } },
+      { "id": "architecture-delivery", "anchor": { "line": 27, "selected_text": "Jobs are delivered at least once." }, "expected": { "status": "anchored", "ranges": [{ "line": 7 }] } },
+      { "id": "architecture-scaling", "anchor": { "line": 33, "selected_text": "Workers scale from queue depth and processing latency." }, "expected": { "status": "fuzzy", "ranges": [{ "line": 39 }] } }
+    ]
+  },
+  {
+    "id": "realistic-user-guide-revision",
+    "description": "User guide with reordered workflows and broad copy editing.",
+    "categories": ["realistic", "user-guide", "move", "rewrite"],
+    "source": { "path": "../../documents/user-guide.before.md" },
+    "target": { "path": "../../documents/user-guide.after.md" },
+    "comments": [
+      { "id": "guide-intro", "anchor": { "line": 3, "selected_text": "This guide explains how teams organize documents in a workspace." }, "expected": { "status": "fuzzy", "ranges": [{ "line": 3 }] } },
+      { "id": "guide-name-rules", "anchor": { "line": 9, "selected_text": "Names may contain letters, numbers, and hyphens." }, "expected": { "status": "anchored", "ranges": [{ "line": 9 }] } },
+      { "id": "guide-invite-heading", "anchor": { "line": 13, "selected_text": "## Invite collaborators" }, "expected": { "status": "anchored", "ranges": [{ "line": 21 }] } },
+      { "id": "guide-member-settings", "anchor": { "line": 15, "selected_text": "Open **Settings** and select **Members**." }, "expected": { "status": "fuzzy", "ranges": [{ "line": 23 }] } },
+      { "id": "guide-create-folders", "anchor": { "line": 23, "selected_text": "Create folders for stable subject areas." }, "expected": { "status": "anchored", "ranges": [{ "line": 15 }] } },
+      { "id": "guide-tags", "anchor": { "line": 27, "selected_text": "Use tags for temporary initiatives." }, "expected": { "status": "fuzzy", "ranges": [{ "line": 17 }] } },
+      { "id": "guide-quoted-search", "anchor": { "line": 33, "selected_text": "Quoted searches require an exact phrase." }, "expected": { "status": "anchored", "ranges": [{ "line": 33 }] } },
+      { "id": "guide-archive-retention", "anchor": { "line": 39, "selected_text": "Archived workspaces remain readable for thirty days." }, "expected": { "status": "fuzzy", "ranges": [{ "line": 41 }] } }
+    ]
+  }
+]

@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "change": "source-revision range projection",
+  "committed_corpus": {
+    "before_passed": 53,
+    "after_passed": 60,
+    "comments": 77,
+    "before_incorrect_confident_relocations": 11,
+    "after_incorrect_confident_relocations": 11
+  },
+  "profiles": {
+    "small": {
+      "before_passed": 375,
+      "after_passed": 414,
+      "comments": 500,
+      "before_total_ms": 1222.069,
+      "after_total_ms": 882.342,
+      "before_incorrect_confident_relocations": 6,
+      "after_incorrect_confident_relocations": 4
+    },
+    "medium": {
+      "before_passed": 1594,
+      "after_passed": 1947,
+      "comments": 2000,
+      "before_total_ms": 4730.206,
+      "after_total_ms": 1875.15,
+      "before_incorrect_confident_relocations": 4,
+      "after_incorrect_confident_relocations": 4
+    },
+    "large": {
+      "before_passed": 1302,
+      "after_passed": 1988,
+      "comments": 2000,
+      "before_total_ms": 11486.786,
+      "after_total_ms": 7725.668,
+      "before_max_comment_ms": 1582.417,
+      "after_max_comment_ms": 2670.195,
+      "before_incorrect_confident_relocations": 0,
+      "after_incorrect_confident_relocations": 0
+    }
+  },
+  "notes": [
+    "Projection requires source revision content and verifies selected_text at its source range.",
+    "Large-profile worst-case time remains a known issue for bounded candidate verification.",
+    "Timing is informational and is not used as a deterministic regression gate."
+  ]
+}

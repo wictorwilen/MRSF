@@ -226,13 +226,19 @@ Parse a unified diff into structured hunk objects.
 
 ## Re-anchoring
 
+The repository's non-normative Anchor Mesh design, execution modes, confidence
+rules, and evaluation methodology are documented in
+[Reanchoring implementation](/guide/reanchoring).
+
 ### `reanchorComment(comment: Comment, lines: string[], options?: ReanchorOptions): ReanchorResult`
 
 Re-anchor a single comment against the current document lines. Returns the result with the new position and status.
 
 ### `reanchorDocument(doc: MrsfDocument, lines: string[], options?: ReanchorOptions): ReanchorResult[]`
 
-Re-anchor all comments in a document. Returns an array of results.
+Re-anchor all comments in a document. The Node entrypoint can use Git and source
+revision evidence when document and repository context are supplied. Returns an
+array of results.
 
 ### `applyReanchorResults(doc: MrsfDocument, results: ReanchorResult[]): MrsfDocument`
 

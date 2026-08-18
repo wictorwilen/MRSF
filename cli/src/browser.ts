@@ -1,6 +1,10 @@
 import * as fuzzy from "./lib/fuzzy.js";
 import * as identity from "./lib/identity.js";
 import * as reanchorCore from "./lib/reanchor-core.js";
+import * as anchorContext from "./lib/anchor-context.js";
+import * as globalReconciliation from "./lib/global-reconciliation.js";
+import * as revisionProjection from "./lib/revision-projection.js";
+import * as confidenceCalibration from "./lib/confidence-calibration.js";
 import * as validateCore from "./lib/validate-core.js";
 import * as serialize from "./lib/serialize.js";
 import { mrsfSchema } from "./lib/schema.js";
@@ -41,6 +45,26 @@ export const reanchorDocumentLines = reanchorCore.reanchorDocumentLines;
 export const reanchorDocumentText = reanchorCore.reanchorDocumentText;
 export const resolveAnchor = reanchorCore.resolveAnchor;
 export const toReanchorLines = reanchorCore.toReanchorLines;
+export const createAnchorContextIndex = anchorContext.createAnchorContextIndex;
+export const reconcileCommentAnchors =
+  globalReconciliation.reconcileCommentAnchors;
+export const createRevisionProjection =
+  revisionProjection.createRevisionProjection;
+export const calibrateAnchorEvidence =
+  confidenceCalibration.calibrateAnchorEvidence;
+export type {
+  AnchorContextIndex,
+  ContextAnchorCandidate,
+  ContextAnchorResolution,
+} from "./lib/anchor-context.js";
+export type {
+  ProjectedAnchor,
+  RevisionProjectionIndex,
+} from "./lib/revision-projection.js";
+export type {
+  CalibratedAnchor,
+  ConfidenceBand,
+} from "./lib/confidence-calibration.js";
 
 export const validateDocument = validateCore.validateDocument;
 export { mrsfSchema };

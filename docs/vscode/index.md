@@ -55,14 +55,15 @@ A dedicated **Sidemark** activity-bar panel lists all comments for the active Ma
 
 ### Automatic Reanchoring on Save
 
-When you save a Markdown file, Sidemark silently reanchors all comments using the MRSF multi-step resolution algorithm:
-
-1. **Exact text match** — finds the selected text at any position
-2. **Fuzzy match** — handles minor edits with configurable threshold
-3. **Diff-based shift** — uses git diffs for precise line shifting
-4. **Line fallback** — falls back to positional anchoring
+When you save a Markdown file, Sidemark silently reanchors all comments using
+the repository's **Anchor Mesh** implementation. It combines verified Git
+shifts, source-revision projection, Markdown structure, bounded text matching,
+and nearby high-confidence comments as landmarks.
 
 High-confidence results are applied automatically; uncertain results are flagged for manual review.
+
+See [Reanchoring implementation](/guide/reanchoring) for the non-normative
+algorithm details.
 
 ### Interactive Reanchor Review
 

@@ -13,6 +13,7 @@ import {
   isStale,
   getDiff,
   getFileAtCommit,
+  resolveCommit,
   getStagedFiles,
   getStagedDiff,
   detectRenames,
@@ -178,6 +179,17 @@ describe("git operations with real repo", () => {
     const commit = await getCurrentCommit(tmpDir);
     expect(commit).toBeTruthy();
     expect(commit!.length).toBe(40);
+  });
+
+  it("resolveCommit expands an abbreviated SHA", async () => {
+    fs.writeFileSync(path.join(tmpDir, "resolve.md"), "content");
+    await execFile("git", ["add", "resolve.md"], { cwd: tmpDir });
+    await execFile("git", ["commit", "-m", "resolve"], { cwd: tmpDir });
+    const full = await getCurrentCommit(tmpDir);
+
+    expect(full).not.toBeNull();
+    if (!full) throw new Error("Expected committed HEAD.");
+    expect(await resolveCommit(full.slice(0, 8), tmpDir)).toBe(full);
   });
 
   it("getCurrentCommit returns null for brand new repo", async () => {

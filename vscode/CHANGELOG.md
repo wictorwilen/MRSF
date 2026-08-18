@@ -5,6 +5,12 @@ All notable changes to the **Sidemark** VS Code extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-08-18
+
+### Changed
+- Reanchoring now uses the Anchor Mesh implementation from `@mrsf/cli` 0.7.0, combining Git revision evidence, Markdown structure, bounded text matching, confidence calibration, and comment landmarks.
+- Weak or conflicting relocations are presented for review rather than applied automatically.
+
 ## [0.4.4] - 2026-03-30
 
 ### Fixed

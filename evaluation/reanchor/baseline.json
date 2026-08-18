@@ -1,0 +1,1415 @@
+{
+  "version": 1,
+  "algorithm": "baseline",
+  "cases": 56,
+  "comments": 80,
+  "metrics": {
+    "passed": 80,
+    "failed": 0,
+    "exactRangeMatches": 80,
+    "statusMatches": 80,
+    "incorrectConfidentRelocations": 0
+  },
+  "results": [
+    {
+      "caseId": "unchanged-selection",
+      "commentId": "c01",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c01",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "reason": "Source-verified anchor remains exact at its stored position."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "lines-inserted-above",
+      "commentId": "c02",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c02",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 3,
+        "newEndLine": 3,
+        "newStartColumn": 0,
+        "newEndColumn": 17,
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "lines-deleted-above",
+      "commentId": "c03",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c03",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 0,
+        "newEndColumn": 17,
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "text-inserted-before-inline-anchor",
+      "commentId": "c04",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c04",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 7,
+        "newEndColumn": 20,
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "text-appended-after-inline-anchor",
+      "commentId": "c05",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c05",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 0,
+        "newEndColumn": 13,
+        "reason": "Source-verified anchor remains exact at its stored position."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "whitespace-normalized",
+      "commentId": "c06",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c06",
+        "status": "fuzzy",
+        "score": 0.6000000000000001,
+        "newLine": 1,
+        "newEndLine": 1,
+        "anchoredText": "Text  with   regular spaces.",
+        "previousSelectedText": "Text with regular spaces.",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "typo-corrected-in-place",
+      "commentId": "c07",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c07",
+        "status": "fuzzy",
+        "score": 0.5258333333333334,
+        "newLine": 1,
+        "newEndLine": 1,
+        "anchoredText": "The algorithm is reliable.",
+        "previousSelectedText": "The algorithmm is reliable.",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "sentence-rewritten-in-place",
+      "commentId": "c08",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c08",
+        "status": "fuzzy",
+        "score": 0.45,
+        "newLine": 1,
+        "newEndLine": 1,
+        "anchoredText": "The revised sentence describes the behavior more clearly.",
+        "previousSelectedText": "The original sentence explains the behavior clearly.",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "paragraph-moved",
+      "commentId": "c09",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c09",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 3,
+        "newEndLine": 3,
+        "newStartColumn": 0,
+        "newEndColumn": 18,
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "section-moved",
+      "commentId": "c10",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c10",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 5,
+        "newEndLine": 5,
+        "newStartColumn": 0,
+        "newEndColumn": 11,
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "heading-renamed",
+      "commentId": "c11",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c11",
+        "status": "fuzzy",
+        "score": 0.393,
+        "newLine": 1,
+        "newEndLine": 1,
+        "anchoredText": "## Setup and installation",
+        "previousSelectedText": "## Installation",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "heading-moved-and-renamed",
+      "commentId": "c12",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c12",
+        "status": "fuzzy",
+        "score": 0.542,
+        "newLine": 3,
+        "newEndLine": 3,
+        "anchoredText": "## Setup and installation",
+        "previousSelectedText": "## Installation",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "paragraph-split",
+      "commentId": "c13",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c13",
+        "status": "fuzzy",
+        "score": 0.5357142857142857,
+        "newLine": 1,
+        "newEndLine": 3,
+        "anchoredText": "First idea continues.\n\nThe second idea follows.",
+        "previousSelectedText": "First idea continues into the second idea.",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "paragraphs-merged",
+      "commentId": "c14",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c14",
+        "status": "fuzzy",
+        "score": 0.6000000000000001,
+        "newLine": 1,
+        "newEndLine": 1,
+        "anchoredText": "First idea. Second idea.",
+        "previousSelectedText": "First idea.\nSecond idea.",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "emphasis-added",
+      "commentId": "c15",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c15",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 2,
+        "newEndColumn": 18,
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "link-wrapped",
+      "commentId": "c16",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c16",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 1,
+        "newEndColumn": 16,
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "punctuation-changed",
+      "commentId": "c17",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c17",
+        "status": "fuzzy",
+        "score": 0.6000000000000001,
+        "newLine": 1,
+        "newEndLine": 1,
+        "anchoredText": "Is this reliable!",
+        "previousSelectedText": "Is this reliable?",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "line-endings-normalized",
+      "commentId": "c18",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c18",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 2,
+        "newEndLine": 2,
+        "reason": "Source-verified anchor remains exact at its stored position."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "multiline-selection-moved",
+      "commentId": "c19",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c19",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 3,
+        "newEndLine": 4,
+        "newStartColumn": 0,
+        "newEndColumn": 10,
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "multiline-whitespace-changed",
+      "commentId": "c20",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c20",
+        "status": "fuzzy",
+        "score": 0.6000000000000001,
+        "newLine": 1,
+        "newEndLine": 2,
+        "anchoredText": "Alpha  line.\nBeta   line.",
+        "previousSelectedText": "Alpha line.\nBeta line.",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "code-block-moved",
+      "commentId": "c21",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c21",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 4,
+        "newEndLine": 4,
+        "newStartColumn": 0,
+        "newEndColumn": 18,
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "repeated-code-without-position",
+      "commentId": "c22",
+      "expectedStatus": "ambiguous",
+      "actual": {
+        "commentId": "c22",
+        "status": "ambiguous",
+        "score": 1,
+        "reason": "Ambiguous: 2 exact matches and no position or source context to disambiguate them."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "table-row-moved",
+      "commentId": "c23",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c23",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 3,
+        "newEndLine": 3,
+        "newStartColumn": 0,
+        "newEndColumn": 11,
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "list-item-reordered",
+      "commentId": "c24",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c24",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 3,
+        "newEndLine": 3,
+        "newStartColumn": 0,
+        "newEndColumn": 12,
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "blockquote-marker-added",
+      "commentId": "c25",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c25",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 2,
+        "newEndColumn": 18,
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "unicode-accent-changed",
+      "commentId": "c26",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c26",
+        "status": "fuzzy",
+        "score": 0.5219117647058824,
+        "newLine": 1,
+        "newEndLine": 1,
+        "anchoredText": "The café is open.",
+        "previousSelectedText": "The cafe is open.",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "emoji-inserted",
+      "commentId": "c27",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c27",
+        "status": "fuzzy",
+        "score": 0.6000000000000001,
+        "newLine": 1,
+        "newEndLine": 1,
+        "anchoredText": "Deployment ✅ succeeded.",
+        "previousSelectedText": "Deployment succeeded.",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "letter-case-changed",
+      "commentId": "c28",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c28",
+        "status": "fuzzy",
+        "score": 0.6000000000000001,
+        "newLine": 1,
+        "newEndLine": 1,
+        "anchoredText": "API configuration",
+        "previousSelectedText": "API Configuration",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "duplicate-nearest-original",
+      "commentId": "c29",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c29",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 3,
+        "newEndLine": 3,
+        "reason": "Source-verified anchor remains exact at its stored position."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "duplicate-without-position",
+      "commentId": "c30",
+      "expectedStatus": "ambiguous",
+      "actual": {
+        "commentId": "c30",
+        "status": "ambiguous",
+        "score": 1,
+        "reason": "Ambiguous: 2 exact matches and no position or source context to disambiguate them."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "far-exact-after-origin-rewrite",
+      "commentId": "c31",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c31",
+        "status": "fuzzy",
+        "score": 0.48000000000000004,
+        "newLine": 1,
+        "newEndLine": 1,
+        "anchoredText": "Origin setting revised.",
+        "previousSelectedText": "Source setting.",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "nearby-exact-relocation",
+      "commentId": "c32",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c32",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 3,
+        "newEndLine": 3,
+        "newStartColumn": 0,
+        "newEndColumn": 14,
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "far-relocation-after-document-shrink",
+      "commentId": "c33",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c33",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 2,
+        "newEndLine": 2,
+        "newStartColumn": 0,
+        "newEndColumn": 11,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "selection-copied-original-remains",
+      "commentId": "c34",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c34",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "reason": "Source-verified anchor remains exact at its stored position."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "selection-copied-original-rewritten",
+      "commentId": "c35",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c35",
+        "status": "fuzzy",
+        "score": 0.6600000000000001,
+        "newLine": 1,
+        "newEndLine": 1,
+        "anchoredText": "Revised original phrase.",
+        "previousSelectedText": "Original phrase.",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "nearby-rewrite-versus-distant-exact",
+      "commentId": "c36",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c36",
+        "status": "fuzzy",
+        "score": 0.550543956043956,
+        "newLine": 2,
+        "newEndLine": 2,
+        "anchoredText": "Revised original statement for this section.",
+        "previousSelectedText": "Precise original statement for this section.",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "selection-deleted",
+      "commentId": "c37",
+      "expectedStatus": "orphaned",
+      "actual": {
+        "commentId": "c37",
+        "status": "orphaned",
+        "score": 0,
+        "reason": "Source block has no plausible structural or contextual match."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "section-deleted-and-position-gone",
+      "commentId": "c38",
+      "expectedStatus": "orphaned",
+      "actual": {
+        "commentId": "c38",
+        "status": "orphaned",
+        "score": 0,
+        "reason": "Source block has no plausible structural or contextual match."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "common-word-edited-at-origin",
+      "commentId": "c39",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c39",
+        "status": "fuzzy",
+        "score": 0.6375000000000001,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 4,
+        "newEndColumn": 10,
+        "anchoredText": "origin",
+        "previousSelectedText": "source",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "repeated-heading-nearest-original",
+      "commentId": "c40",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c40",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 5,
+        "newEndLine": 5,
+        "reason": "Source-verified anchor remains exact at its stored position."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "stale-position-out-of-bounds",
+      "commentId": "c41",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c41",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 2,
+        "newEndLine": 2,
+        "newStartColumn": 0,
+        "newEndColumn": 23,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "selection-with-blank-edges",
+      "commentId": "c42",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c42",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 3,
+        "newEndLine": 5,
+        "newStartColumn": 0,
+        "newEndColumn": 0,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "multiline-column-selection-moved",
+      "commentId": "c43",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c43",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 3,
+        "newEndLine": 4,
+        "newStartColumn": 2,
+        "newEndColumn": 4,
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "blank-line-inserted-inside-selection",
+      "commentId": "c44",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c44",
+        "status": "fuzzy",
+        "score": 0.6000000000000001,
+        "newLine": 1,
+        "newEndLine": 3,
+        "anchoredText": "Alpha line.\n\nBeta line.",
+        "previousSelectedText": "Alpha line.\nBeta line.",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "long-selection-partially-rewritten",
+      "commentId": "c45",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c45",
+        "status": "fuzzy",
+        "score": 0.5148648648648649,
+        "newLine": 1,
+        "newEndLine": 1,
+        "anchoredText": "This long paragraph describes the revised architecture, its safety constraints, and the intended runtime behavior for every supported integration.",
+        "previousSelectedText": "This long paragraph describes the original architecture, its constraints, and the expected operational behavior for every supported integration.",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "unrelated-content-at-original-position",
+      "commentId": "c46",
+      "expectedStatus": "orphaned",
+      "actual": {
+        "commentId": "c46",
+        "status": "orphaned",
+        "score": 0,
+        "reason": "Source block has no plausible structural or contextual match."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "repeated-paragraphs-reordered",
+      "commentId": "c47",
+      "expectedStatus": "ambiguous",
+      "actual": {
+        "commentId": "c47",
+        "status": "ambiguous",
+        "score": 1,
+        "reason": "Ambiguous: 2 exact matches and no position or source context to disambiguate them."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "list-duplicate-origin-edited",
+      "commentId": "c48",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c48",
+        "status": "fuzzy",
+        "score": 0.5357142857142857,
+        "newLine": 1,
+        "newEndLine": 1,
+        "anchoredText": "- Configure the primary service",
+        "previousSelectedText": "- Configure service",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "duplicate-heading-paths-without-context",
+      "commentId": "c49",
+      "expectedStatus": "ambiguous",
+      "actual": {
+        "commentId": "c49",
+        "status": "ambiguous",
+        "score": 1,
+        "reason": "Ambiguous: 2 exact matches and no position or source context to disambiguate them."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "equivalent-duplicate-ranges",
+      "commentId": "c50",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c50",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "reason": "Source-verified anchor remains exact at its stored position."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "moved-section-repeated-anchor",
+      "commentId": "alpha-leading-landmark",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "alpha-leading-landmark",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 17,
+        "newEndLine": 17,
+        "newStartColumn": 0,
+        "newEndColumn": 22,
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "moved-section-repeated-anchor",
+      "commentId": "alpha-repeated-target",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "alpha-repeated-target",
+        "status": "anchored",
+        "score": 0.99,
+        "newLine": 21,
+        "newEndLine": 21,
+        "newStartColumn": 0,
+        "newEndColumn": 16,
+        "reason": "Global reconciliation selected this candidate from 2 nearby landmark(s) (support 1.000, margin 0.447)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "moved-section-repeated-anchor",
+      "commentId": "alpha-trailing-landmark",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "alpha-trailing-landmark",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 25,
+        "newEndLine": 25,
+        "newStartColumn": 0,
+        "newEndColumn": 18,
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-api-guide-revision",
+      "commentId": "api-auth-heading",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "api-auth-heading",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 5,
+        "newEndLine": 5,
+        "newStartColumn": 0,
+        "newEndColumn": 17,
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-api-guide-revision",
+      "commentId": "api-token-expiry",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "api-token-expiry",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 9,
+        "newEndLine": 9,
+        "newStartColumn": 0,
+        "newEndColumn": 68,
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-api-guide-revision",
+      "commentId": "api-project-config",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "api-project-config",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 33,
+        "newEndLine": 33,
+        "newStartColumn": 0,
+        "newEndColumn": 44,
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-api-guide-revision",
+      "commentId": "api-rollout-default",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "api-rollout-default",
+        "status": "fuzzy",
+        "score": 0.7625324675324676,
+        "newLine": 21,
+        "newEndLine": 21,
+        "anchoredText": "The default rollout strategy is progressive.",
+        "previousSelectedText": "The default rollout strategy is gradual.",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-api-guide-revision",
+      "commentId": "api-audit-retention",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "api-audit-retention",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 39,
+        "newEndLine": 39,
+        "newStartColumn": 0,
+        "newEndColumn": 58,
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-deployment-runbook-revision",
+      "commentId": "runbook-intro",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "runbook-intro",
+        "status": "fuzzy",
+        "score": 0.95,
+        "newLine": 3,
+        "newEndLine": 3,
+        "anchoredText": "Use this runbook for scheduled and emergency production releases.",
+        "previousSelectedText": "Use this runbook for scheduled production releases.",
+        "reason": "Probable anchor: revision projection and Markdown context agree (confidence 0.950)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-deployment-runbook-revision",
+      "commentId": "runbook-incident-channel",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "runbook-incident-channel",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 7,
+        "newEndLine": 7,
+        "newStartColumn": 0,
+        "newEndColumn": 34,
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-deployment-runbook-revision",
+      "commentId": "runbook-backup-row",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "runbook-backup-row",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 15,
+        "newEndLine": 15,
+        "newStartColumn": 0,
+        "newEndColumn": 38,
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-deployment-runbook-revision",
+      "commentId": "runbook-deploy-command",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "runbook-deploy-command",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 22,
+        "newEndLine": 22,
+        "newStartColumn": 0,
+        "newEndColumn": 36,
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-deployment-runbook-revision",
+      "commentId": "runbook-rollback-condition",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "runbook-rollback-condition",
+        "status": "fuzzy",
+        "score": 0.95,
+        "newLine": 35,
+        "newEndLine": 35,
+        "anchoredText": "Rollback when two consecutive regional health checks fail.",
+        "previousSelectedText": "Rollback when two consecutive health checks fail.",
+        "reason": "Probable anchor: revision projection and Markdown context agree (confidence 0.950)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-deployment-runbook-revision",
+      "commentId": "runbook-verification",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "runbook-verification",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 29,
+        "newEndLine": 29,
+        "newStartColumn": 0,
+        "newEndColumn": 51,
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-architecture-revision",
+      "commentId": "architecture-intro",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "architecture-intro",
+        "status": "fuzzy",
+        "score": 0.8726794258373206,
+        "newLine": 3,
+        "newEndLine": 3,
+        "anchoredText": "The worker service processes durable jobs from partitioned regional queues.",
+        "previousSelectedText": "The worker service processes durable jobs from regional queues.",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-architecture-revision",
+      "commentId": "architecture-dispatcher-heading",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "architecture-dispatcher-heading",
+        "status": "fuzzy",
+        "score": 0.7424761904761905,
+        "newLine": 13,
+        "newEndLine": 13,
+        "anchoredText": "### Scheduler",
+        "previousSelectedText": "### Dispatcher",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-architecture-revision",
+      "commentId": "architecture-lease",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "architecture-lease",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 17,
+        "newEndLine": 17,
+        "newStartColumn": 0,
+        "newEndColumn": 57,
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-architecture-revision",
+      "commentId": "architecture-worker",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "architecture-worker",
+        "status": "fuzzy",
+        "score": 0.6647500000000001,
+        "newLine": 21,
+        "newEndLine": 21,
+        "anchoredText": "The worker can execute up to four independent jobs concurrently.",
+        "previousSelectedText": "The worker executes one job at a time.",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-architecture-revision",
+      "commentId": "architecture-reaper",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "architecture-reaper",
+        "status": "fuzzy",
+        "score": 0.9188361344537815,
+        "newLine": 27,
+        "newEndLine": 27,
+        "anchoredText": "The reaper returns expired assignments to the correct queue partition.",
+        "previousSelectedText": "The reaper returns expired assignments to the queue.",
+        "reason": "Probable anchor: revision projection and Markdown context agree (confidence 0.919)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-architecture-revision",
+      "commentId": "architecture-delivery",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "architecture-delivery",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 7,
+        "newEndLine": 7,
+        "newStartColumn": 0,
+        "newEndColumn": 33,
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-architecture-revision",
+      "commentId": "architecture-scaling",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "architecture-scaling",
+        "status": "fuzzy",
+        "score": 0.9255714285714286,
+        "newLine": 39,
+        "newEndLine": 39,
+        "anchoredText": "Workers scale from queue depth, processing latency, and lease pressure.",
+        "previousSelectedText": "Workers scale from queue depth and processing latency.",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-user-guide-revision",
+      "commentId": "guide-intro",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "guide-intro",
+        "status": "fuzzy",
+        "score": 0.95,
+        "newLine": 3,
+        "newEndLine": 3,
+        "anchoredText": "This guide explains how teams organize and govern documents in a workspace.",
+        "previousSelectedText": "This guide explains how teams organize documents in a workspace.",
+        "reason": "Probable anchor: revision projection and Markdown context agree (confidence 0.950)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-user-guide-revision",
+      "commentId": "guide-name-rules",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "guide-name-rules",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 9,
+        "newEndLine": 9,
+        "newStartColumn": 0,
+        "newEndColumn": 48,
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-user-guide-revision",
+      "commentId": "guide-invite-heading",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "guide-invite-heading",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 21,
+        "newEndLine": 21,
+        "newStartColumn": 0,
+        "newEndColumn": 23,
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-user-guide-revision",
+      "commentId": "guide-member-settings",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "guide-member-settings",
+        "status": "fuzzy",
+        "score": 0.9109732620320855,
+        "newLine": 23,
+        "newEndLine": 23,
+        "anchoredText": "Open **Workspace settings** and select **Members**.",
+        "previousSelectedText": "Open **Settings** and select **Members**.",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-user-guide-revision",
+      "commentId": "guide-create-folders",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "guide-create-folders",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 15,
+        "newEndLine": 15,
+        "newStartColumn": 0,
+        "newEndColumn": 40,
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-user-guide-revision",
+      "commentId": "guide-tags",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "guide-tags",
+        "status": "fuzzy",
+        "score": 0.6122762951334381,
+        "newLine": 17,
+        "newEndLine": 17,
+        "anchoredText": "Use tags for temporary initiatives and cross-team projects.",
+        "previousSelectedText": "Use tags for temporary initiatives.",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-user-guide-revision",
+      "commentId": "guide-quoted-search",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "guide-quoted-search",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 33,
+        "newEndLine": 33,
+        "reason": "Source-verified anchor remains exact at its stored position."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-user-guide-revision",
+      "commentId": "guide-archive-retention",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "guide-archive-retention",
+        "status": "fuzzy",
+        "score": 0.9400494505494505,
+        "newLine": 41,
+        "newEndLine": 41,
+        "anchoredText": "Archived workspaces remain readable for ninety days.",
+        "previousSelectedText": "Archived workspaces remain readable for thirty days.",
+        "reason": "Probable anchor: revision projection and Markdown context agree (confidence 0.940)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "exact-shift",
+      "commentId": "exact-shift-comment",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "exact-shift-comment",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 5,
+        "newEndLine": 5,
+        "newStartColumn": 0,
+        "newEndColumn": 32,
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    }
+  ]
+}

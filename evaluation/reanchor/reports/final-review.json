@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "change": "Final Anchor Mesh reliability and portability review",
+  "correctness": {
+    "committed_corpus": {
+      "passed": 80,
+      "comments": 80,
+      "incorrect_confident_relocations": 0
+    },
+    "small": {
+      "passed": 394,
+      "comments": 500,
+      "incorrect_confident_relocations": 0
+    },
+    "medium": {
+      "passed": 1945,
+      "comments": 2000,
+      "incorrect_confident_relocations": 0
+    },
+    "large": {
+      "passed": 1987,
+      "comments": 2000,
+      "incorrect_confident_relocations": 0
+    },
+    "stress": {
+      "passed": 997,
+      "comments": 1000,
+      "incorrect_confident_relocations": 0
+    },
+    "python_committed_corpus": {
+      "passed": 80,
+      "comments": 80,
+      "incorrect_confident_relocations": 0
+    }
+  },
+  "performance_ms": {
+    "small": {
+      "per_comment": 0.616,
+      "p95_comment": 1.812,
+      "maximum_comment": 9.43,
+      "maximum_reconciliation": 3.366
+    },
+    "medium": {
+      "per_comment": 0.401,
+      "p95_comment": 1.97,
+      "maximum_comment": 17.905,
+      "maximum_reconciliation": 4.483
+    },
+    "large": {
+      "per_comment": 0.841,
+      "p95_comment": 1.162,
+      "maximum_comment": 19.918,
+      "maximum_reconciliation": 7.402
+    },
+    "stress": {
+      "per_comment": 4.413,
+      "p95_comment": 6.754,
+      "maximum_comment": 76.657,
+      "maximum_reconciliation": 30.133
+    }
+  },
+  "review_fixes": [
+    "Exact revision relocation now requires two independent context signals.",
+    "Python applies the relocation guard to repeated exact text and uses ceiling-based multiline fuzzy windows.",
+    "Python exposes batch proximity-window configuration and uses binary nearest-block lookup.",
+    "Short and full Git revisions resolve to one canonical commit for caches and reconciliation.",
+    "Performance gates include worst-case global reconciliation latency."
+  ],
+  "notes": [
+    "The stricter exact-evidence rule deliberately trades seven small-profile and three medium-profile passes for safer abstention.",
+    "The committed language-neutral corpus remains 80/80 in both TypeScript and Python.",
+    "All seeded profiles retain zero incorrect confident relocations."
+  ]
+}

@@ -119,6 +119,10 @@ result = mrsf.validate_file("docs/guide.md.review.yaml")
 
 ### Re-anchoring
 
+Python implements the same Anchor Mesh stages as TypeScript. See the
+[non-normative implementation guide](./reanchoring) for the evidence pipeline,
+confidence bands, portability boundaries, and evaluation methodology.
+
 ```python
 from mrsf import reanchor_document, ReanchorOptions
 
@@ -178,13 +182,14 @@ doc = MrsfDocument(
 
 ## Node.js ↔ Python Parity
 
-The Python SDK is a 1:1 port of the Node.js `@mrsf/cli`. The two packages share:
+The Python SDK tracks the Node.js `@mrsf/cli` behavior. The two packages share:
 
 - **Same CLI commands** — identical flags, options, and arguments
 - **Same library functions** — `parse_sidecar`, `write_sidecar`, `validate`, `reanchor_document`, etc.
-- **Same test coverage** — 134 tests in both suites
+- **Shared reanchoring corpus** — both runtimes evaluate the same language-neutral cases
 - **Same YAML round-trip behavior** — preserves comments, scalar styles, key ordering
-- **Same fuzzy matching algorithm** — exact, normalized, token LCS, Levenshtein
+- **Same Anchor Mesh evidence model** — revision projection, Markdown context,
+  bounded fuzzy retrieval, confidence calibration, and reconciliation
 
 ### Naming Conventions
 

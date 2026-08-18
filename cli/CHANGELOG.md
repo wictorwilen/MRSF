@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-08-18
+
+### Added
+- Anchor Mesh reanchoring with source-revision projection, Markdown structural context, confidence calibration, and same-section landmark reconciliation.
+- Bounded lexical and Unicode trigram candidate retrieval shared across comments.
+- Language-neutral correctness, mutation, scaling, parity, and performance evaluation gates.
+- Public Node and browser exports for revision projection, structural context, confidence calibration, and reconciliation.
+
+### Changed
+- Reanchoring now prefers reviewable `ambiguous` or `fuzzy` results over weak exact relocations.
+- Git revision names and abbreviated SHAs are canonicalized for shared caches and reconciliation groups.
+
 ## [0.6.0] - 2026-06-28
 
 ### Added

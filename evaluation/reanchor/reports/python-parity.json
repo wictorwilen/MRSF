@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "change": "Python Anchor Mesh parity",
+  "committed_corpus": {
+    "typescript_passed": 80,
+    "python_passed": 80,
+    "comments": 80,
+    "typescript_incorrect_confident_relocations": 0,
+    "python_incorrect_confident_relocations": 0
+  },
+  "profiles": {
+    "small": {
+      "typescript_passed": 401,
+      "python_passed": 401,
+      "comments": 500,
+      "python_total_ms": 627.645,
+      "python_incorrect_confident_relocations": 0
+    },
+    "medium": {
+      "typescript_passed": 1948,
+      "python_passed": 1948,
+      "comments": 2000,
+      "python_total_ms": 2262.771,
+      "python_incorrect_confident_relocations": 0
+    },
+    "large": {
+      "typescript_passed": 1987,
+      "python_passed": 1987,
+      "comments": 2000,
+      "python_total_ms": 4103.031,
+      "python_incorrect_confident_relocations": 0
+    }
+  },
+  "ported_layers": [
+    "bounded lexical and trigram candidate retrieval",
+    "revision projection",
+    "Markdown structural context",
+    "heading-scoped global reconciliation",
+    "evidence-based confidence calibration"
+  ],
+  "notes": [
+    "The Python test suite reads the same language-neutral evaluation fixtures as TypeScript.",
+    "Generated workload accuracy is identical across TypeScript and Python for all measured tiers.",
+    "Timing is informational and is not used as a deterministic regression gate."
+  ]
+}

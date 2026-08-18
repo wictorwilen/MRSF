@@ -6,6 +6,12 @@ Usage:
 
 # Types
 # Comments
+from .anchor_context import (
+    AnchorContextIndex,
+    ContextAnchorCandidate,
+    ContextAnchorResolution,
+    create_anchor_context_index,
+)
 from .comments import (
     add_comment,
     filter_comments,
@@ -15,6 +21,11 @@ from .comments import (
     resolve_comment,
     summarize,
     unresolve_comment,
+)
+from .confidence_calibration import (
+    CalibratedAnchor,
+    ConfidenceBand,
+    calibrate_anchor_evidence,
 )
 
 # Discovery
@@ -41,7 +52,9 @@ from .git import (
     is_git_available,
     is_stale,
     parse_diff_hunks,
+    resolve_commit,
 )
+from .global_reconciliation import reconcile_comment_anchors
 
 # Parsing
 from .parser import (
@@ -59,10 +72,16 @@ from .reanchor import (
     reanchor_comment,
     reanchor_document,
     reanchor_file,
+    to_reanchor_lines,
 )
 
 # File resolution
 from .resolve_files import resolve_sidecar_paths
+from .revision_projection import (
+    ProjectedAnchor,
+    RevisionProjectionIndex,
+    create_revision_projection,
+)
 from .types import (
     AddCommentOptions,
     AnchorHealth,
@@ -95,10 +114,15 @@ __all__ = [
     # Types
     "AddCommentOptions",
     "AnchorHealth",
+    "AnchorContextIndex",
+    "CalibratedAnchor",
     "BaseOptions",
     "Comment",
     "CommentFilter",
     "CommentSummary",
+    "ConfidenceBand",
+    "ContextAnchorCandidate",
+    "ContextAnchorResolution",
     "DiagnosticSeverity",
     "DiffHunk",
     "FuzzyCandidate",
@@ -108,6 +132,8 @@ __all__ = [
     "ReanchorOptions",
     "ReanchorResult",
     "ReanchorStatus",
+    "ProjectedAnchor",
+    "RevisionProjectionIndex",
     "RemoveCommentOptions",
     "StatusResult",
     "ValidateOptions",
@@ -141,6 +167,10 @@ __all__ = [
     "exact_match",
     "fuzzy_search",
     "normalized_match",
+    "create_anchor_context_index",
+    "create_revision_projection",
+    "calibrate_anchor_evidence",
+    "reconcile_comment_anchors",
     # Git
     "detect_renames",
     "find_repo_root",
@@ -152,11 +182,13 @@ __all__ = [
     "is_git_available",
     "is_stale",
     "parse_diff_hunks",
+    "resolve_commit",
     # Re-anchoring
     "apply_reanchor_results",
     "reanchor_comment",
     "reanchor_document",
     "reanchor_file",
+    "to_reanchor_lines",
     # Comments
     "add_comment",
     "filter_comments",

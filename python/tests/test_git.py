@@ -17,6 +17,7 @@ from mrsf.git import (
     is_stale,
     parse_diff_hunks,
     reset_git_cache,
+    resolve_commit,
 )
 from mrsf.types import DiffHunk
 
@@ -218,6 +219,23 @@ class TestGetCurrentCommit:
         """Cover line 75: is_git_available() returns False."""
         result = get_current_commit("/repo")
         assert result is None
+
+
+class TestResolveCommit:
+    def setup_method(self):
+        reset_git_cache()
+
+    def teardown_method(self):
+        reset_git_cache()
+
+    @patch("mrsf.git.subprocess.run")
+    def test_expands_revision_to_full_sha(self, mock_run):
+        mock_run.side_effect = [
+            MagicMock(returncode=0),
+            MagicMock(returncode=0, stdout="abc123def456\n"),
+        ]
+
+        assert resolve_commit("abc123", "/repo") == "abc123def456"
 
 
 # ---------------------------------------------------------------------------

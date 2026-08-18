@@ -1,0 +1,34 @@
+{
+  "id": "exact-shift",
+  "description": "An unchanged selection moves down when content is inserted above it.",
+  "categories": ["insertion", "move"],
+  "source": {
+    "text": "# Guide\n\nThe durable anchor remains here.\n"
+  },
+  "target": {
+    "text": "# Guide\n\nA new introduction.\n\nThe durable anchor remains here.\n"
+  },
+  "comments": [
+    {
+      "id": "exact-shift-comment",
+      "anchor": {
+        "line": 3,
+        "start_column": 0,
+        "end_column": 32,
+        "selected_text": "The durable anchor remains here."
+      },
+      "expected": {
+        "status": "anchored",
+        "ranges": [
+          {
+            "line": 5,
+            "end_line": 5,
+            "start_column": 0,
+            "end_column": 32
+          }
+        ],
+        "rationale": "The selection remains unchanged and has one exact occurrence."
+      }
+    }
+  ]
+}

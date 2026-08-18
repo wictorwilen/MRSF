@@ -10,6 +10,8 @@ import {
   reanchorDocumentText,
   reanchorFile,
 } from "../lib/reanchor.js";
+import { createAnchorContextIndex } from "../lib/anchor-context.js";
+import { createRevisionProjection } from "../lib/revision-projection.js";
 import { parseSidecar } from "../lib/parser.js";
 import { writeSidecar } from "../lib/writer.js";
 import type { Comment, DiffHunk, MrsfDocument, ReanchorResult } from "../lib/types.js";
@@ -32,6 +34,37 @@ function makeComment(overrides: Partial<Comment> = {}): Comment {
     ...overrides,
   };
 }
+
+describe("reanchorComment — conflicting exact and structural evidence", () => {
+  it("keeps a rewritten anchor in its section instead of following a copied exact pair", () => {
+    const source = lines1(
+      "## Active",
+      "Selected statement.",
+      "Supporting context.",
+    );
+    const target = lines1(
+      "## Active",
+      "Revised selected statement.",
+      "Revised supporting context.",
+      "## Archive",
+      "Selected statement.",
+      "Supporting context.",
+    );
+    const anchor = makeComment({
+      line: 2,
+      selected_text: "Selected statement.",
+    });
+
+    const result = reanchorComment(anchor, target, {
+      revisionProjection: createRevisionProjection(source, target),
+      anchorContext: createAnchorContextIndex(source, target),
+    });
+
+    expect(result.status).toBe("fuzzy");
+    expect(result.newLine).toBe(2);
+    expect(result.anchoredText).toBe("Revised selected statement.");
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Step 0: Diff-based shift

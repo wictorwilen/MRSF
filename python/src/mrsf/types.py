@@ -318,6 +318,7 @@ class ReanchorOptions(BaseOptions):
     no_git: bool = False
     from_commit: str | None = None
     update_text: bool = False
+    proximity_window: int = 5
     force: bool = False
 
 

@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "change": "single fuzzy scan for high and low thresholds",
+  "correctness_changed": false,
+  "profiles": {
+    "small": {
+      "before_total_ms": 1486.462,
+      "after_total_ms": 1222.069,
+      "improvement_percent": 17.79
+    },
+    "medium": {
+      "before_total_ms": 6386.218,
+      "after_total_ms": 4730.206,
+      "improvement_percent": 25.93
+    },
+    "large": {
+      "before_total_ms": 15169.528,
+      "after_total_ms": 11486.786,
+      "improvement_percent": 24.28,
+      "before_max_comment_ms": 2073.477,
+      "after_max_comment_ms": 1582.417
+    }
+  },
+  "notes": [
+    "Timing is informational and was measured on the same environment as initial-baseline.json.",
+    "Generated workload profiles do not exercise the separate Git diff cache."
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "change": "Markdown block and bidirectional context indexing",
+  "committed_corpus": {
+    "before_passed": 60,
+    "after_passed": 77,
+    "comments": 77,
+    "before_incorrect_confident_relocations": 11,
+    "after_incorrect_confident_relocations": 0
+  },
+  "profiles": {
+    "small": {
+      "before_passed": 414,
+      "after_passed": 401,
+      "comments": 500,
+      "before_total_ms": 882.342,
+      "after_total_ms": 159.719,
+      "before_incorrect_confident_relocations": 4,
+      "after_incorrect_confident_relocations": 0
+    },
+    "medium": {
+      "before_passed": 1947,
+      "after_passed": 1945,
+      "comments": 2000,
+      "before_total_ms": 1875.15,
+      "after_total_ms": 976.711,
+      "before_incorrect_confident_relocations": 4,
+      "after_incorrect_confident_relocations": 0
+    },
+    "large": {
+      "before_passed": 1988,
+      "after_passed": 1987,
+      "comments": 2000,
+      "before_total_ms": 7725.668,
+      "after_total_ms": 2691.332,
+      "before_max_comment_ms": 2670.195,
+      "after_max_comment_ms": 219.077,
+      "before_incorrect_confident_relocations": 0,
+      "after_incorrect_confident_relocations": 0
+    }
+  },
+  "notes": [
+    "Generated raw pass rate decreases slightly because close repeated candidates now abstain instead of guessing.",
+    "All committed hand-authored and realistic cases pass.",
+    "Timing is informational and is not used as a deterministic regression gate."
+  ]
+}

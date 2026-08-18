@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "change": "Evidence agreement and confidence-band calibration",
+  "confidence_bands": {
+    "certain": "Exact source-verified evidence; maps to anchored or shifted.",
+    "probable": "Independent revision and structural evidence agree, or one source has a decisive margin; maps to fuzzy.",
+    "ambiguous": "Evidence sources disagree without a decisive margin.",
+    "orphaned": "Structural deletion evidence outweighs weak projection evidence."
+  },
+  "committed_corpus": {
+    "before_passed": 80,
+    "after_passed": 80,
+    "comments": 80,
+    "before_incorrect_confident_relocations": 0,
+    "after_incorrect_confident_relocations": 0
+  },
+  "profiles": {
+    "small": {
+      "before_passed": 401,
+      "after_passed": 401,
+      "comments": 500,
+      "after_total_ms": 200.024,
+      "after_incorrect_confident_relocations": 0
+    },
+    "medium": {
+      "before_passed": 1945,
+      "after_passed": 1948,
+      "comments": 2000,
+      "after_total_ms": 500.197,
+      "after_incorrect_confident_relocations": 0
+    },
+    "large": {
+      "before_passed": 1987,
+      "after_passed": 1987,
+      "comments": 2000,
+      "after_total_ms": 1132.923,
+      "after_incorrect_confident_relocations": 0
+    },
+    "stress": {
+      "after_passed": 997,
+      "comments": 1000,
+      "after_total_ms": 2634.1,
+      "after_incorrect_confident_relocations": 0
+    }
+  },
+  "thresholds": {
+    "strong_projection_votes": 3,
+    "strong_projection_minimum_votes_with_margin": 2,
+    "strong_projection_margin": 0.5,
+    "decisive_structural_margin": 0.15,
+    "decisive_structural_score_advantage": 0.1,
+    "maximum_probable_score": 0.95
+  },
+  "notes": [
+    "Exact revision projections retain the fast path; only edited anchors pay for cross-evidence calibration.",
+    "Agreeing scores use a conservative average plus a small agreement bonus rather than assuming statistical independence.",
+    "The calibration API and confidence-band types are exported from both Node and browser entrypoints.",
+    "Timing is informational and is not used as a deterministic regression gate."
+  ]
+}

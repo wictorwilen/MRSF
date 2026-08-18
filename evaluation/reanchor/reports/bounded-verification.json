@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "change": "Bounded lexical retrieval and candidate verification",
+  "limits": {
+    "structural_candidate_blocks": 64,
+    "fuzzy_candidate_lines": 64
+  },
+  "committed_corpus": {
+    "before_passed": 77,
+    "after_passed": 77,
+    "comments": 77,
+    "before_incorrect_confident_relocations": 0,
+    "after_incorrect_confident_relocations": 0
+  },
+  "profiles": {
+    "small": {
+      "before_passed": 401,
+      "after_passed": 401,
+      "comments": 500,
+      "before_total_ms": 159.719,
+      "after_total_ms": 171.335,
+      "before_incorrect_confident_relocations": 0,
+      "after_incorrect_confident_relocations": 0
+    },
+    "medium": {
+      "before_passed": 1945,
+      "after_passed": 1945,
+      "comments": 2000,
+      "before_total_ms": 976.711,
+      "after_total_ms": 530.043,
+      "before_incorrect_confident_relocations": 0,
+      "after_incorrect_confident_relocations": 0
+    },
+    "large": {
+      "before_passed": 1987,
+      "after_passed": 1987,
+      "comments": 2000,
+      "before_total_ms": 2691.332,
+      "after_total_ms": 1482.483,
+      "before_max_comment_ms": 219.077,
+      "after_max_comment_ms": 20.365,
+      "before_incorrect_confident_relocations": 0,
+      "after_incorrect_confident_relocations": 0
+    },
+    "stress": {
+      "after_passed": 997,
+      "comments": 1000,
+      "after_total_ms": 3091.767,
+      "after_max_comment_ms": 26.52,
+      "after_incorrect_confident_relocations": 0
+    }
+  },
+  "notes": [
+    "Rare lexical tokens and Unicode character trigrams retrieve candidate locations before expensive similarity verification.",
+    "Previous and next Markdown blocks vote directionally for the expected target block, preserving moved-and-rewritten anchors.",
+    "Candidate indexes use implementation-neutral arrays, maps, strings, and deterministic sorting suitable for browser, CLI, JavaScript, and Python ports.",
+    "The fuzzy index is built lazily and shared per document so exact and structural matches do not pay its construction cost.",
+    "Timing is informational and is not used as a deterministic regression gate."
+  ]
+}

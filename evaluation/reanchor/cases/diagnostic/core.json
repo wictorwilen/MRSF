@@ -1,0 +1,352 @@
+[
+  {
+    "id": "unchanged-selection",
+    "categories": ["unchanged", "exact"],
+    "source": { "text": "Stable selected text.\n" },
+    "target": { "text": "Stable selected text.\n" },
+    "comments": [{ "id": "c01", "anchor": { "line": 1, "selected_text": "Stable selected text." }, "expected": { "status": "anchored", "ranges": [{ "line": 1 }] } }]
+  },
+  {
+    "id": "lines-inserted-above",
+    "categories": ["insertion", "exact"],
+    "source": { "text": "Anchor paragraph.\n" },
+    "target": { "text": "New heading.\n\nAnchor paragraph.\n" },
+    "comments": [{ "id": "c02", "anchor": { "line": 1, "selected_text": "Anchor paragraph." }, "expected": { "status": "anchored", "ranges": [{ "line": 3 }] } }]
+  },
+  {
+    "id": "lines-deleted-above",
+    "categories": ["deletion", "exact"],
+    "source": { "text": "Old heading.\n\nAnchor paragraph.\n" },
+    "target": { "text": "Anchor paragraph.\n" },
+    "comments": [{ "id": "c03", "anchor": { "line": 3, "selected_text": "Anchor paragraph." }, "expected": { "status": "anchored", "ranges": [{ "line": 1 }] } }]
+  },
+  {
+    "id": "text-inserted-before-inline-anchor",
+    "categories": ["insertion", "inline"],
+    "source": { "text": "target phrase\n" },
+    "target": { "text": "Prefix target phrase\n" },
+    "comments": [{ "id": "c04", "anchor": { "line": 1, "start_column": 0, "end_column": 13, "selected_text": "target phrase" }, "expected": { "status": "anchored", "ranges": [{ "line": 1, "start_column": 7, "end_column": 20 }] } }]
+  },
+  {
+    "id": "text-appended-after-inline-anchor",
+    "categories": ["insertion", "inline"],
+    "source": { "text": "target phrase\n" },
+    "target": { "text": "target phrase with details\n" },
+    "comments": [{ "id": "c05", "anchor": { "line": 1, "start_column": 0, "end_column": 13, "selected_text": "target phrase" }, "expected": { "status": "anchored", "ranges": [{ "line": 1, "start_column": 0, "end_column": 13 }] } }]
+  },
+  {
+    "id": "whitespace-normalized",
+    "categories": ["whitespace", "normalization"],
+    "source": { "text": "Text with regular spaces.\n" },
+    "target": { "text": "Text  with   regular spaces.\n" },
+    "comments": [{ "id": "c06", "anchor": { "line": 1, "selected_text": "Text with regular spaces." }, "expected": { "status": "fuzzy", "ranges": [{ "line": 1 }] } }]
+  },
+  {
+    "id": "typo-corrected-in-place",
+    "categories": ["rewrite", "typo"],
+    "source": { "text": "The algorithmm is reliable.\n" },
+    "target": { "text": "The algorithm is reliable.\n" },
+    "comments": [{ "id": "c07", "anchor": { "line": 1, "selected_text": "The algorithmm is reliable." }, "expected": { "status": "fuzzy", "ranges": [{ "line": 1 }] } }]
+  },
+  {
+    "id": "sentence-rewritten-in-place",
+    "categories": ["rewrite", "sentence"],
+    "source": { "text": "The original sentence explains the behavior clearly.\n" },
+    "target": { "text": "The revised sentence describes the behavior more clearly.\n" },
+    "comments": [{ "id": "c08", "anchor": { "line": 1, "selected_text": "The original sentence explains the behavior clearly." }, "expected": { "status": "fuzzy", "ranges": [{ "line": 1 }] } }]
+  },
+  {
+    "id": "paragraph-moved",
+    "categories": ["move", "paragraph"],
+    "source": { "text": "Movable paragraph.\n\nOther paragraph.\n" },
+    "target": { "text": "Other paragraph.\n\nMovable paragraph.\n" },
+    "comments": [{ "id": "c09", "anchor": { "line": 1, "selected_text": "Movable paragraph." }, "expected": { "status": "anchored", "ranges": [{ "line": 3 }] } }]
+  },
+  {
+    "id": "section-moved",
+    "categories": ["move", "section"],
+    "source": { "text": "## Alpha\nAlpha body.\n\n## Beta\nBeta body.\n" },
+    "target": { "text": "## Beta\nBeta body.\n\n## Alpha\nAlpha body.\n" },
+    "comments": [{ "id": "c10", "anchor": { "line": 2, "selected_text": "Alpha body." }, "expected": { "status": "anchored", "ranges": [{ "line": 5 }] } }]
+  },
+  {
+    "id": "heading-renamed",
+    "categories": ["rewrite", "heading"],
+    "source": { "text": "## Installation\n" },
+    "target": { "text": "## Setup and installation\n" },
+    "comments": [{ "id": "c11", "anchor": { "line": 1, "selected_text": "## Installation" }, "expected": { "status": "fuzzy", "ranges": [{ "line": 1 }] } }]
+  },
+  {
+    "id": "heading-moved-and-renamed",
+    "categories": ["move", "rewrite", "heading"],
+    "source": { "text": "## Installation\nDetails.\n\n## Usage\n" },
+    "target": { "text": "## Usage\n\n## Setup and installation\nDetails.\n" },
+    "comments": [{ "id": "c12", "anchor": { "line": 1, "selected_text": "## Installation" }, "expected": { "status": "fuzzy", "ranges": [{ "line": 3 }] } }]
+  },
+  {
+    "id": "paragraph-split",
+    "categories": ["split", "paragraph"],
+    "source": { "text": "First idea continues into the second idea.\n" },
+    "target": { "text": "First idea continues.\n\nThe second idea follows.\n" },
+    "comments": [{ "id": "c13", "anchor": { "line": 1, "selected_text": "First idea continues into the second idea." }, "expected": { "status": "fuzzy", "ranges": [{ "line": 1, "end_line": 3 }] } }]
+  },
+  {
+    "id": "paragraphs-merged",
+    "categories": ["merge", "paragraph"],
+    "source": { "text": "First idea.\nSecond idea.\n" },
+    "target": { "text": "First idea. Second idea.\n" },
+    "comments": [{ "id": "c14", "anchor": { "line": 1, "end_line": 2, "selected_text": "First idea.\nSecond idea." }, "expected": { "status": "fuzzy", "ranges": [{ "line": 1 }] } }]
+  },
+  {
+    "id": "emphasis-added",
+    "categories": ["formatting", "markdown"],
+    "source": { "text": "Important phrase\n" },
+    "target": { "text": "**Important phrase**\n" },
+    "comments": [{ "id": "c15", "anchor": { "line": 1, "selected_text": "Important phrase" }, "expected": { "status": "anchored", "ranges": [{ "line": 1, "start_column": 2, "end_column": 18 }] } }]
+  },
+  {
+    "id": "link-wrapped",
+    "categories": ["formatting", "markdown"],
+    "source": { "text": "Project website\n" },
+    "target": { "text": "[Project website](https://example.com)\n" },
+    "comments": [{ "id": "c16", "anchor": { "line": 1, "selected_text": "Project website" }, "expected": { "status": "anchored", "ranges": [{ "line": 1, "start_column": 1, "end_column": 16 }] } }]
+  },
+  {
+    "id": "punctuation-changed",
+    "categories": ["rewrite", "punctuation"],
+    "source": { "text": "Is this reliable?\n" },
+    "target": { "text": "Is this reliable!\n" },
+    "comments": [{ "id": "c17", "anchor": { "line": 1, "selected_text": "Is this reliable?" }, "expected": { "status": "fuzzy", "ranges": [{ "line": 1 }] } }]
+  },
+  {
+    "id": "line-endings-normalized",
+    "categories": ["normalization", "line-ending"],
+    "source": { "text": "First\r\nAnchor line\r\n" },
+    "target": { "text": "First\nAnchor line\n" },
+    "comments": [{ "id": "c18", "anchor": { "line": 2, "selected_text": "Anchor line" }, "expected": { "status": "anchored", "ranges": [{ "line": 2 }] } }]
+  },
+  {
+    "id": "multiline-selection-moved",
+    "categories": ["move", "multiline"],
+    "source": { "text": "Alpha line.\nBeta line.\n\nTail.\n" },
+    "target": { "text": "Tail.\n\nAlpha line.\nBeta line.\n" },
+    "comments": [{ "id": "c19", "anchor": { "line": 1, "end_line": 2, "selected_text": "Alpha line.\nBeta line." }, "expected": { "status": "anchored", "ranges": [{ "line": 3, "end_line": 4 }] } }]
+  },
+  {
+    "id": "multiline-whitespace-changed",
+    "categories": ["whitespace", "multiline"],
+    "source": { "text": "Alpha line.\nBeta line.\n" },
+    "target": { "text": "Alpha  line.\nBeta   line.\n" },
+    "comments": [{ "id": "c20", "anchor": { "line": 1, "end_line": 2, "selected_text": "Alpha line.\nBeta line." }, "expected": { "status": "fuzzy", "ranges": [{ "line": 1, "end_line": 2 }] } }]
+  },
+  {
+    "id": "code-block-moved",
+    "categories": ["move", "code"],
+    "source": { "text": "```ts\nconst answer = 42;\n```\n\nText.\n" },
+    "target": { "text": "Text.\n\n```ts\nconst answer = 42;\n```\n" },
+    "comments": [{ "id": "c21", "anchor": { "line": 2, "selected_text": "const answer = 42;" }, "expected": { "status": "anchored", "ranges": [{ "line": 4 }] } }]
+  },
+  {
+    "id": "repeated-code-without-position",
+    "categories": ["duplicate", "code", "ambiguous"],
+    "source": { "text": "const value = true;\n" },
+    "target": { "text": "const value = true;\n\nconst value = true;\n" },
+    "comments": [{ "id": "c22", "anchor": { "selected_text": "const value = true;" }, "expected": { "status": "ambiguous" } }]
+  },
+  {
+    "id": "table-row-moved",
+    "categories": ["move", "table"],
+    "source": { "text": "| A | One |\n| B | Two |\n| C | Three |\n" },
+    "target": { "text": "| B | Two |\n| C | Three |\n| A | One |\n" },
+    "comments": [{ "id": "c23", "anchor": { "line": 1, "selected_text": "| A | One |" }, "expected": { "status": "anchored", "ranges": [{ "line": 3 }] } }]
+  },
+  {
+    "id": "list-item-reordered",
+    "categories": ["move", "list"],
+    "source": { "text": "- Alpha item\n- Beta item\n- Gamma item\n" },
+    "target": { "text": "- Beta item\n- Gamma item\n- Alpha item\n" },
+    "comments": [{ "id": "c24", "anchor": { "line": 1, "selected_text": "- Alpha item" }, "expected": { "status": "anchored", "ranges": [{ "line": 3 }] } }]
+  },
+  {
+    "id": "blockquote-marker-added",
+    "categories": ["formatting", "blockquote"],
+    "source": { "text": "Quoted guidance.\n" },
+    "target": { "text": "> Quoted guidance.\n" },
+    "comments": [{ "id": "c25", "anchor": { "line": 1, "selected_text": "Quoted guidance." }, "expected": { "status": "anchored", "ranges": [{ "line": 1, "start_column": 2, "end_column": 18 }] } }]
+  },
+  {
+    "id": "unicode-accent-changed",
+    "categories": ["rewrite", "unicode"],
+    "source": { "text": "The cafe is open.\n" },
+    "target": { "text": "The café is open.\n" },
+    "comments": [{ "id": "c26", "anchor": { "line": 1, "selected_text": "The cafe is open." }, "expected": { "status": "fuzzy", "ranges": [{ "line": 1 }] } }]
+  },
+  {
+    "id": "emoji-inserted",
+    "categories": ["insertion", "unicode"],
+    "source": { "text": "Deployment succeeded.\n" },
+    "target": { "text": "Deployment ✅ succeeded.\n" },
+    "comments": [{ "id": "c27", "anchor": { "line": 1, "selected_text": "Deployment succeeded." }, "expected": { "status": "fuzzy", "ranges": [{ "line": 1 }] } }]
+  },
+  {
+    "id": "letter-case-changed",
+    "categories": ["rewrite", "normalization"],
+    "source": { "text": "API Configuration\n" },
+    "target": { "text": "API configuration\n" },
+    "comments": [{ "id": "c28", "anchor": { "line": 1, "selected_text": "API Configuration" }, "expected": { "status": "fuzzy", "ranges": [{ "line": 1 }] } }]
+  },
+  {
+    "id": "duplicate-nearest-original",
+    "categories": ["duplicate", "proximity"],
+    "source": { "text": "Other.\n\nRepeated phrase.\n" },
+    "target": { "text": "Repeated phrase.\n\nRepeated phrase.\n" },
+    "comments": [{ "id": "c29", "anchor": { "line": 3, "selected_text": "Repeated phrase." }, "expected": { "status": "anchored", "ranges": [{ "line": 3 }] } }]
+  },
+  {
+    "id": "duplicate-without-position",
+    "categories": ["duplicate", "ambiguous"],
+    "source": { "text": "Repeated phrase.\n" },
+    "target": { "text": "Repeated phrase.\n\nRepeated phrase.\n" },
+    "comments": [{ "id": "c30", "anchor": { "selected_text": "Repeated phrase." }, "expected": { "status": "ambiguous" } }]
+  },
+  {
+    "id": "far-exact-after-origin-rewrite",
+    "categories": ["duplicate", "teleport", "adversarial"],
+    "source": { "text": "Source setting.\n\nA.\nB.\nC.\nD.\nE.\nSource setting.\n" },
+    "target": { "text": "Origin setting revised.\n\nA.\nB.\nC.\nD.\nE.\nSource setting.\n" },
+    "comments": [{ "id": "c31", "anchor": { "line": 1, "selected_text": "Source setting." }, "expected": { "status": "fuzzy", "ranges": [{ "line": 1 }] } }]
+  },
+  {
+    "id": "nearby-exact-relocation",
+    "categories": ["move", "proximity"],
+    "source": { "text": "Nearby anchor.\n" },
+    "target": { "text": "Inserted.\n\nNearby anchor.\n" },
+    "comments": [{ "id": "c32", "anchor": { "line": 1, "selected_text": "Nearby anchor." }, "expected": { "status": "anchored", "ranges": [{ "line": 3 }] } }]
+  },
+  {
+    "id": "far-relocation-after-document-shrink",
+    "categories": ["move", "deletion"],
+    "source": { "text": "1\n2\n3\n4\n5\n6\n7\n8\n9\nFar anchor.\n" },
+    "target": { "text": "Short.\nFar anchor.\n" },
+    "comments": [{ "id": "c33", "anchor": { "line": 10, "selected_text": "Far anchor." }, "expected": { "status": "anchored", "ranges": [{ "line": 2 }] } }]
+  },
+  {
+    "id": "selection-copied-original-remains",
+    "categories": ["duplicate", "copy"],
+    "source": { "text": "Original phrase.\n" },
+    "target": { "text": "Original phrase.\n\nOriginal phrase.\n" },
+    "comments": [{ "id": "c34", "anchor": { "line": 1, "selected_text": "Original phrase." }, "expected": { "status": "anchored", "ranges": [{ "line": 1 }] } }]
+  },
+  {
+    "id": "selection-copied-original-rewritten",
+    "categories": ["duplicate", "copy", "rewrite"],
+    "source": { "text": "Original phrase.\n\nContext.\n" },
+    "target": { "text": "Revised original phrase.\n\nContext.\n\nOriginal phrase.\n" },
+    "comments": [{ "id": "c35", "anchor": { "line": 1, "selected_text": "Original phrase." }, "expected": { "status": "fuzzy", "ranges": [{ "line": 1 }] } }]
+  },
+  {
+    "id": "nearby-rewrite-versus-distant-exact",
+    "categories": ["adversarial", "rewrite", "duplicate"],
+    "source": { "text": "Header.\nPrecise original statement for this section.\n" },
+    "target": { "text": "Header.\nRevised original statement for this section.\n\nA.\nB.\nC.\nD.\nPrecise original statement for this section.\n" },
+    "comments": [{ "id": "c36", "anchor": { "line": 2, "selected_text": "Precise original statement for this section." }, "expected": { "status": "fuzzy", "ranges": [{ "line": 2 }] } }]
+  },
+  {
+    "id": "selection-deleted",
+    "categories": ["deletion", "orphaned"],
+    "source": { "text": "Selected paragraph that will be removed.\n" },
+    "target": { "text": "Unrelated replacement.\n" },
+    "comments": [{ "id": "c37", "anchor": { "line": 1, "selected_text": "Selected paragraph that will be removed." }, "expected": { "status": "orphaned" } }]
+  },
+  {
+    "id": "section-deleted-and-position-gone",
+    "categories": ["deletion", "section", "orphaned"],
+    "source": { "text": "1\n2\n3\n4\n5\n6\n7\nDeleted section body.\n" },
+    "target": { "text": "Short replacement.\n" },
+    "comments": [{ "id": "c38", "anchor": { "line": 8, "selected_text": "Deleted section body." }, "expected": { "status": "orphaned" } }]
+  },
+  {
+    "id": "common-word-edited-at-origin",
+    "categories": ["duplicate", "short-selection", "teleport"],
+    "source": { "text": "The source is primary.\n\nAnother source exists.\n" },
+    "target": { "text": "The origin is primary.\n\nAnother source exists.\n" },
+    "comments": [{ "id": "c39", "anchor": { "line": 1, "start_column": 4, "end_column": 10, "selected_text": "source" }, "expected": { "status": "fuzzy", "ranges": [{ "line": 1, "start_column": 4, "end_column": 10 }] } }]
+  },
+  {
+    "id": "repeated-heading-nearest-original",
+    "categories": ["duplicate", "heading", "proximity"],
+    "source": { "text": "A\nB\nC\nD\n## Notes\n" },
+    "target": { "text": "## Notes\nB\nC\nD\n## Notes\n" },
+    "comments": [{ "id": "c40", "anchor": { "line": 5, "selected_text": "## Notes" }, "expected": { "status": "anchored", "ranges": [{ "line": 5 }] } }]
+  },
+  {
+    "id": "stale-position-out-of-bounds",
+    "categories": ["move", "stale-position"],
+    "source": { "text": "Anchor at old location.\n" },
+    "target": { "text": "Intro.\nAnchor at old location.\n" },
+    "comments": [{ "id": "c41", "anchor": { "line": 100, "selected_text": "Anchor at old location." }, "expected": { "status": "anchored", "ranges": [{ "line": 2 }] } }]
+  },
+  {
+    "id": "selection-with-blank-edges",
+    "categories": ["multiline", "blank-line", "move"],
+    "source": { "text": "\nBody text.\n\n" },
+    "target": { "text": "Intro.\n\n\nBody text.\n\n" },
+    "comments": [{ "id": "c42", "anchor": { "line": 1, "end_line": 3, "selected_text": "\nBody text.\n" }, "expected": { "status": "anchored", "ranges": [{ "line": 3, "end_line": 5 }] } }]
+  },
+  {
+    "id": "multiline-column-selection-moved",
+    "categories": ["multiline", "inline", "move"],
+    "source": { "text": "xxalpha\nbetayy\n" },
+    "target": { "text": "Intro.\n\nxxalpha\nbetayy\n" },
+    "comments": [{ "id": "c43", "anchor": { "line": 1, "end_line": 2, "start_column": 2, "end_column": 4, "selected_text": "alpha\nbeta" }, "expected": { "status": "anchored", "ranges": [{ "line": 3, "end_line": 4, "start_column": 2, "end_column": 4 }] } }]
+  },
+  {
+    "id": "blank-line-inserted-inside-selection",
+    "categories": ["multiline", "insertion", "blank-line"],
+    "source": { "text": "Alpha line.\nBeta line.\n" },
+    "target": { "text": "Alpha line.\n\nBeta line.\n" },
+    "comments": [{ "id": "c44", "anchor": { "line": 1, "end_line": 2, "selected_text": "Alpha line.\nBeta line." }, "expected": { "status": "fuzzy", "ranges": [{ "line": 1, "end_line": 3 }] } }]
+  },
+  {
+    "id": "long-selection-partially-rewritten",
+    "categories": ["rewrite", "long-selection"],
+    "source": { "text": "This long paragraph describes the original architecture, its constraints, and the expected operational behavior for every supported integration.\n" },
+    "target": { "text": "This long paragraph describes the revised architecture, its safety constraints, and the intended runtime behavior for every supported integration.\n" },
+    "comments": [{ "id": "c45", "anchor": { "line": 1, "selected_text": "This long paragraph describes the original architecture, its constraints, and the expected operational behavior for every supported integration." }, "expected": { "status": "fuzzy", "ranges": [{ "line": 1 }] } }]
+  },
+  {
+    "id": "unrelated-content-at-original-position",
+    "categories": ["rewrite", "ambiguous"],
+    "source": { "text": "Original selected statement with unique intent.\n" },
+    "target": { "text": "Completely unrelated replacement content.\n" },
+    "comments": [{ "id": "c46", "anchor": { "line": 1, "selected_text": "Original selected statement with unique intent." }, "expected": { "status": "orphaned" } }]
+  },
+  {
+    "id": "repeated-paragraphs-reordered",
+    "categories": ["duplicate", "reorder", "ambiguous"],
+    "source": { "text": "Shared paragraph.\n\nUnique middle.\n\nShared paragraph.\n" },
+    "target": { "text": "Shared paragraph.\n\nShared paragraph.\n\nUnique middle.\n" },
+    "comments": [{ "id": "c47", "anchor": { "selected_text": "Shared paragraph." }, "expected": { "status": "ambiguous" } }]
+  },
+  {
+    "id": "list-duplicate-origin-edited",
+    "categories": ["duplicate", "list", "rewrite"],
+    "source": { "text": "- Configure service\n- Configure service\n" },
+    "target": { "text": "- Configure the primary service\n- Configure service\n" },
+    "comments": [{ "id": "c48", "anchor": { "line": 1, "selected_text": "- Configure service" }, "expected": { "status": "fuzzy", "ranges": [{ "line": 1 }] } }]
+  },
+  {
+    "id": "duplicate-heading-paths-without-context",
+    "categories": ["duplicate", "heading", "ambiguous"],
+    "source": { "text": "# Alpha\n## Configuration\nTarget body.\n\n# Beta\n## Configuration\nTarget body.\n" },
+    "target": { "text": "# Beta\n## Configuration\nTarget body.\n\n# Alpha\n## Configuration\nTarget body.\n" },
+    "comments": [{ "id": "c49", "anchor": { "selected_text": "Target body." }, "expected": { "status": "ambiguous" } }]
+  },
+  {
+    "id": "equivalent-duplicate-ranges",
+    "categories": ["duplicate", "equivalent"],
+    "source": { "text": "Equivalent notice.\n" },
+    "target": { "text": "Equivalent notice.\n\nEquivalent notice.\n" },
+    "comments": [{ "id": "c50", "anchor": { "line": 1, "selected_text": "Equivalent notice." }, "expected": { "status": "anchored", "ranges": [{ "line": 1 }, { "line": 3 }] } }]
+  }
+]

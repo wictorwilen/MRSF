@@ -1,6 +1,6 @@
 {
   "name": "@mrsf/rehype-mrsf",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "rehype plugin for rendering Sidemark/MRSF (Markdown Review Sidecar Format) review comments",
   "type": "module",
   "main": "./dist/index.js",
@@ -79,7 +79,7 @@
     "LICENSE"
   ],
   "dependencies": {
-    "@mrsf/cli": "^0.5.0",
+    "@mrsf/cli": "^0.5.0 || ^0.6.0 || ^0.7.0",
     "unist-util-visit": "^5.0.0"
   },
   "peerDependencies": {

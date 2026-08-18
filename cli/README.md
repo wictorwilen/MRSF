@@ -195,13 +195,16 @@ mrsf list --json --open
 
 ### `mrsf reanchor [files...]`
 
-Re-anchor comments after the source document has been edited. Uses a multi-step resolution algorithm (§7.4):
+Re-anchor comments after the source document has been edited. The repository's
+**Anchor Mesh** implementation combines verified Git shifts, source-revision
+projection, Markdown structure, bounded text matching, confidence calibration,
+and nearby comments as landmarks. It prefers `ambiguous` or `orphaned` results
+over an unsupported relocation.
 
-1. **Diff-based shift** — uses `git diff` to calculate line offsets
-2. **Exact text match** — searches for `selected_text` verbatim
-3. **Fuzzy match** — token-level LCS + Levenshtein similarity
-4. **Line/column fallback** — checks whether original position is still plausible
-5. **Orphan** — retains unresolvable comments and marks them for review
+See the
+[non-normative implementation guide](https://sidemark.org/guide/reanchoring)
+for the complete pipeline, execution modes, tuning values, and evaluation
+methodology.
 
 ```bash
 # Dry run — see what would change without writing
@@ -456,7 +459,7 @@ The CLI and Sidemark VS Code extension use the following extension fields:
 
 | Field | Scope | Type | Set by | Description |
 |---|---|---|---|---|
-| `x_reanchor_status` | comment | `"anchored"` \| `"shifted"` \| `"fuzzy"` \| `"orphaned"` | `mrsf reanchor` | Result of the most recent reanchor pass. `orphaned` means the anchor text could not be found in the current document. |
+| `x_reanchor_status` | comment | `"anchored"` \| `"shifted"` \| `"fuzzy"` \| `"ambiguous"` \| `"orphaned"` | `mrsf reanchor` | Result of the most recent reanchor pass. `ambiguous` means evidence conflicts or multiple candidates remain; `orphaned` means no defensible anchor was found. |
 | `x_reanchor_score` | comment | `number` (0–1) | `mrsf reanchor` | Confidence score from the reanchor algorithm. `1.0` = exact match, lower values indicate fuzzy or shifted matches. |
 
 ### Adding your own fields

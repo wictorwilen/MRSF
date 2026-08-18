@@ -7,6 +7,7 @@ import {
   exactMatch,
   normalizedMatch,
   fuzzySearch,
+  fuzzySearchThresholds,
   combinedScore,
 } from "../lib/fuzzy.js";
 
@@ -145,5 +146,65 @@ describe("fuzzySearch", () => {
     const results = fuzzySearch(lines, "brown fox", 0.5, 5);
     // Should include matches near line 5
     expect(results.length).toBeGreaterThan(0);
+  });
+
+  it("partitions one candidate scan by base threshold", () => {
+    const thresholds = [0.5, 0.8, 0.95];
+    const results = fuzzySearchThresholds(
+      lines,
+      "The quick brown fox jumps over the lazy dog",
+      thresholds,
+      3,
+    );
+
+    expect(results.get(0.5)?.length).toBeGreaterThanOrEqual(
+      results.get(0.8)?.length ?? 0,
+    );
+    expect(results.get(0.8)?.length).toBeGreaterThanOrEqual(
+      results.get(0.95)?.length ?? 0,
+    );
+    expect(results.get(0.8)?.[0].line).toBe(3);
+  });
+
+  it("does not let proximity promote an ineligible candidate", () => {
+    const results = fuzzySearchThresholds(
+      lines1("alpha beta changed delta"),
+      "alpha beta gamma delta",
+      [0.7, 0.8],
+      1,
+    );
+
+    expect(results.get(0.7)?.[0].score).toBeGreaterThan(0.8);
+    expect(results.get(0.8)).toEqual([]);
+  });
+
+  it("retrieves a distant edited line through character signatures", () => {
+    const document = lines1(
+      ...Array.from(
+        { length: 200 },
+        (_, index) => `Unrelated generated paragraph ${index}.`,
+      ),
+      "The quik brown fox jumps over the lazy dog.",
+    );
+
+    const results = fuzzySearch(
+      document,
+      "The quick brown fox jumps over the lazy dog.",
+      0.8,
+    );
+
+    expect(results[0]).toMatchObject({ line: 201 });
+  });
+
+  it("falls back to scanning when a short needle has no posting signals", () => {
+    const results = fuzzySearch(
+      lines1("unrelated", "ac"),
+      "ab",
+      0.19,
+    );
+
+    expect(results).toEqual(
+      expect.arrayContaining([expect.objectContaining({ line: 2 })]),
+    );
   });
 });

@@ -1,0 +1,121 @@
+name: Reanchor Evaluation
+
+on:
+  pull_request:
+    paths:
+      - "cli/**"
+      - "python/**"
+      - "evaluation/reanchor/**"
+      - ".github/workflows/reanchor-evaluation.yml"
+  push:
+    branches: [main]
+    paths:
+      - "cli/**"
+      - "python/**"
+      - "evaluation/reanchor/**"
+      - ".github/workflows/reanchor-evaluation.yml"
+  schedule:
+    - cron: "17 3 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reanchor-evaluation-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  correctness:
+    name: Deterministic Correctness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: cli/package-lock.json
+
+      - name: Install TypeScript dependencies
+        working-directory: cli
+        run: npm ci
+
+      - name: Build evaluator
+        working-directory: cli
+        run: npx tsc
+
+      - name: Check committed corpus baseline
+        working-directory: cli
+        run: |
+          node dist/evaluation/run-reanchor-eval.js \
+            --baseline ../evaluation/reanchor/baseline.json
+
+      - name: Check seeded workload accuracy
+        working-directory: cli
+        run: |
+          for profile in small medium large stress; do
+            node dist/evaluation/run-reanchor-profile.js \
+              --profile "$profile" \
+              --gate ../evaluation/reanchor/gates.json \
+              --gate-mode correctness
+          done
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: python/pyproject.toml
+
+      - name: Install Python dependencies
+        run: python -m pip install -e "./python[dev]"
+
+      - name: Check Python corpus parity
+        working-directory: python
+        run: pytest -q tests/test_reanchor_parity.py
+
+  performance:
+    name: Performance (${{ matrix.profile }})
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [small, medium, large, stress]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: cli/package-lock.json
+
+      - name: Install dependencies
+        working-directory: cli
+        run: npm ci
+
+      - name: Build evaluator
+        working-directory: cli
+        run: npx tsc
+
+      - name: Run performance gate
+        working-directory: cli
+        run: |
+          mkdir -p ../evaluation-results
+          node dist/evaluation/run-reanchor-profile.js \
+            --profile "${{ matrix.profile }}" \
+            --json \
+            --gate ../evaluation/reanchor/gates.json \
+            --gate-mode performance \
+            > "../evaluation-results/${{ matrix.profile }}.json"
+
+      - name: Upload profile report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reanchor-${{ matrix.profile }}-${{ github.run_id }}
+          path: evaluation-results/${{ matrix.profile }}.json
+          if-no-files-found: warn
+          retention-days: 30

@@ -78,6 +78,24 @@ export async function getCurrentCommit(repoRoot: string): Promise<string | null>
   }
 }
 
+/** Resolve a revision name or abbreviated SHA to its canonical commit SHA. */
+export async function resolveCommit(
+  revision: string,
+  repoRoot: string,
+): Promise<string | null> {
+  if (!(await isGitAvailable())) return null;
+  try {
+    const { stdout } = await execFile(
+      "git",
+      ["rev-parse", "--verify", `${revision}^{commit}`],
+      { cwd: repoRoot, timeout: GIT_TIMEOUT },
+    );
+    return stdout.trim();
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Check if a commit hash is the same as HEAD.
  */

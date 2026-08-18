@@ -7,10 +7,22 @@ import type {
   ReanchorResult,
 } from "./types.js";
 import {
+  createFuzzySearchIndex,
   exactMatch,
   fuzzySearch,
+  fuzzySearchThresholds,
   normalizedMatch,
+  type FuzzySearchIndex,
 } from "./fuzzy.js";
+import {
+  projectCommentAnchor,
+  type RevisionProjectionIndex,
+} from "./revision-projection.js";
+import {
+  resolveContextAnchor,
+  type AnchorContextIndex,
+} from "./anchor-context.js";
+import { calibrateAnchorEvidence } from "./confidence-calibration.js";
 
 export const HIGH_THRESHOLD = 0.8;
 export const DEFAULT_THRESHOLD = 0.6;
@@ -37,12 +49,23 @@ export function reanchorComment(
     threshold?: number;
     commitIsStale?: boolean;
     proximityWindow?: number;
+    revisionProjection?: RevisionProjectionIndex;
+    anchorContext?: AnchorContextIndex;
+    fuzzySearchIndex?: FuzzySearchIndex;
+    getFuzzySearchIndex?: () => FuzzySearchIndex;
   } = {},
 ): ReanchorResult {
   const threshold = opts.threshold ?? DEFAULT_THRESHOLD;
   const proximityWindow = opts.proximityWindow ?? DEFAULT_PROXIMITY_WINDOW;
   const commentId = comment.id;
   const selectedText = comment.selected_text;
+  let fuzzyCandidateSets: Map<number, FuzzyCandidate[]> | undefined;
+  let fuzzySearchIndex = opts.fuzzySearchIndex;
+  const getFuzzySearchIndex = (): FuzzySearchIndex => {
+    fuzzySearchIndex ??= opts.getFuzzySearchIndex?.()
+      ?? createFuzzySearchIndex(documentLines);
+    return fuzzySearchIndex;
+  };
 
   if (!selectedText && comment.line == null) {
     return {
@@ -106,8 +129,46 @@ export function reanchorComment(
     }
   }
 
+  const projected = selectedText && opts.revisionProjection
+    ? projectCommentAnchor(
+      comment,
+      opts.revisionProjection,
+      threshold,
+    )
+    : undefined;
+  if (selectedText && projected?.exact) {
+    const exactCalibration = calibrateAnchorEvidence(
+      commentId,
+      selectedText,
+      projected,
+    );
+    if (exactCalibration) return exactCalibration.result;
+  }
+  const contextual = selectedText && opts.anchorContext
+    ? resolveContextAnchor(comment, opts.anchorContext)
+    : undefined;
+  if (selectedText && (projected || contextual)) {
+    const calibrated = calibrateAnchorEvidence(
+      commentId,
+      selectedText,
+      projected,
+      contextual,
+    );
+    if (calibrated) return calibrated.result;
+  }
+
   if (selectedText) {
     const exactCandidates = exactMatch(documentLines, selectedText);
+    if (exactCandidates.length > 1 && comment.line == null) {
+      return {
+        commentId,
+        status: "ambiguous",
+        score: 1,
+        reason:
+          `Ambiguous: ${exactCandidates.length} exact matches and no position `
+          + "or source context to disambiguate them.",
+      };
+    }
 
     // Pick the best exact candidate: the only one, or — when several remain —
     // the one nearest to the original line (§7.4 step 1b).
@@ -182,12 +243,14 @@ export function reanchorComment(
       };
     }
 
-    const fuzzyCandidates = fuzzySearch(
+    fuzzyCandidateSets = fuzzySearchThresholds(
       documentLines,
       selectedText,
-      HIGH_THRESHOLD,
+      [HIGH_THRESHOLD, threshold],
       comment.line,
+      getFuzzySearchIndex(),
     );
+    const fuzzyCandidates = fuzzyCandidateSets.get(HIGH_THRESHOLD) ?? [];
 
     if (fuzzyCandidates.length === 1 || (fuzzyCandidates.length > 0 && fuzzyCandidates[0].score >= HIGH_THRESHOLD)) {
       const best =
@@ -248,12 +311,14 @@ export function reanchorComment(
   }
 
   if (selectedText) {
-    const lowCandidates = fuzzySearch(
-      documentLines,
-      selectedText,
-      threshold,
-      comment.line,
-    );
+    const lowCandidates = fuzzyCandidateSets?.get(threshold)
+      ?? fuzzySearch(
+        documentLines,
+        selectedText,
+        threshold,
+        comment.line,
+        getFuzzySearchIndex(),
+      );
 
     if (lowCandidates.length === 1) {
       const candidate = lowCandidates[0];
@@ -297,7 +362,14 @@ export function reanchorDocumentLines(
   documentLines: string[],
   opts: { threshold?: number; proximityWindow?: number } = {},
 ): ReanchorResult[] {
-  return doc.comments.map((comment) => reanchorComment(comment, documentLines, opts));
+  let fuzzySearchIndex: FuzzySearchIndex | undefined;
+  const getFuzzySearchIndex = (): FuzzySearchIndex => {
+    fuzzySearchIndex ??= createFuzzySearchIndex(documentLines);
+    return fuzzySearchIndex;
+  };
+  return doc.comments.map((comment) =>
+    reanchorComment(comment, documentLines, { ...opts, getFuzzySearchIndex })
+  );
 }
 
 export function reanchorDocumentText(

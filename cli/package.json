@@ -1,6 +1,6 @@
 {
   "name": "@mrsf/cli",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "CLI and library for the Markdown Review Sidecar Format (MRSF)",
   "type": "module",
   "main": "./dist/index.js",
@@ -30,6 +30,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
+    "eval:reanchor": "tsc && node dist/evaluation/run-reanchor-eval.js",
+    "eval:reanchor:baseline": "tsc && node dist/evaluation/run-reanchor-eval.js --baseline ../evaluation/reanchor/baseline.json",
+    "eval:reanchor:generate": "tsc && node dist/evaluation/run-reanchor-generator.js",
+    "eval:reanchor:profile": "tsc && node dist/evaluation/run-reanchor-profile.js",
     "prepublishOnly": "cp ../LICENSE . && npm run build && npm test",
     "postpublish": "rm -f LICENSE"
   },

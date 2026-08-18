@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "change": "Deterministic correctness and scheduled performance gates",
+  "correctness": {
+    "committed_corpus": {
+      "passed": 80,
+      "comments": 80,
+      "incorrect_confident_relocations": 0
+    },
+    "small": {
+      "passed": 394,
+      "comments": 500,
+      "incorrect_confident_relocations": 0
+    },
+    "medium": {
+      "passed": 1945,
+      "comments": 2000,
+      "incorrect_confident_relocations": 0
+    },
+    "large": {
+      "passed": 1987,
+      "comments": 2000,
+      "incorrect_confident_relocations": 0
+    },
+    "stress": {
+      "passed": 997,
+      "comments": 1000,
+      "incorrect_confident_relocations": 0
+    },
+    "python_committed_corpus": {
+      "passed": 80,
+      "comments": 80,
+      "incorrect_confident_relocations": 0
+    }
+  },
+  "workflow": {
+    "pull_request_and_main_push": [
+      "TypeScript committed baseline",
+      "small, medium, large, and stress seeded correctness gates",
+      "Python shared-corpus parity"
+    ],
+    "weekly_and_manual": [
+      "all deterministic correctness gates",
+      "per-profile performance ceilings",
+      "30-day JSON profile artifacts"
+    ]
+  },
+  "notes": [
+    "PR correctness gates do not evaluate wall-clock timing.",
+    "Scheduled timing ceilings are broad enough for runner variance and target algorithmic regressions.",
+    "Small and medium floors reflect stricter abstention when an exact relocation has only one independent context signal.",
+    "All profiles require zero incorrect confident relocations."
+  ]
+}

@@ -6,9 +6,31 @@ Levenshtein matching for re-anchoring selected_text.
 
 from __future__ import annotations
 
+import math
+import re
+from dataclasses import dataclass
+
 from rapidfuzz.distance import Levenshtein
 
 from .types import FuzzyCandidate
+
+MAX_FUZZY_CANDIDATE_LINES = 64
+
+
+@dataclass
+class FuzzySearchIndex:
+    lines: list[str]
+    token_postings: dict[str, list[int]]
+    trigram_postings: dict[str, list[int]]
+
+
+def create_fuzzy_search_index(lines: list[str]) -> FuzzySearchIndex:
+    tokens: dict[str, list[int]] = {}
+    trigrams: dict[str, list[int]] = {}
+    for line in range(1, len(lines)):
+        _add_postings(tokens, _lexical_tokens(lines[line]), line)
+        _add_postings(trigrams, _character_trigrams(lines[line]), line)
+    return FuzzySearchIndex(lines, tokens, trigrams)
 
 # ---------------------------------------------------------------------------
 # Exact matching
@@ -76,8 +98,6 @@ def exact_match(lines: list[str], needle: str) -> list[FuzzyCandidate]:
 
 
 def _normalize(text: str) -> str:
-    import re
-
     return re.sub(r"\s+", " ", text).strip()
 
 
@@ -193,26 +213,58 @@ def fuzzy_search(
     needle: str,
     threshold: float = 0.6,
     hint_line: int | None = None,
+    index: FuzzySearchIndex | None = None,
 ) -> list[FuzzyCandidate]:
     """Search the document for fuzzy matches of needle."""
+    return fuzzy_search_thresholds(
+        lines, needle, [threshold], hint_line, index
+    ).get(threshold, [])
+
+
+def fuzzy_search_thresholds(
+    lines: list[str],
+    needle: str,
+    thresholds: list[float],
+    hint_line: int | None = None,
+    index: FuzzySearchIndex | None = None,
+) -> dict[float, list[FuzzyCandidate]]:
+    """Compute bounded fuzzy candidates once and partition by base threshold."""
+    unique_thresholds = list(dict.fromkeys(thresholds))
+    results: dict[float, list[FuzzyCandidate]] = {}
+    if not unique_thresholds:
+        return results
     if not needle:
-        return []
+        return {threshold: [] for threshold in unique_thresholds}
+    if index is None:
+        index = create_fuzzy_search_index(lines)
 
     needle_lines = needle.split("\n")
     needle_line_count = len(needle_lines)
     candidates: list[FuzzyCandidate] = []
+    minimum_threshold = min(unique_thresholds)
+    candidate_lines = _retrieve_candidate_lines(index, needle, hint_line)
 
     min_window = max(1, int(needle_line_count * 0.7))
-    max_window = min(len(lines) - 1, int(needle_line_count * 1.3) + 1)
+    max_window = min(
+        len(lines) - 1,
+        math.ceil(needle_line_count * 1.3) + 1,
+    )
 
     for win_size in range(min_window, max_window + 1):
-        for start_line in range(1, len(lines) - win_size + 1):
+        start_lines = {
+            candidate_line - offset
+            for candidate_line in candidate_lines
+            for offset in range(win_size)
+            if candidate_line - offset >= 1
+            and candidate_line - offset + win_size - 1 < len(lines)
+        }
+        for start_line in start_lines:
             window_lines = lines[start_line : start_line + win_size]
             window_text = "\n".join(window_lines)
 
             score = combined_score(needle, window_text)
 
-            if score >= threshold:
+            if score >= minimum_threshold:
                 candidates.append(
                     FuzzyCandidate(
                         text=window_text,
@@ -226,7 +278,7 @@ def fuzzy_search(
 
     # Single-line substring matching
     if needle_line_count == 1 and len(needle) < 200:
-        for line_num in range(1, len(lines)):
+        for line_num in candidate_lines:
             line = lines[line_num]
             if not line:
                 continue
@@ -235,11 +287,11 @@ def fuzzy_search(
             min_win_len = max(3, int(win_len * 0.7))
             max_win_len = min(len(line), int(win_len * 1.3))
 
-            for length in range(min_win_len, max_win_len + 1):
+            for length in _evenly_spaced(min_win_len, max_win_len, 7):
                 for col in range(0, len(line) - length + 1):
                     sub = line[col : col + length]
                     score = combined_score(needle, sub)
-                    if score >= threshold:
+                    if score >= minimum_threshold:
                         candidates.append(
                             FuzzyCandidate(
                                 text=sub,
@@ -251,22 +303,105 @@ def fuzzy_search(
                             )
                         )
 
-    deduped = _deduplicate_candidates(candidates)
-
-    if hint_line is not None:
-        deduped = [
-            FuzzyCandidate(
-                text=c.text,
-                line=c.line,
-                end_line=c.end_line,
-                start_column=c.start_column,
-                end_column=c.end_column,
-                score=min(1.0, c.score + 0.1 * max(0, 1 - abs(c.line - hint_line) / 50)),
+    scored: list[tuple[float, FuzzyCandidate]] = []
+    for candidate in _deduplicate_candidates(candidates):
+        base_score = candidate.score
+        if hint_line is not None:
+            candidate = FuzzyCandidate(
+                text=candidate.text,
+                line=candidate.line,
+                end_line=candidate.end_line,
+                start_column=candidate.start_column,
+                end_column=candidate.end_column,
+                score=min(
+                    1.0,
+                    candidate.score
+                    + 0.1 * max(0, 1 - abs(candidate.line - hint_line) / 50),
+                ),
             )
-            for c in deduped
-        ]
+        scored.append((base_score, candidate))
+    for threshold in unique_thresholds:
+        results[threshold] = sorted(
+            (candidate for base, candidate in scored if base >= threshold),
+            key=lambda candidate: candidate.score,
+            reverse=True,
+        )
+    return results
 
-    return sorted(deduped, key=lambda c: c.score, reverse=True)
+
+def _retrieve_candidate_lines(
+    index: FuzzySearchIndex,
+    needle: str,
+    hint_line: int | None,
+) -> list[int]:
+    votes: dict[int, float] = {}
+    line_count = max(0, len(index.lines) - 1)
+    signals = [
+        *(_posting_signals(index.token_postings, _lexical_tokens(needle), 2.0)),
+        *(_posting_signals(index.trigram_postings, _character_trigrams(needle), 1.0)),
+    ]
+    signals.sort(key=lambda signal: len(signal[0]))
+    for postings, weight in signals[:16]:
+        rarity = math.log1p(line_count / len(postings))
+        for line in postings:
+            votes[line] = votes.get(line, 0.0) + weight * rarity
+    if hint_line is not None:
+        for offset in range(-4, 5):
+            line = hint_line + offset
+            if 1 <= line <= line_count:
+                votes[line] = votes.get(line, 0.0) + 0.25
+    if not votes:
+        return list(range(1, line_count + 1))
+    return [
+        line
+        for line, _ in sorted(
+            votes.items(),
+            key=lambda item: (
+                -item[1],
+                abs(item[0] - hint_line) if hint_line is not None else 0,
+                item[0],
+            ),
+        )[:MAX_FUZZY_CANDIDATE_LINES]
+    ]
+
+
+def _posting_signals(
+    postings: dict[str, list[int]],
+    values: list[str],
+    weight: float,
+) -> list[tuple[list[int], float]]:
+    return [
+        (postings[value], weight)
+        for value in dict.fromkeys(values)
+        if value in postings
+    ]
+
+
+def _add_postings(postings: dict[str, list[int]], values: list[str], line: int) -> None:
+    for value in dict.fromkeys(values):
+        postings.setdefault(value, []).append(line)
+
+
+def _lexical_tokens(text: str) -> list[str]:
+    return re.findall(r"[\w-]+", text.lower(), flags=re.UNICODE)
+
+
+def _character_trigrams(text: str) -> list[str]:
+    normalized = re.sub(r"\s+", " ", text.lower()).strip()
+    if len(normalized) < 3:
+        return [normalized] if normalized else []
+    return [normalized[index : index + 3] for index in range(len(normalized) - 2)]
+
+
+def _evenly_spaced(minimum: int, maximum: int, count: int) -> list[int]:
+    if maximum <= minimum:
+        return [minimum]
+    return list(
+        dict.fromkeys(
+            round(minimum + (maximum - minimum) * index / (count - 1))
+            for index in range(count)
+        )
+    )
 
 
 # ---------------------------------------------------------------------------
