@@ -52,7 +52,31 @@ export interface EvaluationCase {
   categories: string[];
   source: EvaluationDocument;
   target: EvaluationDocument;
+  generation?: EvaluationGeneration;
   comments: EvaluationComment[];
+}
+
+export interface EvaluationGeneration {
+  generator_version: 1;
+  seed: number;
+  blocks_per_case: number;
+  comments_per_case: number;
+  operations: EvaluationMutation[];
+}
+
+export interface EvaluationMutation {
+  type:
+    | "insert-block"
+    | "delete-block"
+    | "move-block"
+    | "rewrite-block"
+    | "duplicate-block"
+    | "swap-blocks"
+    | "whitespace-block"
+    | "split-block"
+    | "merge-blocks"
+    | "rename-heading";
+  block_ids: string[];
 }
 
 export interface EvaluationCommentResult {

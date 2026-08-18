@@ -32,6 +32,7 @@
     "lint": "tsc --noEmit",
     "eval:reanchor": "npm run build --silent && node dist/evaluation/run-reanchor-eval.js",
     "eval:reanchor:baseline": "npm run build --silent && node dist/evaluation/run-reanchor-eval.js --baseline ../evaluation/reanchor/baseline.json",
+    "eval:reanchor:generate": "npm run build --silent && node dist/evaluation/run-reanchor-generator.js",
     "prepublishOnly": "cp ../LICENSE . && npm run build && npm test",
     "postpublish": "rm -f LICENSE"
   },

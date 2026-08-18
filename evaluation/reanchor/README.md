@@ -31,3 +31,20 @@ known gaps, and fails when any outcome changes. Intentionally refresh it with:
 ```bash
 npm run eval:reanchor -- --write-baseline ../evaluation/reanchor/baseline.json
 ```
+
+Generate reproducible mutation cases with:
+
+```bash
+npm run eval:reanchor:generate -- \
+  --seed 1000 \
+  --cases 100 \
+  --blocks 20 \
+  --comments 5 \
+  --mutations 8 \
+  --output ../evaluation/reanchor/generated/seed-1000.json
+```
+
+Each generated case records its seed and exact operation sequence. Semantic
+block identities are tracked through insertions, deletions, moves, rewrites,
+duplication, reordering, whitespace changes, splits, merges, and heading
+renames, allowing expected anchor ranges to be derived rather than guessed.
