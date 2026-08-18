@@ -9,6 +9,7 @@ import type {
 import {
   exactMatch,
   fuzzySearch,
+  fuzzySearchThresholds,
   normalizedMatch,
 } from "./fuzzy.js";
 
@@ -43,6 +44,7 @@ export function reanchorComment(
   const proximityWindow = opts.proximityWindow ?? DEFAULT_PROXIMITY_WINDOW;
   const commentId = comment.id;
   const selectedText = comment.selected_text;
+  let fuzzyCandidateSets: Map<number, FuzzyCandidate[]> | undefined;
 
   if (!selectedText && comment.line == null) {
     return {
@@ -182,12 +184,13 @@ export function reanchorComment(
       };
     }
 
-    const fuzzyCandidates = fuzzySearch(
+    fuzzyCandidateSets = fuzzySearchThresholds(
       documentLines,
       selectedText,
-      HIGH_THRESHOLD,
+      [HIGH_THRESHOLD, threshold],
       comment.line,
     );
+    const fuzzyCandidates = fuzzyCandidateSets.get(HIGH_THRESHOLD) ?? [];
 
     if (fuzzyCandidates.length === 1 || (fuzzyCandidates.length > 0 && fuzzyCandidates[0].score >= HIGH_THRESHOLD)) {
       const best =
@@ -248,12 +251,8 @@ export function reanchorComment(
   }
 
   if (selectedText) {
-    const lowCandidates = fuzzySearch(
-      documentLines,
-      selectedText,
-      threshold,
-      comment.line,
-    );
+    const lowCandidates = fuzzyCandidateSets?.get(threshold)
+      ?? fuzzySearch(documentLines, selectedText, threshold, comment.line);
 
     if (lowCandidates.length === 1) {
       const candidate = lowCandidates[0];

@@ -73,10 +73,6 @@ export async function reanchorDocument(
   const threshold = opts.threshold ?? DEFAULT_THRESHOLD;
   const proximityWindow = opts.proximityWindow;
 
-  // Determine git context
-  let diffHunks: DiffHunk[] | undefined;
-  let commitIsStale = false;
-
   if (!opts.noGit && (await isGitAvailable())) {
     const repoRoot = opts.repoRoot ?? (await findRepoRoot(opts.cwd));
     if (repoRoot && opts.documentPath) {
@@ -85,13 +81,16 @@ export async function reanchorDocument(
 
       // Use a shared fromCommit for all comments, or per-comment
       const globalFrom = opts.fromCommit;
+      const diffCache = new Map<string, DiffHunk[]>();
 
       for (const comment of doc.comments) {
         const commentCommit = globalFrom ?? comment.commit;
         if (commentCommit && head && commentCommit !== head) {
-          commitIsStale = true;
-          // Get diff for this commit range
-          const hunks = await getDiff(commentCommit, head, relPath, repoRoot);
+          let hunks = diffCache.get(commentCommit);
+          if (!hunks) {
+            hunks = await getDiff(commentCommit, head, relPath, repoRoot);
+            diffCache.set(commentCommit, hunks);
+          }
           const result = reanchorComment(comment, documentLines, {
             diffHunks: hunks,
             threshold,

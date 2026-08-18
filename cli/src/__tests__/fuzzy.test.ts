@@ -7,6 +7,7 @@ import {
   exactMatch,
   normalizedMatch,
   fuzzySearch,
+  fuzzySearchThresholds,
   combinedScore,
 } from "../lib/fuzzy.js";
 
@@ -145,5 +146,35 @@ describe("fuzzySearch", () => {
     const results = fuzzySearch(lines, "brown fox", 0.5, 5);
     // Should include matches near line 5
     expect(results.length).toBeGreaterThan(0);
+  });
+
+  it("partitions one candidate scan by base threshold", () => {
+    const thresholds = [0.5, 0.8, 0.95];
+    const results = fuzzySearchThresholds(
+      lines,
+      "The quick brown fox jumps over the lazy dog",
+      thresholds,
+      3,
+    );
+
+    expect(results.get(0.5)?.length).toBeGreaterThanOrEqual(
+      results.get(0.8)?.length ?? 0,
+    );
+    expect(results.get(0.8)?.length).toBeGreaterThanOrEqual(
+      results.get(0.95)?.length ?? 0,
+    );
+    expect(results.get(0.8)?.[0].line).toBe(3);
+  });
+
+  it("does not let proximity promote an ineligible candidate", () => {
+    const results = fuzzySearchThresholds(
+      lines1("alpha beta changed delta"),
+      "alpha beta gamma delta",
+      [0.7, 0.8],
+      1,
+    );
+
+    expect(results.get(0.7)?.[0].score).toBeGreaterThan(0.8);
+    expect(results.get(0.8)).toEqual([]);
   });
 });

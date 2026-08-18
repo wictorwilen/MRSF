@@ -76,3 +76,6 @@ profiles are intended for deliberate performance runs rather than normal CI.
 `reports/initial-baseline.json` records the first small, medium, and large runs.
 It is informational because timings depend on hardware and runtime conditions;
 `baseline.json` remains the deterministic correctness checkpoint.
+
+Subsequent algorithm checkpoints may add informational comparison reports under
+`reports/`. They never replace the deterministic per-case baseline.

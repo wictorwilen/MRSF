@@ -139,6 +139,26 @@ describe("reanchorDocument wrapper", () => {
     );
   });
 
+  it("reuses one diff for comments from the same commit", async () => {
+    const doc = {
+      mrsf_version: "1.0",
+      document: "docs/doc.md",
+      comments: [
+        makeComment("first", "old-commit"),
+        makeComment("second", "old-commit"),
+      ],
+    };
+
+    await reanchorDocument(doc, ["", "line one"], {
+      cwd: "/repo",
+      documentPath: "/repo/docs/doc.md",
+      repoRoot: "/repo",
+    });
+
+    expect(mockGetDiff).toHaveBeenCalledTimes(1);
+    expect(mockReanchorComment).toHaveBeenCalledTimes(2);
+  });
+
   it("falls back to plain document reanchoring when git is available but documentPath is missing", async () => {
     const doc = {
       mrsf_version: "1.0",

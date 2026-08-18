@@ -226,11 +226,37 @@ export function fuzzySearch(
   threshold: number = 0.6,
   hintLine?: number,
 ): FuzzyCandidate[] {
-  if (!needle) return [];
+  return fuzzySearchThresholds(
+    lines,
+    needle,
+    [threshold],
+    hintLine,
+  ).get(threshold) ?? [];
+}
+
+/**
+ * Compute fuzzy candidates once and partition them by their unadjusted
+ * similarity thresholds. Proximity remains a ranking bonus and does not make
+ * a candidate eligible for a threshold it did not originally satisfy.
+ */
+export function fuzzySearchThresholds(
+  lines: string[],
+  needle: string,
+  thresholds: number[],
+  hintLine?: number,
+): Map<number, FuzzyCandidate[]> {
+  const uniqueThresholds = [...new Set(thresholds)];
+  const results = new Map<number, FuzzyCandidate[]>();
+  if (uniqueThresholds.length === 0) return results;
+  if (!needle) {
+    for (const threshold of uniqueThresholds) results.set(threshold, []);
+    return results;
+  }
 
   const needleLines = needle.split("\n");
   const needleLineCount = needleLines.length;
   const candidates: FuzzyCandidate[] = [];
+  const minimumThreshold = Math.min(...uniqueThresholds);
 
   // Window sizes: ±30% of original line count, minimum 1
   const minWindow = Math.max(1, Math.floor(needleLineCount * 0.7));
@@ -246,7 +272,7 @@ export function fuzzySearch(
 
       const score = combinedScore(needle, windowText);
 
-      if (score >= threshold) {
+      if (score >= minimumThreshold) {
         candidates.push({
           text: windowText,
           line: startLine,
@@ -274,7 +300,7 @@ export function fuzzySearch(
         for (let col = 0; col + len <= line.length; col++) {
           const sub = line.substring(col, col + len);
           const score = combinedScore(needle, sub);
-          if (score >= threshold) {
+          if (score >= minimumThreshold) {
             candidates.push({
               text: sub,
               line: lineNum,
@@ -289,20 +315,23 @@ export function fuzzySearch(
     }
   }
 
-  // Deduplicate and sort
-  let deduped = deduplicateCandidates(candidates);
+  const deduped = deduplicateCandidates(candidates);
+  const scored = deduped.map((candidate) => ({
+    baseScore: candidate.score,
+    candidate: applyProximityBonus(candidate, hintLine),
+  }));
 
-  // Apply proximity bonus if hintLine is provided
-  if (hintLine != null) {
-    deduped = deduped.map((c) => {
-      const dist = Math.abs(c.line - hintLine);
-      // Small bonus for proximity (up to 0.1 for exact line match)
-      const proximityBonus = 0.1 * Math.max(0, 1 - dist / 50);
-      return { ...c, score: Math.min(1.0, c.score + proximityBonus) };
-    });
+  for (const threshold of uniqueThresholds) {
+    results.set(
+      threshold,
+      scored
+        .filter((item) => item.baseScore >= threshold)
+        .map((item) => item.candidate)
+        .sort((left, right) => right.score - left.score),
+    );
   }
 
-  return deduped.sort((a, b) => b.score - a.score);
+  return results;
 }
 
 // ---------------------------------------------------------------------------
@@ -321,4 +350,18 @@ function deduplicateCandidates(
     }
   }
   return Array.from(seen.values());
+}
+
+function applyProximityBonus(
+  candidate: FuzzyCandidate,
+  hintLine?: number,
+): FuzzyCandidate {
+  if (hintLine == null) return candidate;
+
+  const distance = Math.abs(candidate.line - hintLine);
+  const proximityBonus = 0.1 * Math.max(0, 1 - distance / 50);
+  return {
+    ...candidate,
+    score: Math.min(1.0, candidate.score + proximityBonus),
+  };
 }
