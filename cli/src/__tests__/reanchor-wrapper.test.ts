@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mockFindRepoRoot = vi.fn();
 const mockGetCurrentCommit = vi.fn();
 const mockGetDiff = vi.fn();
+const mockGetFileAtCommit = vi.fn();
 const mockIsGitAvailable = vi.fn();
 
 const mockApplyReanchorResults = vi.fn();
@@ -18,7 +19,7 @@ vi.mock("../lib/git.js", () => ({
   findRepoRoot: (...args: unknown[]) => mockFindRepoRoot(...args),
   getCurrentCommit: (...args: unknown[]) => mockGetCurrentCommit(...args),
   getDiff: (...args: unknown[]) => mockGetDiff(...args),
-  getFileAtCommit: vi.fn(),
+  getFileAtCommit: (...args: unknown[]) => mockGetFileAtCommit(...args),
   getLineShift: vi.fn(),
   isGitAvailable: (...args: unknown[]) => mockIsGitAvailable(...args),
   parseDiffHunks: vi.fn(),
@@ -31,7 +32,7 @@ vi.mock("../lib/reanchor-core.js", () => ({
   reanchorComment: (...args: unknown[]) => mockReanchorComment(...args),
   reanchorDocumentLines: (...args: unknown[]) => mockReanchorDocumentLines(...args),
   reanchorDocumentText: vi.fn(),
-  toReanchorLines: vi.fn(),
+  toReanchorLines: (text: string) => ["", ...text.split("\n")],
 }));
 
 vi.mock("../lib/parser.js", () => ({
@@ -70,6 +71,7 @@ describe("reanchorDocument wrapper", () => {
     mockFindRepoRoot.mockResolvedValue("/repo");
     mockGetCurrentCommit.mockResolvedValue("head-commit");
     mockGetDiff.mockResolvedValue([{ oldStart: 1, oldCount: 0, newStart: 1, newCount: 1, lines: ["+added"] }]);
+    mockGetFileAtCommit.mockResolvedValue("old line");
     mockReanchorComment.mockImplementation((comment, _lines, options) => ({
       commentId: comment.id,
       status: options.commitIsStale ? "shifted" : "anchored",
@@ -95,6 +97,11 @@ describe("reanchorDocument wrapper", () => {
     });
 
     expect(mockGetDiff).toHaveBeenCalledWith("old-commit", "head-commit", "docs/doc.md", "/repo");
+    expect(mockGetFileAtCommit).toHaveBeenCalledWith(
+      "old-commit",
+      "docs/doc.md",
+      "/repo",
+    );
     expect(mockReanchorComment).toHaveBeenNthCalledWith(
       1,
       doc.comments[0],
@@ -103,6 +110,9 @@ describe("reanchorDocument wrapper", () => {
         diffHunks: expect.any(Array),
         threshold: 0.6,
         commitIsStale: true,
+        revisionProjection: expect.objectContaining({
+          lineMap: expect.any(Map),
+        }),
       }),
     );
     expect(mockReanchorComment).toHaveBeenNthCalledWith(
@@ -156,6 +166,7 @@ describe("reanchorDocument wrapper", () => {
     });
 
     expect(mockGetDiff).toHaveBeenCalledTimes(1);
+    expect(mockGetFileAtCommit).toHaveBeenCalledTimes(1);
     expect(mockReanchorComment).toHaveBeenCalledTimes(2);
   });
 

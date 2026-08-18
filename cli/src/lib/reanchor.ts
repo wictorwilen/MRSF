@@ -32,7 +32,12 @@ import {
   DEFAULT_THRESHOLD,
   reanchorComment,
   reanchorDocumentLines,
+  toReanchorLines,
 } from "./reanchor-core.js";
+import {
+  createRevisionProjection,
+  type RevisionProjectionIndex,
+} from "./revision-projection.js";
 import { readDocumentLines } from "./parser.js";
 import { discoverSidecar, sidecarToDocument } from "./discovery.js";
 import { parseSidecar } from "./parser.js";
@@ -82,6 +87,10 @@ export async function reanchorDocument(
       // Use a shared fromCommit for all comments, or per-comment
       const globalFrom = opts.fromCommit;
       const diffCache = new Map<string, DiffHunk[]>();
+      const projectionCache = new Map<
+        string,
+        RevisionProjectionIndex | undefined
+      >();
 
       for (const comment of doc.comments) {
         const commentCommit = globalFrom ?? comment.commit;
@@ -91,11 +100,27 @@ export async function reanchorDocument(
             hunks = await getDiff(commentCommit, head, relPath, repoRoot);
             diffCache.set(commentCommit, hunks);
           }
+          let revisionProjection = projectionCache.get(commentCommit);
+          if (!projectionCache.has(commentCommit)) {
+            const sourceText = await getFileAtCommit(
+              commentCommit,
+              relPath,
+              repoRoot,
+            );
+            revisionProjection = sourceText == null
+              ? undefined
+              : createRevisionProjection(
+                toReanchorLines(sourceText),
+                documentLines,
+              );
+            projectionCache.set(commentCommit, revisionProjection);
+          }
           const result = reanchorComment(comment, documentLines, {
             diffHunks: hunks,
             threshold,
             commitIsStale: true,
             proximityWindow,
+            revisionProjection,
           });
           results.push(result);
           continue;

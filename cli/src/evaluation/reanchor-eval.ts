@@ -6,6 +6,7 @@ import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
 import { reanchorComment, toReanchorLines } from "../lib/reanchor-core.js";
+import { createRevisionProjection } from "../lib/revision-projection.js";
 import type { Comment, ReanchorResult, ReanchorStatus } from "../lib/types.js";
 
 const Ajv2020 = Ajv2020Module as unknown as new (
@@ -191,12 +192,19 @@ export async function evaluateCases(
       loadedCase.value.target,
       loadedCase.casePath,
     );
+    const sourceLines = toReanchorLines(sourceText);
     const documentLines = toReanchorLines(targetText);
+    const revisionProjection = createRevisionProjection(
+      sourceLines,
+      documentLines,
+    );
 
     for (const evaluationComment of loadedCase.value.comments) {
       const comment = toComment(evaluationComment);
       const commentStartedAt = performance.now();
-      const actual = reanchorComment(comment, documentLines);
+      const actual = reanchorComment(comment, documentLines, {
+        revisionProjection,
+      });
       const durationMs = performance.now() - commentStartedAt;
       const statusCorrect = actual.status === evaluationComment.expected.status;
       const rangeCorrect = matchesExpectedRange(

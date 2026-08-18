@@ -12,6 +12,10 @@ import {
   fuzzySearchThresholds,
   normalizedMatch,
 } from "./fuzzy.js";
+import {
+  projectCommentAnchor,
+  type RevisionProjectionIndex,
+} from "./revision-projection.js";
 
 export const HIGH_THRESHOLD = 0.8;
 export const DEFAULT_THRESHOLD = 0.6;
@@ -38,6 +42,7 @@ export function reanchorComment(
     threshold?: number;
     commitIsStale?: boolean;
     proximityWindow?: number;
+    revisionProjection?: RevisionProjectionIndex;
   } = {},
 ): ReanchorResult {
   const threshold = opts.threshold ?? DEFAULT_THRESHOLD;
@@ -105,6 +110,28 @@ export function reanchorComment(
               : `Diff shifted by ${shift > 0 ? "+" : ""}${shift} line(s).`,
         };
       }
+    }
+  }
+
+  if (selectedText && opts.revisionProjection) {
+    const projected = projectCommentAnchor(
+      comment,
+      opts.revisionProjection,
+      threshold,
+    );
+    if (projected) {
+      return {
+        commentId,
+        status: projected.exact ? "anchored" : "fuzzy",
+        score: projected.score,
+        newLine: projected.line,
+        newEndLine: projected.endLine,
+        newStartColumn: projected.startColumn,
+        newEndColumn: projected.endColumn,
+        anchoredText: projected.exact ? undefined : projected.text,
+        previousSelectedText: projected.exact ? undefined : selectedText,
+        reason: projected.reason,
+      };
     }
   }
 

@@ -4,10 +4,10 @@
   "cases": 55,
   "comments": 77,
   "metrics": {
-    "passed": 53,
-    "failed": 24,
-    "exactRangeMatches": 60,
-    "statusMatches": 55,
+    "passed": 60,
+    "failed": 17,
+    "exactRangeMatches": 67,
+    "statusMatches": 60,
     "incorrectConfidentRelocations": 11
   },
   "results": [
@@ -188,7 +188,7 @@
         "newEndLine": 5,
         "newStartColumn": 0,
         "newEndColumn": 11,
-        "reason": "Exact text match (unique)."
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -324,7 +324,7 @@
         "newEndLine": 2,
         "newStartColumn": 0,
         "newEndColumn": 11,
-        "reason": "Exact text match (unique)."
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -380,7 +380,7 @@
         "newEndLine": 4,
         "newStartColumn": 0,
         "newEndColumn": 18,
-        "reason": "Exact text match (unique)."
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -771,7 +771,7 @@
         "newEndLine": 4,
         "newStartColumn": 2,
         "newEndColumn": 4,
-        "reason": "Exact text match (unique)."
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -917,7 +917,7 @@
         "newEndLine": 5,
         "newStartColumn": 0,
         "newEndColumn": 17,
-        "reason": "Exact text match (unique)."
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -935,7 +935,7 @@
         "newEndLine": 9,
         "newStartColumn": 0,
         "newEndColumn": 68,
-        "reason": "Exact text match (unique)."
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -947,16 +947,17 @@
       "expectedStatus": "anchored",
       "actual": {
         "commentId": "api-project-config",
-        "status": "fuzzy",
-        "score": 0.5,
-        "newLine": 23,
-        "anchoredText": "Retry failed deployments with the same idempotency key.",
-        "previousSelectedText": "Set the project region and retention period.",
-        "reason": "Lone exact match at line 33 is beyond the proximity window (±5) of original line 23 and the text at the original position changed; kept at original position, needs re-anchoring."
+        "status": "anchored",
+        "score": 1,
+        "newLine": 33,
+        "newEndLine": 33,
+        "newStartColumn": 0,
+        "newEndColumn": 44,
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
       },
-      "statusCorrect": false,
-      "rangeCorrect": false,
-      "passed": false
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
     },
     {
       "caseId": "realistic-api-guide-revision",
@@ -990,7 +991,7 @@
         "newEndLine": 39,
         "newStartColumn": 0,
         "newEndColumn": 58,
-        "reason": "Exact text match (unique)."
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -1003,11 +1004,12 @@
       "actual": {
         "commentId": "runbook-intro",
         "status": "fuzzy",
-        "score": 0.7805128205128206,
+        "score": 0.8805128205128205,
         "newLine": 3,
+        "newEndLine": 3,
         "anchoredText": "Use this runbook for scheduled and emergency production releases.",
         "previousSelectedText": "Use this runbook for scheduled production releases.",
-        "reason": "Line-fallback with fuzzy text match (score 0.781)."
+        "reason": "Source revision context projects the edited anchor range."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -1061,7 +1063,7 @@
         "newEndLine": 22,
         "newStartColumn": 0,
         "newEndColumn": 36,
-        "reason": "Exact text match (unique)."
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -1074,18 +1076,16 @@
       "actual": {
         "commentId": "runbook-rollback-condition",
         "status": "fuzzy",
-        "score": 0.9452033898305084,
-        "newLine": 34,
+        "score": 0.9629310344827586,
+        "newLine": 35,
         "newEndLine": 35,
-        "newStartColumn": 0,
-        "newEndColumn": 58,
-        "anchoredText": "\nRollback when two consecutive regional health checks fail.",
+        "anchoredText": "Rollback when two consecutive regional health checks fail.",
         "previousSelectedText": "Rollback when two consecutive health checks fail.",
-        "reason": "High-confidence fuzzy match (score 0.945)."
+        "reason": "Source revision context projects the edited anchor range."
       },
       "statusCorrect": true,
-      "rangeCorrect": false,
-      "passed": false
+      "rangeCorrect": true,
+      "passed": true
     },
     {
       "caseId": "realistic-deployment-runbook-revision",
@@ -1093,16 +1093,17 @@
       "expectedStatus": "anchored",
       "actual": {
         "commentId": "runbook-verification",
-        "status": "fuzzy",
-        "score": 0.5,
-        "newLine": 38,
-        "anchoredText": "acme rollback --environment production",
-        "previousSelectedText": "Confirm that new requests use the released version.",
-        "reason": "Lone exact match at line 29 is beyond the proximity window (±5) of original line 38 and the text at the original position changed; kept at original position, needs re-anchoring."
+        "status": "anchored",
+        "score": 1,
+        "newLine": 29,
+        "newEndLine": 29,
+        "newStartColumn": 0,
+        "newEndColumn": 51,
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
       },
-      "statusCorrect": false,
-      "rangeCorrect": false,
-      "passed": false
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
     },
     {
       "caseId": "realistic-architecture-revision",
@@ -1145,16 +1146,17 @@
       "expectedStatus": "anchored",
       "actual": {
         "commentId": "architecture-lease",
-        "status": "fuzzy",
-        "score": 0.5,
-        "newLine": 11,
-        "anchoredText": "## Components",
-        "previousSelectedText": "It records an assignment lease before publishing the job.",
-        "reason": "Lone exact match at line 17 is beyond the proximity window (±5) of original line 11 and the text at the original position changed; kept at original position, needs re-anchoring."
+        "status": "anchored",
+        "score": 1,
+        "newLine": 17,
+        "newEndLine": 17,
+        "newStartColumn": 0,
+        "newEndColumn": 57,
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
       },
-      "statusCorrect": false,
-      "rangeCorrect": false,
-      "passed": false
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
     },
     {
       "caseId": "realistic-architecture-revision",
@@ -1178,14 +1180,12 @@
       "actual": {
         "commentId": "architecture-reaper",
         "status": "fuzzy",
-        "score": 0.9745384615384616,
+        "score": 0.8171428571428571,
         "newLine": 27,
         "newEndLine": 27,
-        "newStartColumn": 0,
-        "newEndColumn": 51,
-        "anchoredText": "The reaper returns expired assignments to the corre",
+        "anchoredText": "The reaper returns expired assignments to the correct queue partition.",
         "previousSelectedText": "The reaper returns expired assignments to the queue.",
-        "reason": "High-confidence fuzzy match (score 0.975)."
+        "reason": "Source revision context projects the edited anchor range."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -1197,16 +1197,17 @@
       "expectedStatus": "anchored",
       "actual": {
         "commentId": "architecture-delivery",
-        "status": "fuzzy",
-        "score": 0.5,
-        "newLine": 27,
-        "anchoredText": "The reaper returns expired assignments to the correct queue partition.",
-        "previousSelectedText": "Jobs are delivered at least once.",
-        "reason": "Lone exact match at line 7 is beyond the proximity window (±5) of original line 27 and the text at the original position changed; kept at original position, needs re-anchoring."
+        "status": "anchored",
+        "score": 1,
+        "newLine": 7,
+        "newEndLine": 7,
+        "newStartColumn": 0,
+        "newEndColumn": 33,
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
       },
-      "statusCorrect": false,
-      "rangeCorrect": false,
-      "passed": false
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
     },
     {
       "caseId": "realistic-architecture-revision",
@@ -1233,11 +1234,9 @@
         "score": 0.9413333333333332,
         "newLine": 3,
         "newEndLine": 3,
-        "newStartColumn": 0,
-        "newEndColumn": 75,
         "anchoredText": "This guide explains how teams organize and govern documents in a workspace.",
         "previousSelectedText": "This guide explains how teams organize documents in a workspace.",
-        "reason": "High-confidence fuzzy match (score 0.941)."
+        "reason": "Source revision context projects the edited anchor range."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -1255,7 +1254,7 @@
         "newEndLine": 9,
         "newStartColumn": 0,
         "newEndColumn": 48,
-        "reason": "Exact text match (unique)."
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -1299,16 +1298,17 @@
       "expectedStatus": "anchored",
       "actual": {
         "commentId": "guide-create-folders",
-        "status": "fuzzy",
-        "score": 0.5,
-        "newLine": 23,
-        "anchoredText": "Open **Workspace settings** and select **Members**.",
-        "previousSelectedText": "Create folders for stable subject areas.",
-        "reason": "Lone exact match at line 15 is beyond the proximity window (±5) of original line 23 and the text at the original position changed; kept at original position, needs re-anchoring."
+        "status": "anchored",
+        "score": 1,
+        "newLine": 15,
+        "newEndLine": 15,
+        "newStartColumn": 0,
+        "newEndColumn": 40,
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
       },
-      "statusCorrect": false,
-      "rangeCorrect": false,
-      "passed": false
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
     },
     {
       "caseId": "realistic-user-guide-revision",
@@ -1355,18 +1355,16 @@
       "actual": {
         "commentId": "guide-archive-retention",
         "status": "fuzzy",
-        "score": 0.9745498652291105,
-        "newLine": 40,
+        "score": 0.9835164835164835,
+        "newLine": 41,
         "newEndLine": 41,
-        "newStartColumn": 0,
-        "newEndColumn": 52,
-        "anchoredText": "\nArchived workspaces remain readable for ninety days.",
+        "anchoredText": "Archived workspaces remain readable for ninety days.",
         "previousSelectedText": "Archived workspaces remain readable for thirty days.",
-        "reason": "High-confidence fuzzy match (score 0.975)."
+        "reason": "Source revision context projects the edited anchor range."
       },
       "statusCorrect": true,
-      "rangeCorrect": false,
-      "passed": false
+      "rangeCorrect": true,
+      "passed": true
     },
     {
       "caseId": "exact-shift",
@@ -1380,7 +1378,7 @@
         "newEndLine": 5,
         "newStartColumn": 0,
         "newEndColumn": 32,
-        "reason": "Exact text match (unique)."
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
