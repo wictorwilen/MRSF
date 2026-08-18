@@ -8,6 +8,24 @@
 import { distance as levenshtein } from "fastest-levenshtein";
 import type { FuzzyCandidate } from "./types.js";
 
+export const MAX_FUZZY_CANDIDATE_LINES = 64;
+
+export interface FuzzySearchIndex {
+  lines: string[];
+  tokenPostings: Map<string, number[]>;
+  trigramPostings: Map<string, number[]>;
+}
+
+export function createFuzzySearchIndex(lines: string[]): FuzzySearchIndex {
+  const tokenPostings = new Map<string, number[]>();
+  const trigramPostings = new Map<string, number[]>();
+  for (let line = 1; line < lines.length; line += 1) {
+    addPostingSignals(tokenPostings, lexicalTokens(lines[line]), line);
+    addPostingSignals(trigramPostings, characterTrigrams(lines[line]), line);
+  }
+  return { lines, tokenPostings, trigramPostings };
+}
+
 // ---------------------------------------------------------------------------
 // Exact matching
 // ---------------------------------------------------------------------------
@@ -225,12 +243,14 @@ export function fuzzySearch(
   needle: string,
   threshold: number = 0.6,
   hintLine?: number,
+  index?: FuzzySearchIndex,
 ): FuzzyCandidate[] {
   return fuzzySearchThresholds(
     lines,
     needle,
     [threshold],
     hintLine,
+    index,
   ).get(threshold) ?? [];
 }
 
@@ -244,6 +264,7 @@ export function fuzzySearchThresholds(
   needle: string,
   thresholds: number[],
   hintLine?: number,
+  index: FuzzySearchIndex = createFuzzySearchIndex(lines),
 ): Map<number, FuzzyCandidate[]> {
   const uniqueThresholds = [...new Set(thresholds)];
   const results = new Map<number, FuzzyCandidate[]>();
@@ -257,6 +278,7 @@ export function fuzzySearchThresholds(
   const needleLineCount = needleLines.length;
   const candidates: FuzzyCandidate[] = [];
   const minimumThreshold = Math.min(...uniqueThresholds);
+  const candidateLines = retrieveCandidateLines(index, needle, hintLine);
 
   // Window sizes: ±30% of original line count, minimum 1
   const minWindow = Math.max(1, Math.floor(needleLineCount * 0.7));
@@ -266,7 +288,16 @@ export function fuzzySearchThresholds(
   );
 
   for (let winSize = minWindow; winSize <= maxWindow; winSize++) {
-    for (let startLine = 1; startLine + winSize - 1 < lines.length; startLine++) {
+    const startLines = new Set<number>();
+    for (const candidateLine of candidateLines) {
+      for (let offset = 0; offset < winSize; offset += 1) {
+        const startLine = candidateLine - offset;
+        if (startLine >= 1 && startLine + winSize - 1 < lines.length) {
+          startLines.add(startLine);
+        }
+      }
+    }
+    for (const startLine of startLines) {
       const windowLines = lines.slice(startLine, startLine + winSize);
       const windowText = windowLines.join("\n");
 
@@ -287,16 +318,15 @@ export function fuzzySearchThresholds(
 
   // For single-line needles, also try substring matching within each line
   if (needleLineCount === 1 && needle.length < 200) {
-    for (let lineNum = 1; lineNum < lines.length; lineNum++) {
+    for (const lineNum of candidateLines) {
       const line = lines[lineNum];
       if (!line) continue;
 
-      // Sliding window within line
       const winLen = needle.length;
       const minWinLen = Math.max(3, Math.floor(winLen * 0.7));
       const maxWinLen = Math.min(line.length, Math.ceil(winLen * 1.3));
-
-      for (let len = minWinLen; len <= maxWinLen; len++) {
+      const lengths = evenlySpacedIntegers(minWinLen, maxWinLen, 7);
+      for (const len of lengths) {
         for (let col = 0; col + len <= line.length; col++) {
           const sub = line.substring(col, col + len);
           const score = combinedScore(needle, sub);
@@ -332,6 +362,103 @@ export function fuzzySearchThresholds(
   }
 
   return results;
+}
+
+function retrieveCandidateLines(
+  index: FuzzySearchIndex,
+  needle: string,
+  hintLine?: number,
+): number[] {
+  const votes = new Map<number, number>();
+  const lineCount = Math.max(0, index.lines.length - 1);
+  const signals = [
+    ...postingSignals(index.tokenPostings, lexicalTokens(needle), 2),
+    ...postingSignals(index.trigramPostings, characterTrigrams(needle), 1),
+  ]
+    .sort((left, right) => left.postings.length - right.postings.length)
+    .slice(0, 16);
+
+  for (const signal of signals) {
+    const rarity = Math.log1p(lineCount / signal.postings.length);
+    for (const line of signal.postings) {
+      votes.set(line, (votes.get(line) ?? 0) + signal.weight * rarity);
+    }
+  }
+
+  if (hintLine != null) {
+    for (let offset = -4; offset <= 4; offset += 1) {
+      const line = hintLine + offset;
+      if (line >= 1 && line <= lineCount) {
+        votes.set(line, (votes.get(line) ?? 0) + 0.25);
+      }
+    }
+  }
+
+  return [...votes.entries()]
+    .sort((left, right) =>
+      right[1] - left[1]
+      || distanceFromHint(left[0], hintLine) - distanceFromHint(right[0], hintLine)
+      || left[0] - right[0]
+    )
+    .slice(0, MAX_FUZZY_CANDIDATE_LINES)
+    .map(([line]) => line);
+}
+
+function postingSignals(
+  postings: Map<string, number[]>,
+  values: string[],
+  weight: number,
+): Array<{ postings: number[]; weight: number }> {
+  return [...new Set(values)]
+    .map((value) => ({ postings: postings.get(value) ?? [], weight }))
+    .filter((signal) => signal.postings.length > 0);
+}
+
+function addPostingSignals(
+  postings: Map<string, number[]>,
+  values: string[],
+  line: number,
+): void {
+  for (const value of new Set(values)) {
+    const lines = postings.get(value);
+    if (lines) {
+      lines.push(line);
+    } else {
+      postings.set(value, [line]);
+    }
+  }
+}
+
+function lexicalTokens(text: string): string[] {
+  return text.toLowerCase().match(/[\p{L}\p{N}_-]+/gu) ?? [];
+}
+
+function characterTrigrams(text: string): string[] {
+  const normalized = text.toLowerCase().replace(/\s+/g, " ").trim();
+  const characters = [...normalized];
+  if (characters.length < 3) return normalized ? [normalized] : [];
+  const trigrams: string[] = [];
+  for (let index = 0; index <= characters.length - 3; index += 1) {
+    trigrams.push(characters.slice(index, index + 3).join(""));
+  }
+  return trigrams;
+}
+
+function evenlySpacedIntegers(
+  minimum: number,
+  maximum: number,
+  count: number,
+): number[] {
+  if (maximum <= minimum) return [minimum];
+  const values = new Set<number>();
+  for (let index = 0; index < count; index += 1) {
+    values.add(Math.round(minimum + (maximum - minimum) * index / (count - 1)));
+  }
+  return [...values];
+}
+
+function distanceFromHint(line: number, hintLine?: number): number {
+  return hintLine == null ? 0 : Math.abs(line - hintLine);
 }
 
 // ---------------------------------------------------------------------------

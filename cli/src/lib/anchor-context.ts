@@ -3,6 +3,7 @@ import type { Comment, ReanchorStatus } from "./types.js";
 
 const MATCH_THRESHOLD = 0.35;
 const AMBIGUITY_MARGIN = 0.03;
+export const MAX_CONTEXT_CANDIDATE_BLOCKS = 64;
 
 type BlockType =
   | "heading"
@@ -24,6 +25,7 @@ interface DocumentBlockIndex {
   lines: string[];
   blocks: MarkdownBlock[];
   lineToBlock: Map<number, number>;
+  tokenPostings: Map<string, number[]>;
 }
 
 interface CandidateWindow {
@@ -99,7 +101,12 @@ export function resolveContextAnchor(
     };
   }
 
-  const candidates = createCandidateWindows(sourceBlock, index.target)
+  const candidates = createCandidateWindows(
+    sourceBlock,
+    sourceBlockIndex,
+    comment.line,
+    index,
+  )
     .map((candidate) => ({
       ...candidate,
       score: scoreCandidate(
@@ -232,7 +239,12 @@ function createDocumentBlockIndex(lines: string[]): DocumentBlockIndex {
     }
   }
 
-  return { lines, blocks, lineToBlock };
+  return {
+    lines,
+    blocks,
+    lineToBlock,
+    tokenPostings: createTokenPostings(blocks),
+  };
 }
 
 function makeBlock(
@@ -292,11 +304,19 @@ function continuesBlock(type: BlockType, line: string): boolean {
 
 function createCandidateWindows(
   sourceBlock: MarkdownBlock,
-  target: DocumentBlockIndex,
+  sourceBlockIndex: number,
+  originalLine: number,
+  index: AnchorContextIndex,
 ): CandidateWindow[] {
+  const target = index.target;
   const candidates: CandidateWindow[] = [];
 
-  for (let start = 0; start < target.blocks.length; start += 1) {
+  for (const start of retrieveCandidateBlocks(
+    sourceBlock,
+    sourceBlockIndex,
+    originalLine,
+    index,
+  )) {
     const block = target.blocks[start];
     candidates.push(toCandidateWindow(target, start, start));
 
@@ -311,6 +331,112 @@ function createCandidateWindows(
   }
 
   return candidates;
+}
+
+function createTokenPostings(
+  blocks: MarkdownBlock[],
+): Map<string, number[]> {
+  const postings = new Map<string, number[]>();
+  for (const [blockIndex, block] of blocks.entries()) {
+    for (const token of new Set(tokenize(block.text))) {
+      const blocksForToken = postings.get(token);
+      if (blocksForToken) {
+        blocksForToken.push(blockIndex);
+      } else {
+        postings.set(token, [blockIndex]);
+      }
+    }
+  }
+  return postings;
+}
+
+/**
+ * Retrieve a small candidate pool using rare content tokens and directional
+ * neighbor evidence. Expensive similarity scoring is bounded to this pool.
+ */
+function retrieveCandidateBlocks(
+  sourceBlock: MarkdownBlock,
+  sourceBlockIndex: number,
+  originalLine: number,
+  index: AnchorContextIndex,
+): number[] {
+  const votes = new Map<number, number>();
+  const targetCount = index.target.blocks.length;
+  const addEvidence = (
+    text: string | undefined,
+    targetOffset: number,
+    weight: number,
+  ): void => {
+    if (!text) return;
+    const rankedTokens = [...new Set(tokenize(text))]
+      .map((token) => ({
+        token,
+        postings: index.target.tokenPostings.get(token) ?? [],
+      }))
+      .filter((item) => item.postings.length > 0)
+      .sort((left, right) => left.postings.length - right.postings.length)
+      .slice(0, 12);
+
+    for (const { postings } of rankedTokens) {
+      const rarity = Math.log1p(targetCount / postings.length);
+      for (const posting of postings) {
+        const candidate = posting + targetOffset;
+        if (candidate >= 0 && candidate < targetCount) {
+          votes.set(candidate, (votes.get(candidate) ?? 0) + weight * rarity);
+        }
+      }
+    }
+  };
+
+  addEvidence(sourceBlock.text, 0, 1);
+  addEvidence(index.source.blocks[sourceBlockIndex - 1]?.text, 1, 0.7);
+  addEvidence(index.source.blocks[sourceBlockIndex + 1]?.text, -1, 0.7);
+
+  const nearbyBlock = closestBlockToLine(index.target.blocks, originalLine);
+  if (nearbyBlock != null) {
+    for (let offset = -2; offset <= 2; offset += 1) {
+      const candidate = nearbyBlock + offset;
+      if (candidate >= 0 && candidate < targetCount) {
+        votes.set(candidate, (votes.get(candidate) ?? 0) + 0.25);
+      }
+    }
+  }
+
+  return [...votes.entries()]
+    .sort((left, right) =>
+      right[1] - left[1]
+      || Math.abs(index.target.blocks[left[0]].startLine - originalLine)
+        - Math.abs(index.target.blocks[right[0]].startLine - originalLine)
+      || left[0] - right[0]
+    )
+    .slice(0, MAX_CONTEXT_CANDIDATE_BLOCKS)
+    .map(([blockIndex]) => blockIndex);
+}
+
+function closestBlockToLine(
+  blocks: MarkdownBlock[],
+  line: number,
+): number | undefined {
+  if (blocks.length === 0) return undefined;
+  let low = 0;
+  let high = blocks.length - 1;
+  while (low <= high) {
+    const middle = Math.floor((low + high) / 2);
+    const block = blocks[middle];
+    if (line < block.startLine) {
+      high = middle - 1;
+    } else if (line > block.endLine) {
+      low = middle + 1;
+    } else {
+      return middle;
+    }
+  }
+  if (low >= blocks.length) return blocks.length - 1;
+  if (high < 0) return 0;
+  return Math.abs(blocks[low].startLine - line)
+      < Math.abs(blocks[high].endLine - line)
+    ? low
+    : high;
 }
 
 function toCandidateWindow(
@@ -410,7 +536,7 @@ function tokenize(text: string): string[] {
 }
 
 function normalizeText(text: string): string {
-  return text.toLocaleLowerCase().replace(/\s+/g, " ").trim();
+  return text.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
 function samePath(left: string[], right: string[]): boolean {

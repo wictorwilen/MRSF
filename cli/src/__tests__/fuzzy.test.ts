@@ -177,4 +177,22 @@ describe("fuzzySearch", () => {
     expect(results.get(0.7)?.[0].score).toBeGreaterThan(0.8);
     expect(results.get(0.8)).toEqual([]);
   });
+
+  it("retrieves a distant edited line through character signatures", () => {
+    const document = lines1(
+      ...Array.from(
+        { length: 200 },
+        (_, index) => `Unrelated generated paragraph ${index}.`,
+      ),
+      "The quik brown fox jumps over the lazy dog.",
+    );
+
+    const results = fuzzySearch(
+      document,
+      "The quick brown fox jumps over the lazy dog.",
+      0.8,
+    );
+
+    expect(results[0]).toMatchObject({ line: 201 });
+  });
 });

@@ -42,6 +42,10 @@ import {
   createAnchorContextIndex,
   type AnchorContextIndex,
 } from "./anchor-context.js";
+import {
+  createFuzzySearchIndex,
+  type FuzzySearchIndex,
+} from "./fuzzy.js";
 import { readDocumentLines } from "./parser.js";
 import { discoverSidecar, sidecarToDocument } from "./discovery.js";
 import { parseSidecar } from "./parser.js";
@@ -81,6 +85,11 @@ export async function reanchorDocument(
   const results: ReanchorResult[] = [];
   const threshold = opts.threshold ?? DEFAULT_THRESHOLD;
   const proximityWindow = opts.proximityWindow;
+  let fuzzySearchIndex: FuzzySearchIndex | undefined;
+  const getFuzzySearchIndex = (): FuzzySearchIndex => {
+    fuzzySearchIndex ??= createFuzzySearchIndex(documentLines);
+    return fuzzySearchIndex;
+  };
 
   if (!opts.noGit && (await isGitAvailable())) {
     const repoRoot = opts.repoRoot ?? (await findRepoRoot(opts.cwd));
@@ -135,6 +144,7 @@ export async function reanchorDocument(
             proximityWindow,
             revisionProjection,
             anchorContext,
+            getFuzzySearchIndex,
           });
           results.push(result);
           continue;
@@ -142,7 +152,12 @@ export async function reanchorDocument(
 
         // non-stale or no commit
         results.push(
-          reanchorComment(comment, documentLines, { threshold, commitIsStale: false, proximityWindow }),
+          reanchorComment(comment, documentLines, {
+            threshold,
+            commitIsStale: false,
+            proximityWindow,
+            getFuzzySearchIndex,
+          }),
         );
       }
 

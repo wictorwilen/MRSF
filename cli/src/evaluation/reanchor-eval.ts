@@ -8,6 +8,10 @@ import { performance } from "node:perf_hooks";
 import { reanchorComment, toReanchorLines } from "../lib/reanchor-core.js";
 import { createRevisionProjection } from "../lib/revision-projection.js";
 import { createAnchorContextIndex } from "../lib/anchor-context.js";
+import {
+  createFuzzySearchIndex,
+  type FuzzySearchIndex,
+} from "../lib/fuzzy.js";
 import type { Comment, ReanchorResult, ReanchorStatus } from "../lib/types.js";
 
 const Ajv2020 = Ajv2020Module as unknown as new (
@@ -203,6 +207,11 @@ export async function evaluateCases(
       sourceLines,
       documentLines,
     );
+    let fuzzySearchIndex: FuzzySearchIndex | undefined;
+    const getFuzzySearchIndex = (): FuzzySearchIndex => {
+      fuzzySearchIndex ??= createFuzzySearchIndex(documentLines);
+      return fuzzySearchIndex;
+    };
 
     for (const evaluationComment of loadedCase.value.comments) {
       const comment = toComment(evaluationComment);
@@ -210,6 +219,7 @@ export async function evaluateCases(
       const actual = reanchorComment(comment, documentLines, {
         revisionProjection,
         anchorContext,
+        getFuzzySearchIndex,
       });
       const durationMs = performance.now() - commentStartedAt;
       const statusCorrect = actual.status === evaluationComment.expected.status;

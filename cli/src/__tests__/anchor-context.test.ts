@@ -147,4 +147,39 @@ describe("Markdown anchor context", () => {
       index,
     )?.status).not.toBe("anchored");
   });
+
+  it("retrieves a rewritten moved block from directional neighbor evidence", () => {
+    const decoys = Array.from(
+      { length: 200 },
+      (_, index) => [`Unrelated paragraph ${index}.`, ""],
+    ).flat();
+    const index = createAnchorContextIndex(
+      lines(
+        "Stable context before.",
+        "",
+        "The dispatcher assigns each incoming job.",
+        "",
+        "Stable context after.",
+      ),
+      lines(
+        ...decoys,
+        "Stable context before.",
+        "",
+        "The scheduler routes every incoming task.",
+        "",
+        "Stable context after.",
+      ),
+    );
+
+    expect(resolveContextAnchor(
+      comment({
+        line: 3,
+        selected_text: "The dispatcher assigns each incoming job.",
+      }),
+      index,
+    )).toMatchObject({
+      status: "fuzzy",
+      line: 403,
+    });
+  });
 });
