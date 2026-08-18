@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "change": "Heading-scoped multi-comment landmark reconciliation",
+  "committed_corpus": {
+    "existing_comments_passed": 77,
+    "new_reconciliation_comments_passed": 3,
+    "after_passed": 80,
+    "comments": 80,
+    "incorrect_confident_relocations": 0
+  },
+  "profiles": {
+    "small": {
+      "before_passed": 401,
+      "after_passed": 401,
+      "comments": 500,
+      "after_incorrect_confident_relocations": 0
+    },
+    "medium": {
+      "before_passed": 1945,
+      "after_passed": 1945,
+      "comments": 2000,
+      "after_incorrect_confident_relocations": 0
+    },
+    "large": {
+      "before_passed": 1987,
+      "after_passed": 1987,
+      "comments": 2000,
+      "after_incorrect_confident_relocations": 0
+    },
+    "stress": {
+      "after_passed": 997,
+      "comments": 1000,
+      "after_incorrect_confident_relocations": 0
+    }
+  },
+  "safety_thresholds": {
+    "minimum_supporting_landmarks": 2,
+    "minimum_landmark_support": 0.65,
+    "minimum_candidate_margin": 0.08,
+    "local_landmark_window_lines": 30
+  },
+  "notes": [
+    "Nearby certain anchors vote for local source-to-target displacement instead of imposing document-wide order.",
+    "Landmarks only vote within the same source heading path, allowing sections to move independently.",
+    "Only ambiguous exact candidates can be promoted; edited or weakly supported candidates remain fuzzy or ambiguous.",
+    "The implementation uses portable deterministic data structures and is exported from both Node and browser entrypoints.",
+    "Generated workloads do not currently contain coordinated duplicate-comment scenarios, so their accuracy remains unchanged."
+  ]
+}

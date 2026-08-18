@@ -9,6 +9,8 @@ describe("library entrypoints", () => {
     const validator = await import("../lib/validator.js");
     const git = await import("../lib/git.js");
     const reanchor = await import("../lib/reanchor.js");
+    const anchorContext = await import("../lib/anchor-context.js");
+    const globalReconciliation = await import("../lib/global-reconciliation.js");
     const comments = await import("../lib/comments.js");
     const identity = await import("../lib/identity.js");
     const validateCore = await import("../lib/validate-core.js");
@@ -20,6 +22,12 @@ describe("library entrypoints", () => {
     expect(api.findRepoRoot).toBe(git.findRepoRoot);
     expect(api.reanchorFile).toBe(reanchor.reanchorFile);
     expect(api.resolveAnchor).toBe(reanchor.resolveAnchor);
+    expect(api.createAnchorContextIndex).toBe(
+      anchorContext.createAnchorContextIndex,
+    );
+    expect(api.reconcileCommentAnchors).toBe(
+      globalReconciliation.reconcileCommentAnchors,
+    );
     expect(api.validateDocument).toBe(validateCore.validateDocument);
     expect(api.newCommentId).toBe(identity.newCommentId);
     expect(api.addComment).toBe(comments.addComment);
@@ -31,6 +39,8 @@ describe("library entrypoints", () => {
     const fuzzy = await import("../lib/fuzzy.js");
     const identity = await import("../lib/identity.js");
     const reanchorCore = await import("../lib/reanchor-core.js");
+    const anchorContext = await import("../lib/anchor-context.js");
+    const globalReconciliation = await import("../lib/global-reconciliation.js");
     const validateCore = await import("../lib/validate-core.js");
 
     expect(browser.combinedScore).toBe(fuzzy.combinedScore);
@@ -42,6 +52,12 @@ describe("library entrypoints", () => {
     expect(browser.reanchorDocumentLines).toBe(reanchorCore.reanchorDocumentLines);
     expect(browser.resolveAnchor).toBe(reanchorCore.resolveAnchor);
     expect(browser.toReanchorLines).toBe(reanchorCore.toReanchorLines);
+    expect(browser.createAnchorContextIndex).toBe(
+      anchorContext.createAnchorContextIndex,
+    );
+    expect(browser.reconcileCommentAnchors).toBe(
+      globalReconciliation.reconcileCommentAnchors,
+    );
     expect(browser.validateDocument).toBe(validateCore.validateDocument);
     expect(browser.newCommentId).toBe(identity.newCommentId);
   });

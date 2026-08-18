@@ -12,6 +12,7 @@ import {
   createFuzzySearchIndex,
   type FuzzySearchIndex,
 } from "../lib/fuzzy.js";
+import { reconcileCommentAnchors } from "../lib/global-reconciliation.js";
 import type { Comment, ReanchorResult, ReanchorStatus } from "../lib/types.js";
 
 const Ajv2020 = Ajv2020Module as unknown as new (
@@ -213,6 +214,13 @@ export async function evaluateCases(
       return fuzzySearchIndex;
     };
 
+    const caseComments: Comment[] = [];
+    const caseResults: Array<{
+      evaluationComment: EvaluationComment;
+      comment: Comment;
+      actual: ReanchorResult;
+      durationMs: number;
+    }> = [];
     for (const evaluationComment of loadedCase.value.comments) {
       const comment = toComment(evaluationComment);
       const commentStartedAt = performance.now();
@@ -222,6 +230,27 @@ export async function evaluateCases(
         getFuzzySearchIndex,
       });
       const durationMs = performance.now() - commentStartedAt;
+      caseComments.push(comment);
+      caseResults.push({
+        evaluationComment,
+        comment,
+        actual,
+        durationMs,
+      });
+    }
+    const reconciled = reconcileCommentAnchors(
+      caseComments,
+      caseResults.map((result) => result.actual),
+      anchorContext,
+    );
+
+    for (const [index, caseResult] of caseResults.entries()) {
+      const {
+        evaluationComment,
+        comment,
+        durationMs,
+      } = caseResult;
+      const actual = reconciled[index];
       const statusCorrect = actual.status === evaluationComment.expected.status;
       const rangeCorrect = matchesExpectedRange(
         actual,

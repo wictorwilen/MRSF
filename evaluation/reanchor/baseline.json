@@ -1,13 +1,13 @@
 {
   "version": 1,
   "algorithm": "baseline",
-  "cases": 55,
-  "comments": 77,
+  "cases": 56,
+  "comments": 80,
   "metrics": {
-    "passed": 77,
+    "passed": 80,
     "failed": 0,
-    "exactRangeMatches": 77,
-    "statusMatches": 77,
+    "exactRangeMatches": 80,
+    "statusMatches": 80,
     "incorrectConfidentRelocations": 0
   },
   "results": [
@@ -870,6 +870,60 @@
         "newLine": 1,
         "newEndLine": 1,
         "reason": "Source-verified anchor remains exact at its stored position."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "moved-section-repeated-anchor",
+      "commentId": "alpha-leading-landmark",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "alpha-leading-landmark",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 17,
+        "newEndLine": 17,
+        "newStartColumn": 0,
+        "newEndColumn": 22,
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "moved-section-repeated-anchor",
+      "commentId": "alpha-repeated-target",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "alpha-repeated-target",
+        "status": "anchored",
+        "score": 0.99,
+        "newLine": 21,
+        "newEndLine": 21,
+        "newStartColumn": 0,
+        "newEndColumn": 16,
+        "reason": "Global reconciliation selected this candidate from 2 nearby landmark(s) (support 1.000, margin 0.447)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "moved-section-repeated-anchor",
+      "commentId": "alpha-trailing-landmark",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "alpha-trailing-landmark",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 25,
+        "newEndLine": 25,
+        "newStartColumn": 0,
+        "newEndColumn": 18,
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
       },
       "statusCorrect": true,
       "rangeCorrect": true,

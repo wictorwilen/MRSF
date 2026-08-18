@@ -55,6 +55,16 @@ export interface ContextAnchorResolution {
   reason: string;
 }
 
+export interface ContextAnchorCandidate {
+  score: number;
+  line: number;
+  endLine: number;
+  startColumn?: number;
+  endColumn?: number;
+  text: string;
+  exact: boolean;
+}
+
 export function createAnchorContextIndex(
   sourceLines: string[],
   targetLines: string[],
@@ -101,7 +111,72 @@ export function resolveContextAnchor(
     };
   }
 
-  const candidates = createCandidateWindows(
+  const candidates = findContextAnchorCandidates(comment, index);
+  const best = candidates[0];
+  if (!best) {
+    if (
+      index.target.lines.slice(1).join("\n").includes(comment.selected_text)
+    ) {
+      return undefined;
+    }
+    return {
+      status: "orphaned",
+      score: 0,
+      reason: "Source block has no plausible structural or contextual match.",
+    };
+  }
+
+  if (candidates[1] && best.score - candidates[1].score < AMBIGUITY_MARGIN) {
+    return {
+      status: "ambiguous",
+      score: best.score,
+      line: best.line,
+      endLine: best.endLine,
+      reason:
+        `Structural candidates are too close (${best.score.toFixed(3)} vs `
+        + `${candidates[1].score.toFixed(3)}).`,
+    };
+  }
+
+  const repeatedExactText = best.exact
+    && countOccurrences(
+      index.target.lines.slice(1).join("\n"),
+      comment.selected_text,
+    ) > 1;
+  return {
+    status: best.exact && !repeatedExactText ? "anchored" : "fuzzy",
+    score: best.exact && !repeatedExactText ? 1 : best.score,
+    line: best.line,
+    endLine: best.endLine,
+    startColumn: best.startColumn,
+    endColumn: best.endColumn,
+    text: best.text,
+    reason: best.exact && !repeatedExactText
+      ? "Markdown structure and bidirectional context disambiguate the exact anchor."
+      : repeatedExactText
+        ? "Markdown context selects one repeated exact anchor tentatively."
+        : "Markdown structure and bidirectional context locate the edited anchor.",
+  };
+}
+
+export function findContextAnchorCandidates(
+  comment: Comment,
+  index: AnchorContextIndex,
+): ContextAnchorCandidate[] {
+  if (comment.line == null || !comment.selected_text) return [];
+  const sourceBlockIndex = index.source.lineToBlock.get(comment.line);
+  if (sourceBlockIndex == null) return [];
+  const sourceBlock = index.source.blocks[sourceBlockIndex];
+  const sourceText = extractText(
+    index.source.lines,
+    comment.line,
+    comment.end_line,
+    comment.start_column,
+    comment.end_column,
+  );
+  if (sourceText !== comment.selected_text) return [];
+
+  return createCandidateWindows(
     sourceBlock,
     sourceBlockIndex,
     comment.line,
@@ -122,55 +197,34 @@ export function resolveContextAnchor(
       right.score - left.score
       || Math.abs(left.startLine - (comment.line as number))
         - Math.abs(right.startLine - (comment.line as number))
-    );
+    )
+    .map((candidate) => {
+      const range = resolveCandidateRange(
+        comment,
+        sourceBlock,
+        candidate,
+        index.target,
+      );
+      return {
+        score: candidate.score,
+        line: range.line,
+        endLine: range.endLine,
+        startColumn: range.startColumn,
+        endColumn: range.endColumn,
+        text: range.text,
+        exact: range.text === comment.selected_text,
+      };
+    });
+}
 
-  const best = candidates[0];
-  if (!best) {
-    if (
-      index.target.lines.slice(1).join("\n").includes(comment.selected_text)
-    ) {
-      return undefined;
-    }
-    return {
-      status: "orphaned",
-      score: 0,
-      reason: "Source block has no plausible structural or contextual match.",
-    };
-  }
-
-  if (candidates[1] && best.score - candidates[1].score < AMBIGUITY_MARGIN) {
-    return {
-      status: "ambiguous",
-      score: best.score,
-      line: best.startLine,
-      endLine: best.endLine,
-      reason:
-        `Structural candidates are too close (${best.score.toFixed(3)} vs `
-        + `${candidates[1].score.toFixed(3)}).`,
-    };
-  }
-
-  const range = resolveCandidateRange(comment, sourceBlock, best, index.target);
-  const exact = range.text === comment.selected_text;
-  const repeatedExactText = exact
-    && countOccurrences(
-      index.target.lines.slice(1).join("\n"),
-      comment.selected_text,
-    ) > 1;
-  return {
-    status: exact && !repeatedExactText ? "anchored" : "fuzzy",
-    score: exact && !repeatedExactText ? 1 : best.score,
-    line: range.line,
-    endLine: range.endLine,
-    startColumn: range.startColumn,
-    endColumn: range.endColumn,
-    text: range.text,
-    reason: exact && !repeatedExactText
-      ? "Markdown structure and bidirectional context disambiguate the exact anchor."
-      : repeatedExactText
-        ? "Markdown context selects one repeated exact anchor tentatively."
-        : "Markdown structure and bidirectional context locate the edited anchor.",
-  };
+export function getAnchorContextScope(
+  comment: Comment,
+  index: AnchorContextIndex,
+): string | undefined {
+  if (comment.line == null) return undefined;
+  const blockIndex = index.source.lineToBlock.get(comment.line);
+  if (blockIndex == null) return undefined;
+  return index.source.blocks[blockIndex].headingPath.join("\u001f");
 }
 
 function createDocumentBlockIndex(lines: string[]): DocumentBlockIndex {

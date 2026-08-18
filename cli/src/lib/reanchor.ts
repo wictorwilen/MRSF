@@ -46,6 +46,7 @@ import {
   createFuzzySearchIndex,
   type FuzzySearchIndex,
 } from "./fuzzy.js";
+import { reconcileCommentAnchors } from "./global-reconciliation.js";
 import { readDocumentLines } from "./parser.js";
 import { discoverSidecar, sidecarToDocument } from "./discovery.js";
 import { parseSidecar } from "./parser.js";
@@ -105,6 +106,14 @@ export async function reanchorDocument(
         RevisionProjectionIndex | undefined
       >();
       const contextCache = new Map<string, AnchorContextIndex | undefined>();
+      const reconciliationGroups = new Map<
+        string,
+        {
+          comments: MrsfDocument["comments"];
+          resultIndexes: number[];
+          anchorContext: AnchorContextIndex;
+        }
+      >();
 
       for (const comment of doc.comments) {
         const commentCommit = globalFrom ?? comment.commit;
@@ -146,7 +155,21 @@ export async function reanchorDocument(
             anchorContext,
             getFuzzySearchIndex,
           });
+          const resultIndex = results.length;
           results.push(result);
+          if (anchorContext) {
+            const group = reconciliationGroups.get(commentCommit);
+            if (group) {
+              group.comments.push(comment);
+              group.resultIndexes.push(resultIndex);
+            } else {
+              reconciliationGroups.set(commentCommit, {
+                comments: [comment],
+                resultIndexes: [resultIndex],
+                anchorContext,
+              });
+            }
+          }
           continue;
         }
 
@@ -161,6 +184,16 @@ export async function reanchorDocument(
         );
       }
 
+      for (const group of reconciliationGroups.values()) {
+        const reconciled = reconcileCommentAnchors(
+          group.comments,
+          group.resultIndexes.map((index) => results[index]),
+          group.anchorContext,
+        );
+        for (const [offset, resultIndex] of group.resultIndexes.entries()) {
+          results[resultIndex] = reconciled[offset];
+        }
+      }
       return results;
     }
   }

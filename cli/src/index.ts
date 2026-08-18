@@ -13,6 +13,8 @@ import * as validator from "./lib/validator.js";
 import * as fuzzy from "./lib/fuzzy.js";
 import * as git from "./lib/git.js";
 import * as reanchor from "./lib/reanchor.js";
+import * as anchorContext from "./lib/anchor-context.js";
+import * as globalReconciliation from "./lib/global-reconciliation.js";
 import * as comments from "./lib/comments.js";
 import * as identity from "./lib/identity.js";
 import * as validateCore from "./lib/validate-core.js";
@@ -104,6 +106,14 @@ export const resolveAnchor = reanchor.resolveAnchor;
 export const reanchorDocument = reanchor.reanchorDocument;
 export const applyReanchorResults = reanchor.applyReanchorResults;
 export const reanchorFile = reanchor.reanchorFile;
+export const createAnchorContextIndex = anchorContext.createAnchorContextIndex;
+export const reconcileCommentAnchors =
+  globalReconciliation.reconcileCommentAnchors;
+export type {
+  AnchorContextIndex,
+  ContextAnchorCandidate,
+  ContextAnchorResolution,
+} from "./lib/anchor-context.js";
 
 // Comments
 export const addComment = comments.addComment;
