@@ -99,13 +99,18 @@ export async function loadEvaluationCases(
   const caseIds = new Set<string>();
 
   for (const casePath of files) {
-    const value: unknown = JSON.parse(await readFile(casePath, "utf8"));
-    assertValidCase(validator, value, casePath);
-    if (caseIds.has(value.id)) {
-      throw new Error(`Duplicate evaluation case id "${value.id}" in ${casePath}.`);
+    const parsed: unknown = JSON.parse(await readFile(casePath, "utf8"));
+    const values = Array.isArray(parsed) ? parsed : [parsed];
+
+    for (const [index, value] of values.entries()) {
+      const location = values.length === 1 ? casePath : `${casePath}[${index}]`;
+      assertValidCase(validator, value, location);
+      if (caseIds.has(value.id)) {
+        throw new Error(`Duplicate evaluation case id "${value.id}" in ${location}.`);
+      }
+      caseIds.add(value.id);
+      loaded.push({ casePath, value });
     }
-    caseIds.add(value.id);
-    loaded.push({ casePath, value: value as EvaluationCase });
   }
 
   if (loaded.length === 0) {
@@ -122,7 +127,11 @@ export async function evaluateCases(
   const results: EvaluationCommentResult[] = [];
 
   for (const loadedCase of cases) {
-    await readEvaluationDocument(loadedCase.value.source, loadedCase.casePath);
+    const sourceText = await readEvaluationDocument(
+      loadedCase.value.source,
+      loadedCase.casePath,
+    );
+    validateSourceSelections(loadedCase.value, sourceText);
     const targetText = await readEvaluationDocument(
       loadedCase.value.target,
       loadedCase.casePath,
@@ -164,8 +173,13 @@ export async function evaluateCases(
     statusMatches: results.filter((result) => result.statusCorrect).length,
     incorrectConfidentRelocations: results.filter(
       (result) =>
-        !result.passed
-        && (result.actual.status === "anchored" || result.actual.status === "shifted"),
+        (result.actual.status === "anchored" || result.actual.status === "shifted")
+        && (
+          result.expected.ranges?.length
+            ? !result.rangeCorrect
+            : result.expected.status === "ambiguous"
+              || result.expected.status === "orphaned"
+        ),
     ).length,
     durationMs: performance.now() - startedAt,
     results,
@@ -214,6 +228,23 @@ async function readEvaluationDocument(
     return readFile(path.resolve(path.dirname(casePath), document.path), "utf8");
   }
   throw new Error(`Evaluation document in ${casePath} has neither text nor path.`);
+}
+
+function validateSourceSelections(
+  evaluationCase: EvaluationCase,
+  sourceText: string,
+): void {
+  const normalizedSource = sourceText.replace(/\r\n/g, "\n");
+
+  for (const comment of evaluationCase.comments) {
+    const selectedText = comment.anchor.selected_text?.replace(/\r\n/g, "\n");
+    if (selectedText != null && !normalizedSource.includes(selectedText)) {
+      throw new Error(
+        `Evaluation case ${evaluationCase.id}/${comment.id} has selected_text `
+        + "that does not occur in its source document.",
+      );
+    }
+  }
 }
 
 function toComment(evaluationComment: EvaluationComment): Comment {
