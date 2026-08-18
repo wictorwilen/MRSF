@@ -79,6 +79,31 @@ export interface EvaluationSummary {
   results: EvaluationCommentResult[];
 }
 
+export interface EvaluationBaseline {
+  version: 1;
+  algorithm: string;
+  cases: number;
+  comments: number;
+  metrics: {
+    passed: number;
+    failed: number;
+    exactRangeMatches: number;
+    statusMatches: number;
+    incorrectConfidentRelocations: number;
+  };
+  results: EvaluationBaselineResult[];
+}
+
+export interface EvaluationBaselineResult {
+  caseId: string;
+  commentId: string;
+  expectedStatus: ReanchorStatus;
+  actual: ReanchorResult;
+  statusCorrect: boolean;
+  rangeCorrect: boolean;
+  passed: boolean;
+}
+
 export interface LoadedEvaluationCase {
   casePath: string;
   value: EvaluationCase;
@@ -184,6 +209,97 @@ export async function evaluateCases(
     durationMs: performance.now() - startedAt,
     results,
   };
+}
+
+export function createEvaluationBaseline(
+  summary: EvaluationSummary,
+): EvaluationBaseline {
+  return {
+    version: 1,
+    algorithm: summary.algorithm,
+    cases: summary.cases,
+    comments: summary.comments,
+    metrics: {
+      passed: summary.passed,
+      failed: summary.failed,
+      exactRangeMatches: summary.exactRangeMatches,
+      statusMatches: summary.statusMatches,
+      incorrectConfidentRelocations: summary.incorrectConfidentRelocations,
+    },
+    results: summary.results.map((result) => ({
+      caseId: result.caseId,
+      commentId: result.commentId,
+      expectedStatus: result.expected.status,
+      actual: result.actual,
+      statusCorrect: result.statusCorrect,
+      rangeCorrect: result.rangeCorrect,
+      passed: result.passed,
+    })),
+  };
+}
+
+export function findBaselineDifferences(
+  expected: EvaluationBaseline,
+  actual: EvaluationBaseline,
+): string[] {
+  const differences: string[] = [];
+
+  if (expected.version !== actual.version) {
+    differences.push(
+      `Baseline version changed from ${expected.version} to ${actual.version}.`,
+    );
+  }
+  if (expected.algorithm !== actual.algorithm) {
+    differences.push(
+      `Algorithm changed from ${expected.algorithm} to ${actual.algorithm}.`,
+    );
+  }
+
+  const expectedHeader = {
+    cases: expected.cases,
+    comments: expected.comments,
+    metrics: expected.metrics,
+  };
+  const actualHeader = {
+    cases: actual.cases,
+    comments: actual.comments,
+    metrics: actual.metrics,
+  };
+  if (JSON.stringify(expectedHeader) !== JSON.stringify(actualHeader)) {
+    differences.push(
+      `Summary changed: expected ${JSON.stringify(expectedHeader)}, `
+      + `received ${JSON.stringify(actualHeader)}.`,
+    );
+  }
+
+  const expectedResults = new Map(
+    expected.results.map((result) => [baselineResultKey(result), result]),
+  );
+  const actualResults = new Map(
+    actual.results.map((result) => [baselineResultKey(result), result]),
+  );
+
+  for (const [key, expectedResult] of expectedResults) {
+    const actualResult = actualResults.get(key);
+    if (!actualResult) {
+      differences.push(`Result ${key} is missing.`);
+    } else if (JSON.stringify(expectedResult) !== JSON.stringify(actualResult)) {
+      differences.push(`Result ${key} changed.`);
+    }
+  }
+  for (const key of actualResults.keys()) {
+    if (!expectedResults.has(key)) {
+      differences.push(`Result ${key} is new.`);
+    }
+  }
+
+  return differences;
+}
+
+function baselineResultKey(
+  result: Pick<EvaluationBaselineResult, "caseId" | "commentId">,
+): string {
+  return `${result.caseId}/${result.commentId}`;
 }
 
 async function findJsonFiles(rootPath: string): Promise<string[]> {

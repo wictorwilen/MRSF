@@ -2,7 +2,14 @@
 
 import path from "node:path";
 import process from "node:process";
-import { evaluateCases, loadEvaluationCases } from "./reanchor-eval.js";
+import { readFile, writeFile } from "node:fs/promises";
+import {
+  createEvaluationBaseline,
+  evaluateCases,
+  findBaselineDifferences,
+  loadEvaluationCases,
+  type EvaluationBaseline,
+} from "./reanchor-eval.js";
 
 async function main(): Promise<void> {
   const options = parseArguments(process.argv.slice(2));
@@ -10,6 +17,7 @@ async function main(): Promise<void> {
   const schemaPath = path.resolve(options.schemaPath);
   const cases = await loadEvaluationCases(casesPath, schemaPath);
   const summary = await evaluateCases(cases);
+  const baseline = createEvaluationBaseline(summary);
 
   if (options.json) {
     process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
@@ -17,7 +25,28 @@ async function main(): Promise<void> {
     printSummary(summary);
   }
 
-  if (summary.failed > 0) {
+  if (options.writeBaselinePath) {
+    await writeFile(
+      path.resolve(options.writeBaselinePath),
+      `${JSON.stringify(baseline, null, 2)}\n`,
+    );
+    return;
+  }
+
+  if (options.baselinePath) {
+    const expected = JSON.parse(
+      await readFile(path.resolve(options.baselinePath), "utf8"),
+    ) as EvaluationBaseline;
+    const differences = findBaselineDifferences(expected, baseline);
+    if (differences.length > 0) {
+      for (const difference of differences) {
+        console.error(`BASELINE ${difference}`);
+      }
+      process.exitCode = 1;
+    } else if (!options.json) {
+      console.log("Baseline matches.");
+    }
+  } else if (summary.failed > 0) {
     process.exitCode = 1;
   }
 }
@@ -26,10 +55,14 @@ function parseArguments(args: string[]): {
   casesPath: string;
   schemaPath: string;
   json: boolean;
+  baselinePath?: string;
+  writeBaselinePath?: string;
 } {
   let casesPath = "../evaluation/reanchor/cases";
   let schemaPath = "../evaluation/reanchor/schema.json";
   let json = false;
+  let baselinePath: string | undefined;
+  let writeBaselinePath: string | undefined;
 
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
@@ -39,12 +72,26 @@ function parseArguments(args: string[]): {
       casesPath = args[index += 1];
     } else if (argument === "--schema" && args[index + 1]) {
       schemaPath = args[index += 1];
+    } else if (argument === "--baseline" && args[index + 1]) {
+      baselinePath = args[index += 1];
+    } else if (argument === "--write-baseline" && args[index + 1]) {
+      writeBaselinePath = args[index += 1];
     } else {
       throw new Error(`Unknown or incomplete argument: ${argument}`);
     }
   }
 
-  return { casesPath, schemaPath, json };
+  if (baselinePath && writeBaselinePath) {
+    throw new Error("--baseline and --write-baseline cannot be used together.");
+  }
+
+  return {
+    casesPath,
+    schemaPath,
+    json,
+    baselinePath,
+    writeBaselinePath,
+  };
 }
 
 function printSummary(summary: Awaited<ReturnType<typeof evaluateCases>>): void {

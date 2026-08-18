@@ -17,8 +17,17 @@ Run the corpus from `cli/`:
 ```bash
 npm run eval:reanchor
 npm run eval:reanchor -- --json
+npm run eval:reanchor:baseline
 ```
 
 The command exits non-zero when outcomes differ from the expected results.
 That is intentional while evaluating the baseline. Corpus validation itself is
 covered by `cli/src/__tests__/reanchor-eval.test.ts`.
+
+`baseline.json` is a deterministic snapshot of the current implementation. The
+baseline command succeeds while behavior matches that snapshot, including its
+known gaps, and fails when any outcome changes. Intentionally refresh it with:
+
+```bash
+npm run eval:reanchor -- --write-baseline ../evaluation/reanchor/baseline.json
+```

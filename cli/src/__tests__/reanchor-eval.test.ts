@@ -4,7 +4,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  createEvaluationBaseline,
   evaluateCases,
+  findBaselineDifferences,
   loadEvaluationCases,
   type LoadedEvaluationCase,
 } from "../evaluation/reanchor-eval.js";
@@ -162,5 +164,51 @@ describe("reanchoring evaluation", () => {
 
     expect(cases.length).toBeGreaterThanOrEqual(50);
     expect(new Set(cases.map((item) => item.value.id)).size).toBe(cases.length);
+  });
+
+  it("creates a deterministic baseline without timing measurements", async () => {
+    const summary = await evaluateCases([{
+      casePath: "/tmp/baseline.json",
+      value: {
+        id: "baseline-case",
+        categories: ["baseline"],
+        source: { text: "Selected text\n" },
+        target: { text: "Selected text\n" },
+        comments: [{
+          id: "comment-1",
+          anchor: { line: 1, selected_text: "Selected text" },
+          expected: { status: "anchored", ranges: [{ line: 1 }] },
+        }],
+      },
+    }]);
+
+    const baseline = createEvaluationBaseline(summary);
+
+    expect(JSON.stringify(baseline)).not.toContain("durationMs");
+    expect(findBaselineDifferences(baseline, baseline)).toEqual([]);
+  });
+
+  it("reports changed baseline results", async () => {
+    const summary = await evaluateCases([{
+      casePath: "/tmp/baseline-change.json",
+      value: {
+        id: "baseline-change",
+        categories: ["baseline"],
+        source: { text: "Selected text\n" },
+        target: { text: "Selected text\n" },
+        comments: [{
+          id: "comment-1",
+          anchor: { line: 1, selected_text: "Selected text" },
+          expected: { status: "anchored", ranges: [{ line: 1 }] },
+        }],
+      },
+    }]);
+    const expected = createEvaluationBaseline(summary);
+    const actual = structuredClone(expected);
+    actual.results[0].actual.score = 0.5;
+
+    expect(findBaselineDifferences(expected, actual)).toContain(
+      "Result baseline-change/comment-1 changed.",
+    );
   });
 });

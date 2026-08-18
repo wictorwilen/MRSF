@@ -1,0 +1,927 @@
+{
+  "version": 1,
+  "algorithm": "baseline",
+  "cases": 51,
+  "comments": 51,
+  "metrics": {
+    "passed": 39,
+    "failed": 12,
+    "exactRangeMatches": 46,
+    "statusMatches": 39,
+    "incorrectConfidentRelocations": 7
+  },
+  "results": [
+    {
+      "caseId": "unchanged-selection",
+      "commentId": "c01",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c01",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 0,
+        "newEndColumn": 21,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "lines-inserted-above",
+      "commentId": "c02",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c02",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 3,
+        "newEndLine": 3,
+        "newStartColumn": 0,
+        "newEndColumn": 17,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "lines-deleted-above",
+      "commentId": "c03",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c03",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 0,
+        "newEndColumn": 17,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "text-inserted-before-inline-anchor",
+      "commentId": "c04",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c04",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 7,
+        "newEndColumn": 20,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "text-appended-after-inline-anchor",
+      "commentId": "c05",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c05",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 0,
+        "newEndColumn": 13,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "whitespace-normalized",
+      "commentId": "c06",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c06",
+        "status": "fuzzy",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 0,
+        "newEndColumn": 28,
+        "anchoredText": "Text  with   regular spaces.",
+        "previousSelectedText": "Text with regular spaces.",
+        "reason": "High-confidence fuzzy match (score 1.000)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "typo-corrected-in-place",
+      "commentId": "c07",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c07",
+        "status": "fuzzy",
+        "score": 0.9351851851851852,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 0,
+        "newEndColumn": 26,
+        "anchoredText": "The algorithm is reliable.",
+        "previousSelectedText": "The algorithmm is reliable.",
+        "reason": "High-confidence fuzzy match (score 0.935)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "sentence-rewritten-in-place",
+      "commentId": "c08",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c08",
+        "status": "fuzzy",
+        "score": 0.6486842105263158,
+        "newLine": 1,
+        "anchoredText": "The revised sentence describes the behavior more clearly.",
+        "previousSelectedText": "The original sentence explains the behavior clearly.",
+        "reason": "Line-fallback with fuzzy text match (score 0.649)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "paragraph-moved",
+      "commentId": "c09",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c09",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 3,
+        "newEndLine": 3,
+        "newStartColumn": 0,
+        "newEndColumn": 18,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "section-moved",
+      "commentId": "c10",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c10",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 5,
+        "newEndLine": 5,
+        "newStartColumn": 0,
+        "newEndColumn": 11,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "heading-renamed",
+      "commentId": "c11",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c11",
+        "status": "anchored",
+        "score": 0.8,
+        "newLine": 1,
+        "reason": "Line/column fallback."
+      },
+      "statusCorrect": false,
+      "rangeCorrect": true,
+      "passed": false
+    },
+    {
+      "caseId": "heading-moved-and-renamed",
+      "commentId": "c12",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c12",
+        "status": "anchored",
+        "score": 0.8,
+        "newLine": 1,
+        "reason": "Line/column fallback."
+      },
+      "statusCorrect": false,
+      "rangeCorrect": false,
+      "passed": false
+    },
+    {
+      "caseId": "paragraph-split",
+      "commentId": "c13",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c13",
+        "status": "anchored",
+        "score": 0.8,
+        "newLine": 1,
+        "reason": "Line/column fallback."
+      },
+      "statusCorrect": false,
+      "rangeCorrect": false,
+      "passed": false
+    },
+    {
+      "caseId": "paragraphs-merged",
+      "commentId": "c14",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c14",
+        "status": "fuzzy",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 0,
+        "newEndColumn": 24,
+        "anchoredText": "First idea. Second idea.",
+        "previousSelectedText": "First idea.\nSecond idea.",
+        "reason": "High-confidence fuzzy match (score 1.000)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "emphasis-added",
+      "commentId": "c15",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c15",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 2,
+        "newEndColumn": 18,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "link-wrapped",
+      "commentId": "c16",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c16",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 1,
+        "newEndColumn": 16,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "punctuation-changed",
+      "commentId": "c17",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c17",
+        "status": "fuzzy",
+        "score": 0.776470588235294,
+        "newLine": 1,
+        "anchoredText": "Is this reliable!",
+        "previousSelectedText": "Is this reliable?",
+        "reason": "Line-fallback with fuzzy text match (score 0.776)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "line-endings-normalized",
+      "commentId": "c18",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c18",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 2,
+        "newEndLine": 2,
+        "newStartColumn": 0,
+        "newEndColumn": 11,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "multiline-selection-moved",
+      "commentId": "c19",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c19",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 3,
+        "newEndLine": 4,
+        "newStartColumn": 0,
+        "newEndColumn": 10,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "multiline-whitespace-changed",
+      "commentId": "c20",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c20",
+        "status": "fuzzy",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 2,
+        "newStartColumn": 0,
+        "newEndColumn": 12,
+        "anchoredText": "Alpha  line.\nBeta   line.",
+        "previousSelectedText": "Alpha line.\nBeta line.",
+        "reason": "High-confidence fuzzy match (score 1.000)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "code-block-moved",
+      "commentId": "c21",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c21",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 4,
+        "newEndLine": 4,
+        "newStartColumn": 0,
+        "newEndColumn": 18,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "repeated-code-without-position",
+      "commentId": "c22",
+      "expectedStatus": "ambiguous",
+      "actual": {
+        "commentId": "c22",
+        "status": "fuzzy",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 0,
+        "newEndColumn": 19,
+        "anchoredText": "const value = true;",
+        "previousSelectedText": "const value = true;",
+        "reason": "High-confidence fuzzy match (score 1.000)."
+      },
+      "statusCorrect": false,
+      "rangeCorrect": true,
+      "passed": false
+    },
+    {
+      "caseId": "table-row-moved",
+      "commentId": "c23",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c23",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 3,
+        "newEndLine": 3,
+        "newStartColumn": 0,
+        "newEndColumn": 11,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "list-item-reordered",
+      "commentId": "c24",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c24",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 3,
+        "newEndLine": 3,
+        "newStartColumn": 0,
+        "newEndColumn": 12,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "blockquote-marker-added",
+      "commentId": "c25",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c25",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 2,
+        "newEndColumn": 18,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "unicode-accent-changed",
+      "commentId": "c26",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c26",
+        "status": "fuzzy",
+        "score": 0.926470588235294,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 0,
+        "newEndColumn": 17,
+        "anchoredText": "The café is open.",
+        "previousSelectedText": "The cafe is open.",
+        "reason": "High-confidence fuzzy match (score 0.926)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "emoji-inserted",
+      "commentId": "c27",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c27",
+        "status": "fuzzy",
+        "score": 0.7652173913043478,
+        "newLine": 1,
+        "anchoredText": "Deployment ✅ succeeded.",
+        "previousSelectedText": "Deployment succeeded.",
+        "reason": "Line-fallback with fuzzy text match (score 0.765)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "letter-case-changed",
+      "commentId": "c28",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c28",
+        "status": "fuzzy",
+        "score": 0.6764705882352942,
+        "newLine": 1,
+        "anchoredText": "API configuration",
+        "previousSelectedText": "API Configuration",
+        "reason": "Line-fallback with fuzzy text match (score 0.676)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "duplicate-nearest-original",
+      "commentId": "c29",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c29",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 3,
+        "newEndLine": 3,
+        "newStartColumn": 0,
+        "newEndColumn": 16,
+        "reason": "Exact text match (2 occurrences; chose nearest to original line 3)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "duplicate-without-position",
+      "commentId": "c30",
+      "expectedStatus": "ambiguous",
+      "actual": {
+        "commentId": "c30",
+        "status": "fuzzy",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 0,
+        "newEndColumn": 16,
+        "anchoredText": "Repeated phrase.",
+        "previousSelectedText": "Repeated phrase.",
+        "reason": "High-confidence fuzzy match (score 1.000)."
+      },
+      "statusCorrect": false,
+      "rangeCorrect": true,
+      "passed": false
+    },
+    {
+      "caseId": "far-exact-after-origin-rewrite",
+      "commentId": "c31",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c31",
+        "status": "fuzzy",
+        "score": 0.5,
+        "newLine": 1,
+        "anchoredText": "Origin setting revised.",
+        "previousSelectedText": "Source setting.",
+        "reason": "Lone exact match at line 8 is beyond the proximity window (±5) of original line 1 and the text at the original position changed; kept at original position, needs re-anchoring."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "nearby-exact-relocation",
+      "commentId": "c32",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c32",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 3,
+        "newEndLine": 3,
+        "newStartColumn": 0,
+        "newEndColumn": 14,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "far-relocation-after-document-shrink",
+      "commentId": "c33",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c33",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 2,
+        "newEndLine": 2,
+        "newStartColumn": 0,
+        "newEndColumn": 11,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "selection-copied-original-remains",
+      "commentId": "c34",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c34",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 0,
+        "newEndColumn": 16,
+        "reason": "Exact text match (2 occurrences; chose nearest to original line 1)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "selection-copied-original-rewritten",
+      "commentId": "c35",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c35",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 5,
+        "newEndLine": 5,
+        "newStartColumn": 0,
+        "newEndColumn": 16,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": false,
+      "rangeCorrect": false,
+      "passed": false
+    },
+    {
+      "caseId": "nearby-rewrite-versus-distant-exact",
+      "commentId": "c36",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c36",
+        "status": "fuzzy",
+        "score": 0.5,
+        "newLine": 2,
+        "anchoredText": "Revised original statement for this section.",
+        "previousSelectedText": "Precise original statement for this section.",
+        "reason": "Lone exact match at line 8 is beyond the proximity window (±5) of original line 2 and the text at the original position changed; kept at original position, needs re-anchoring."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "selection-deleted",
+      "commentId": "c37",
+      "expectedStatus": "orphaned",
+      "actual": {
+        "commentId": "c37",
+        "status": "anchored",
+        "score": 0.8,
+        "newLine": 1,
+        "reason": "Line/column fallback."
+      },
+      "statusCorrect": false,
+      "rangeCorrect": true,
+      "passed": false
+    },
+    {
+      "caseId": "section-deleted-and-position-gone",
+      "commentId": "c38",
+      "expectedStatus": "orphaned",
+      "actual": {
+        "commentId": "c38",
+        "status": "orphaned",
+        "score": 0,
+        "reason": "No match found. Comment is orphaned."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "common-word-edited-at-origin",
+      "commentId": "c39",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c39",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 3,
+        "newEndLine": 3,
+        "newStartColumn": 8,
+        "newEndColumn": 14,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": false,
+      "rangeCorrect": false,
+      "passed": false
+    },
+    {
+      "caseId": "repeated-heading-nearest-original",
+      "commentId": "c40",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c40",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 5,
+        "newEndLine": 5,
+        "newStartColumn": 0,
+        "newEndColumn": 8,
+        "reason": "Exact text match (2 occurrences; chose nearest to original line 5)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "stale-position-out-of-bounds",
+      "commentId": "c41",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c41",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 2,
+        "newEndLine": 2,
+        "newStartColumn": 0,
+        "newEndColumn": 23,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "selection-with-blank-edges",
+      "commentId": "c42",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c42",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 3,
+        "newEndLine": 5,
+        "newStartColumn": 0,
+        "newEndColumn": 0,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "multiline-column-selection-moved",
+      "commentId": "c43",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c43",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 3,
+        "newEndLine": 4,
+        "newStartColumn": 2,
+        "newEndColumn": 4,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "blank-line-inserted-inside-selection",
+      "commentId": "c44",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c44",
+        "status": "fuzzy",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 3,
+        "newStartColumn": 0,
+        "newEndColumn": 10,
+        "anchoredText": "Alpha line.\n\nBeta line.",
+        "previousSelectedText": "Alpha line.\nBeta line.",
+        "reason": "High-confidence fuzzy match (score 1.000)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "long-selection-partially-rewritten",
+      "commentId": "c45",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c45",
+        "status": "fuzzy",
+        "score": 0.7997116077865898,
+        "newLine": 1,
+        "anchoredText": "This long paragraph describes the revised architecture, its safety constraints, and the intended runtime behavior for every supported integration.",
+        "previousSelectedText": "This long paragraph describes the original architecture, its constraints, and the expected operational behavior for every supported integration.",
+        "reason": "Line-fallback with fuzzy text match (score 0.800)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "unrelated-content-at-original-position",
+      "commentId": "c46",
+      "expectedStatus": "ambiguous",
+      "actual": {
+        "commentId": "c46",
+        "status": "anchored",
+        "score": 0.8,
+        "newLine": 1,
+        "reason": "Line/column fallback."
+      },
+      "statusCorrect": false,
+      "rangeCorrect": true,
+      "passed": false
+    },
+    {
+      "caseId": "repeated-paragraphs-reordered",
+      "commentId": "c47",
+      "expectedStatus": "ambiguous",
+      "actual": {
+        "commentId": "c47",
+        "status": "fuzzy",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 0,
+        "newEndColumn": 17,
+        "anchoredText": "Shared paragraph.",
+        "previousSelectedText": "Shared paragraph.",
+        "reason": "High-confidence fuzzy match (score 1.000)."
+      },
+      "statusCorrect": false,
+      "rangeCorrect": true,
+      "passed": false
+    },
+    {
+      "caseId": "list-duplicate-origin-edited",
+      "commentId": "c48",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "c48",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 2,
+        "newEndLine": 2,
+        "newStartColumn": 0,
+        "newEndColumn": 19,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": false,
+      "rangeCorrect": false,
+      "passed": false
+    },
+    {
+      "caseId": "duplicate-heading-paths-without-context",
+      "commentId": "c49",
+      "expectedStatus": "ambiguous",
+      "actual": {
+        "commentId": "c49",
+        "status": "fuzzy",
+        "score": 1,
+        "newLine": 3,
+        "newEndLine": 3,
+        "newStartColumn": 0,
+        "newEndColumn": 12,
+        "anchoredText": "Target body.",
+        "previousSelectedText": "Target body.",
+        "reason": "High-confidence fuzzy match (score 1.000)."
+      },
+      "statusCorrect": false,
+      "rangeCorrect": true,
+      "passed": false
+    },
+    {
+      "caseId": "equivalent-duplicate-ranges",
+      "commentId": "c50",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "c50",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 0,
+        "newEndColumn": 18,
+        "reason": "Exact text match (2 occurrences; chose nearest to original line 1)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "exact-shift",
+      "commentId": "exact-shift-comment",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "exact-shift-comment",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 5,
+        "newEndLine": 5,
+        "newStartColumn": 0,
+        "newEndColumn": 32,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    }
+  ]
+}
