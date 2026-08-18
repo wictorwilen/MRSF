@@ -9,12 +9,13 @@ vi.mock("@mrsf/cli", () => ({
   getGitUserName: (...args: unknown[]) => mockGetGitUserName(...args),
 }));
 
-import { resolveAuthor } from "../../util/author.js";
+import { clearAuthorCache, resolveAuthor } from "../../util/author.js";
 
 describe("resolveAuthor", () => {
   beforeEach(() => {
     __mock.reset();
     vi.clearAllMocks();
+    clearAuthorCache();
   });
 
   it("prefers the configured author override", async () => {
@@ -36,6 +37,18 @@ describe("resolveAuthor", () => {
     expect(mockFindRepoRoot).toHaveBeenCalledWith("/workspace/docs");
     expect(mockGetGitUserName).toHaveBeenCalledWith("/workspace");
     expect(__mock.configuration.has("sidemark.author")).toBe(false);
+  });
+
+  it("caches Git identity lookups for repeated document checks", async () => {
+    mockFindRepoRoot.mockResolvedValue("/workspace");
+    mockGetGitUserName.mockResolvedValue("Repository Author");
+    const documentUri = Uri.file("/workspace/docs/doc.md");
+
+    await expect(resolveAuthor(documentUri, false)).resolves.toBe("Repository Author");
+    await expect(resolveAuthor(documentUri, false)).resolves.toBe("Repository Author");
+
+    expect(mockFindRepoRoot).toHaveBeenCalledTimes(1);
+    expect(mockGetGitUserName).toHaveBeenCalledTimes(1);
   });
 
   it("prompts without creating a global override when repository identity is unavailable", async () => {

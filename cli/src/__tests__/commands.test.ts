@@ -699,7 +699,7 @@ describe("add command", () => {
     findRepoRoot.mockResolvedValue(tmpDir);
     getGitUserName.mockResolvedValue(null);
 
-    await expect(
+    await expectExit(() =>
       runCommand(registerAdd, [
         "--cwd",
         tmpDir,
@@ -708,9 +708,12 @@ describe("add command", () => {
         "--text",
         "Missing author",
       ]),
-    ).rejects.toThrow("Comment author is required");
+    );
 
     expect(addComment).not.toHaveBeenCalled();
+    expect(consoleErrorSpy.mock.calls.flat().join("\n")).toContain(
+      "Comment author is required",
+    );
   });
 
   it("rejects malformed extension flags", async () => {

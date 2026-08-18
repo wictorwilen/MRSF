@@ -120,10 +120,14 @@ export function registerAdd(program: Command): void {
         const author = opts.author?.trim()
           || (repoRoot ? await getGitUserName(repoRoot) : null);
         if (!author) {
-          throw new Error(
-            "Comment author is required. Pass --author or configure "
-            + "repository-local Git identity with: git config --local user.name \"Your Name\"",
+          console.error(
+            chalk.red(
+              "Comment author is required. Pass --author or configure "
+              + "repository-local Git identity with: "
+              + "git config --local user.name \"Your Name\"",
+            ),
           );
+          process.exit(1);
         }
 
         const comment = await addComment(
