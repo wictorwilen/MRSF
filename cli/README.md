@@ -90,7 +90,7 @@ mrsf validate --strict
 
 ### `mrsf add <document>`
 
-Add a review comment to a document's sidecar file. Creates the sidecar if it doesn't exist. Automatically populates `selected_text` from the document when a line is specified, and stamps the current git commit.
+Add a review comment to a document's sidecar file. Creates the sidecar if it doesn't exist. Automatically populates `selected_text` from the document when a line is specified, and stamps the current git commit. When `--author` is omitted, MRSF uses `user.name` from the repository-local `.git/config`; global Git identity is not used.
 
 ```bash
 # Add a line comment
@@ -124,7 +124,7 @@ mrsf add docs/api.md \
 
 | Option | Description |
 |---|---|
-| `-a, --author <name>` | Comment author (required) |
+| `-a, --author <name>` | Comment author; overrides repository-local Git `user.name` |
 | `-t, --text <text>` | Comment body (required) |
 | `-l, --line <n>` | Line number (1-based) |
 | `--end-line <n>` | End line (inclusive) |

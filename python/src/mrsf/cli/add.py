@@ -10,6 +10,7 @@ import click
 
 from ..comments import add_comment
 from ..discovery import discover_sidecar
+from ..git import find_repo_root, get_git_user_name
 from ..parser import parse_sidecar, read_document_lines
 from ..types import AddCommentOptions, MrsfDocument
 from ..writer import write_sidecar
@@ -18,7 +19,12 @@ from .main import MrsfContext, pass_ctx
 
 @click.command("add")
 @click.argument("document", type=click.Path())
-@click.option("-a", "--author", required=True, help="Comment author.")
+@click.option(
+    "-a",
+    "--author",
+    default=None,
+    help="Comment author. Defaults to repository-local Git user.name.",
+)
 @click.option("-t", "--text", required=True, help="Comment text.")
 @click.option("-l", "--line", type=int, default=None, help="Starting line number.")
 @click.option("--end-line", type=int, default=None, help="Ending line number.")
@@ -36,7 +42,7 @@ from .main import MrsfContext, pass_ctx
 def add_cmd(
     ctx: MrsfContext,
     document: str,
-    author: str,
+    author: str | None,
     text: str,
     line: int | None,
     end_line: int | None,
@@ -52,6 +58,15 @@ def add_cmd(
     if not os.path.isfile(doc_path):
         click.echo(click.style(f"Document not found: {doc_path}", fg="red"), err=True)
         sys.exit(1)
+
+    if author is None or not author.strip():
+        repo_root = find_repo_root(os.path.dirname(doc_path))
+        author = get_git_user_name(repo_root) if repo_root is not None else None
+    if author is None:
+        raise click.UsageError(
+            "Comment author is required. Pass --author or configure "
+            'repository-local Git identity with: git config --local user.name "Your Name"'
+        )
 
     # Discover or create sidecar
     try:

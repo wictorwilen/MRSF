@@ -6,6 +6,7 @@ import * as vscode from "vscode";
 import type { Comment, CommentSummary } from "@mrsf/cli";
 import type { SidecarStore } from "../store/SidecarStore.js";
 import { relativeTime, mrsfToVscodeRange } from "../util/positions.js";
+import { resolveAuthor } from "../util/author.js";
 import { setPreviewScrollTarget } from "../extension.js";
 
 interface WebviewMessage {
@@ -33,6 +34,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
   private pendingFilterSelectionStart?: number;
   private pendingFilterSelectionEnd?: number;
   private pendingHighlightCommentId?: string;
+  private refreshGeneration = 0;
   private static readonly STATE_KEY = "mrsf.lastDocUri";
 
   constructor(
@@ -137,6 +139,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
 
   async refresh(): Promise<void> {
     if (!this.view) return;
+    const generation = ++this.refreshGeneration;
 
     if (!this.currentDocUri) {
       this.view.webview.html = this.getEmptyHtml("No Markdown file open");
@@ -146,6 +149,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
     let doc = this.store.get(this.currentDocUri);
     if (!doc) {
       doc = await this.store.load(this.currentDocUri);
+      if (generation !== this.refreshGeneration) return;
     }
 
     if (!doc) {
@@ -160,7 +164,13 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
       docLineCount = editor.document.lineCount;
     }
 
-    this.view.webview.html = this.getCommentsHtml(doc.comments, docLineCount);
+    const currentAuthor = await resolveAuthor(this.currentDocUri, false);
+    if (generation !== this.refreshGeneration) return;
+    this.view.webview.html = this.getCommentsHtml(
+      doc.comments,
+      docLineCount,
+      currentAuthor,
+    );
   }
 
   /**
@@ -180,6 +190,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
   async revealComment(documentUri: vscode.Uri, commentId: string): Promise<void> {
     this.currentDocUri = documentUri;
     this.pendingHighlightCommentId = commentId;
+    this.refreshGeneration += 1;
     this.persistDocUri();
     await vscode.commands.executeCommand("mrsf.commentsView.focus");
     await this.refresh();
@@ -213,8 +224,8 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
         break;
       case "reply":
         if (msg.parentId && msg.text) {
-          const config = vscode.workspace.getConfiguration("sidemark");
-          const author = config.get<string>("author") || "Anonymous";
+          const author = await resolveAuthor(this.currentDocUri);
+          if (!author) break;
           await this.store.replyToComment(
             this.currentDocUri,
             msg.parentId,
@@ -225,11 +236,8 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
         break;
       case "edit":
         if (msg.commentId && typeof msg.text === "string") {
-          const actor = this.getConfiguredAuthor();
+          const actor = await resolveAuthor(this.currentDocUri);
           if (!actor) {
-            vscode.window.showWarningMessage(
-              "Set sidemark.author to edit your comments.",
-            );
             break;
           }
 
@@ -262,7 +270,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
       case "sort":
         if (msg.sortMode === "line" || msg.sortMode === "date") {
           this.sortMode = msg.sortMode;
-          this.refresh();
+          await this.refresh();
         }
         break;
       case "setFilter":
@@ -270,20 +278,20 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
         this.pendingFilterFocus = true;
         this.pendingFilterSelectionStart = msg.selectionStart;
         this.pendingFilterSelectionEnd = msg.selectionEnd;
-        this.refresh();
+        await this.refresh();
         break;
       case "toggleResolved": {
         const config = vscode.workspace.getConfiguration("sidemark");
         const current = config.get<boolean>("showResolved", true);
         await config.update("showResolved", !current, vscode.ConfigurationTarget.Workspace);
-        this.refresh();
+        await this.refresh();
         break;
       }
       case "toggleCommentsEnabled": {
         const config = vscode.workspace.getConfiguration("sidemark");
         const current = config.get<boolean>("commentsEnabled", true);
         await config.update("commentsEnabled", !current, vscode.ConfigurationTarget.Workspace);
-        this.refresh();
+        await this.refresh();
         break;
       }
     }
@@ -366,11 +374,6 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
     return false;
   }
 
-  private getConfiguredAuthor(): string | undefined {
-    const author = vscode.workspace.getConfiguration("sidemark").get<string>("author")?.trim();
-    return author && author.length > 0 ? author : undefined;
-  }
-
   private canEditComment(comment: Comment, currentAuthor?: string): boolean {
     return currentAuthor != null && currentAuthor === comment.author;
   }
@@ -423,12 +426,14 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
     });
   }
 
-  private getCommentsHtml(comments: Comment[], docLineCount?: number): string {
+  private getCommentsHtml(
+    comments: Comment[],
+    docLineCount?: number,
+    currentAuthor?: string,
+  ): string {
     const config = vscode.workspace.getConfiguration("sidemark");
     const commentsEnabled = config.get<boolean>("commentsEnabled", true);
     const showResolved = config.get<boolean>("showResolved", true);
-    const currentAuthor = this.getConfiguredAuthor();
-
     const threads = this.buildThreads(comments);
 
     // Filter threads based on showResolved setting

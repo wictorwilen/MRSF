@@ -16,7 +16,7 @@ mrsf validate docs/*.review.yaml
 mrsf validate --strict README.md
 
 # Add a comment
-mrsf add README.md --author "Alice" --text "Fix this" --line 10
+mrsf add README.md --text "Fix this" --line 10
 
 # Re-anchor after edits
 mrsf reanchor docs/
@@ -44,6 +44,10 @@ mrsf rename old.md new.md
 # Watch for changes
 mrsf watch docs/ --reanchor --force
 ```
+
+`mrsf add` uses `user.name` from the repository-local `.git/config` when
+`--author` is omitted. Pass `--author` to override it; global Git identity is
+not used.
 
 ### Global Options
 

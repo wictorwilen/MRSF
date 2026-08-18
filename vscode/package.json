@@ -2,7 +2,7 @@
   "name": "mrsf-vscode",
   "displayName": "Sidemark – MRSF Review Comments",
   "description": "Display, create, and manage Markdown Review Sidecar Format (MRSF) comments directly in VS Code",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "publisher": "wictor",
   "license": "MIT",
   "author": "Wictor Wilén (https://github.com/wictorwilen)",
@@ -156,7 +156,7 @@
         "sidemark.author": {
           "type": "string",
           "default": "",
-          "description": "Default author name for new comments (e.g., 'Your Name (username)')"
+          "description": "Author override for new comments. When empty, Sidemark uses the repository-local Git user.name."
         },
         "sidemark.showResolved": {
           "type": "boolean",
