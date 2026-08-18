@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-18
+
+### Changed
+- Reanchoring uses the bounded browser-safe Anchor Mesh core from `@mrsf/cli` 0.7.0.
+- Widened the `@mrsf/cli` dependency range through `^0.7.0`.
+
 ## [0.3.4] - 2026-06-27
 
 ### Changed

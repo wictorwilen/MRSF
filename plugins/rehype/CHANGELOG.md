@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-08-18
+
+### Changed
+- Widened the `@mrsf/cli` dependency range through `^0.7.0`; rendering behavior is unchanged.
+
 ## [0.5.0] - 2026-06-27
 
 ### Added
