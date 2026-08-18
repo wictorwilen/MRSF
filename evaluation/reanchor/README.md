@@ -16,7 +16,7 @@ Run the corpus from `cli/`:
 
 ```bash
 npm run eval:reanchor
-npm run eval:reanchor -- --json
+npm run --silent eval:reanchor -- --json
 npm run eval:reanchor:baseline
 ```
 
@@ -48,3 +48,31 @@ Each generated case records its seed and exact operation sequence. Semantic
 block identities are tracked through insertions, deletions, moves, rewrites,
 duplication, reordering, whitespace changes, splits, merges, and heading
 renames, allowing expected anchor ranges to be derived rather than guessed.
+
+Four file-backed realistic revisions cover API documentation, an operational
+runbook, an architecture document, and an end-user guide. Run all committed
+cases with `npm run eval:reanchor`.
+
+Generated scaling profiles live in `workloads.json`:
+
+| Profile | Cases | Blocks/case | Comments/case |
+| --- | ---: | ---: | ---: |
+| small | 100 | 20 | 5 |
+| medium | 100 | 200 | 20 |
+| large | 20 | 2,000 | 100 |
+| stress | 5 | 10,000 | 200 |
+
+Run a profile without writing generated fixtures:
+
+```bash
+npm run eval:reanchor:profile -- --profile small
+npm run --silent eval:reanchor:profile -- --profile medium --json
+```
+
+Profile reports include pass rate, incorrect confident relocations, total and
+per-comment time, median, p95, and worst-case comment time. Large and stress
+profiles are intended for deliberate performance runs rather than normal CI.
+
+`reports/initial-baseline.json` records the first small, medium, and large runs.
+It is informational because timings depend on hardware and runtime conditions;
+`baseline.json` remains the deterministic correctness checkpoint.

@@ -107,6 +107,11 @@ function printSummary(summary: Awaited<ReturnType<typeof evaluateCases>>): void 
   console.log(`Exact range matches: ${summary.exactRangeMatches}/${summary.comments}`);
   console.log(`Incorrect confident relocations: ${summary.incorrectConfidentRelocations}`);
   console.log(`Duration: ${summary.durationMs.toFixed(2)} ms`);
+  console.log(
+    `Per-comment timing: median ${summary.timingMs.median.toFixed(3)} ms, `
+    + `p95 ${summary.timingMs.p95.toFixed(3)} ms, `
+    + `max ${summary.timingMs.max.toFixed(3)} ms`,
+  );
 
   for (const result of summary.results.filter((item) => !item.passed)) {
     console.log(

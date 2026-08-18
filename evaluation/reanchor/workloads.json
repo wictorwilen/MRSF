@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "profiles": {
+    "small": {
+      "seed": 10000,
+      "case_count": 100,
+      "blocks_per_case": 20,
+      "comments_per_case": 5,
+      "mutations_per_case": 8
+    },
+    "medium": {
+      "seed": 20000,
+      "case_count": 100,
+      "blocks_per_case": 200,
+      "comments_per_case": 20,
+      "mutations_per_case": 12
+    },
+    "large": {
+      "seed": 30000,
+      "case_count": 20,
+      "blocks_per_case": 2000,
+      "comments_per_case": 100,
+      "mutations_per_case": 20
+    },
+    "stress": {
+      "seed": 40000,
+      "case_count": 5,
+      "blocks_per_case": 10000,
+      "comments_per_case": 200,
+      "mutations_per_case": 30
+    }
+  }
+}

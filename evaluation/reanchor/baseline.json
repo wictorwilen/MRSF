@@ -1,14 +1,14 @@
 {
   "version": 1,
   "algorithm": "baseline",
-  "cases": 51,
-  "comments": 51,
+  "cases": 55,
+  "comments": 77,
   "metrics": {
-    "passed": 39,
-    "failed": 12,
-    "exactRangeMatches": 46,
-    "statusMatches": 39,
-    "incorrectConfidentRelocations": 7
+    "passed": 53,
+    "failed": 24,
+    "exactRangeMatches": 60,
+    "statusMatches": 55,
+    "incorrectConfidentRelocations": 11
   },
   "results": [
     {
@@ -904,6 +904,469 @@
       "statusCorrect": true,
       "rangeCorrect": true,
       "passed": true
+    },
+    {
+      "caseId": "realistic-api-guide-revision",
+      "commentId": "api-auth-heading",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "api-auth-heading",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 5,
+        "newEndLine": 5,
+        "newStartColumn": 0,
+        "newEndColumn": 17,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-api-guide-revision",
+      "commentId": "api-token-expiry",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "api-token-expiry",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 9,
+        "newEndLine": 9,
+        "newStartColumn": 0,
+        "newEndColumn": 68,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-api-guide-revision",
+      "commentId": "api-project-config",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "api-project-config",
+        "status": "fuzzy",
+        "score": 0.5,
+        "newLine": 23,
+        "anchoredText": "Retry failed deployments with the same idempotency key.",
+        "previousSelectedText": "Set the project region and retention period.",
+        "reason": "Lone exact match at line 33 is beyond the proximity window (±5) of original line 23 and the text at the original position changed; kept at original position, needs re-anchoring."
+      },
+      "statusCorrect": false,
+      "rangeCorrect": false,
+      "passed": false
+    },
+    {
+      "caseId": "realistic-api-guide-revision",
+      "commentId": "api-rollout-default",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "api-rollout-default",
+        "status": "fuzzy",
+        "score": 0.898,
+        "newLine": 21,
+        "newEndLine": 21,
+        "newStartColumn": 0,
+        "newEndColumn": 34,
+        "anchoredText": "The default rollout strategy is pr",
+        "previousSelectedText": "The default rollout strategy is gradual.",
+        "reason": "High-confidence fuzzy match (score 0.898)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-api-guide-revision",
+      "commentId": "api-audit-retention",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "api-audit-retention",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 39,
+        "newEndLine": 39,
+        "newStartColumn": 0,
+        "newEndColumn": 58,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-deployment-runbook-revision",
+      "commentId": "runbook-intro",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "runbook-intro",
+        "status": "fuzzy",
+        "score": 0.7805128205128206,
+        "newLine": 3,
+        "anchoredText": "Use this runbook for scheduled and emergency production releases.",
+        "previousSelectedText": "Use this runbook for scheduled production releases.",
+        "reason": "Line-fallback with fuzzy text match (score 0.781)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-deployment-runbook-revision",
+      "commentId": "runbook-incident-channel",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "runbook-incident-channel",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 7,
+        "newEndLine": 7,
+        "newStartColumn": 0,
+        "newEndColumn": 34,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-deployment-runbook-revision",
+      "commentId": "runbook-backup-row",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "runbook-backup-row",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 15,
+        "newEndLine": 15,
+        "newStartColumn": 0,
+        "newEndColumn": 38,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-deployment-runbook-revision",
+      "commentId": "runbook-deploy-command",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "runbook-deploy-command",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 22,
+        "newEndLine": 22,
+        "newStartColumn": 0,
+        "newEndColumn": 36,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-deployment-runbook-revision",
+      "commentId": "runbook-rollback-condition",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "runbook-rollback-condition",
+        "status": "fuzzy",
+        "score": 0.9452033898305084,
+        "newLine": 34,
+        "newEndLine": 35,
+        "newStartColumn": 0,
+        "newEndColumn": 58,
+        "anchoredText": "\nRollback when two consecutive regional health checks fail.",
+        "previousSelectedText": "Rollback when two consecutive health checks fail.",
+        "reason": "High-confidence fuzzy match (score 0.945)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": false,
+      "passed": false
+    },
+    {
+      "caseId": "realistic-deployment-runbook-revision",
+      "commentId": "runbook-verification",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "runbook-verification",
+        "status": "fuzzy",
+        "score": 0.5,
+        "newLine": 38,
+        "anchoredText": "acme rollback --environment production",
+        "previousSelectedText": "Confirm that new requests use the released version.",
+        "reason": "Lone exact match at line 29 is beyond the proximity window (±5) of original line 38 and the text at the original position changed; kept at original position, needs re-anchoring."
+      },
+      "statusCorrect": false,
+      "rangeCorrect": false,
+      "passed": false
+    },
+    {
+      "caseId": "realistic-architecture-revision",
+      "commentId": "architecture-intro",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "architecture-intro",
+        "status": "fuzzy",
+        "score": 0.9760000000000001,
+        "newLine": 3,
+        "newEndLine": 3,
+        "newStartColumn": 0,
+        "newEndColumn": 75,
+        "anchoredText": "The worker service processes durable jobs from partitioned regional queues.",
+        "previousSelectedText": "The worker service processes durable jobs from regional queues.",
+        "reason": "High-confidence fuzzy match (score 0.976)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-architecture-revision",
+      "commentId": "architecture-dispatcher-heading",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "architecture-dispatcher-heading",
+        "status": "anchored",
+        "score": 0.8,
+        "newLine": 7,
+        "reason": "Line/column fallback."
+      },
+      "statusCorrect": false,
+      "rangeCorrect": false,
+      "passed": false
+    },
+    {
+      "caseId": "realistic-architecture-revision",
+      "commentId": "architecture-lease",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "architecture-lease",
+        "status": "fuzzy",
+        "score": 0.5,
+        "newLine": 11,
+        "anchoredText": "## Components",
+        "previousSelectedText": "It records an assignment lease before publishing the job.",
+        "reason": "Lone exact match at line 17 is beyond the proximity window (±5) of original line 11 and the text at the original position changed; kept at original position, needs re-anchoring."
+      },
+      "statusCorrect": false,
+      "rangeCorrect": false,
+      "passed": false
+    },
+    {
+      "caseId": "realistic-architecture-revision",
+      "commentId": "architecture-worker",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "architecture-worker",
+        "status": "anchored",
+        "score": 0.8,
+        "newLine": 15,
+        "reason": "Line/column fallback."
+      },
+      "statusCorrect": false,
+      "rangeCorrect": false,
+      "passed": false
+    },
+    {
+      "caseId": "realistic-architecture-revision",
+      "commentId": "architecture-reaper",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "architecture-reaper",
+        "status": "fuzzy",
+        "score": 0.9745384615384616,
+        "newLine": 27,
+        "newEndLine": 27,
+        "newStartColumn": 0,
+        "newEndColumn": 51,
+        "anchoredText": "The reaper returns expired assignments to the corre",
+        "previousSelectedText": "The reaper returns expired assignments to the queue.",
+        "reason": "High-confidence fuzzy match (score 0.975)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-architecture-revision",
+      "commentId": "architecture-delivery",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "architecture-delivery",
+        "status": "fuzzy",
+        "score": 0.5,
+        "newLine": 27,
+        "anchoredText": "The reaper returns expired assignments to the correct queue partition.",
+        "previousSelectedText": "Jobs are delivered at least once.",
+        "reason": "Lone exact match at line 7 is beyond the proximity window (±5) of original line 27 and the text at the original position changed; kept at original position, needs re-anchoring."
+      },
+      "statusCorrect": false,
+      "rangeCorrect": false,
+      "passed": false
+    },
+    {
+      "caseId": "realistic-architecture-revision",
+      "commentId": "architecture-scaling",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "architecture-scaling",
+        "status": "anchored",
+        "score": 0.8,
+        "newLine": 33,
+        "reason": "Line/column fallback."
+      },
+      "statusCorrect": false,
+      "rangeCorrect": false,
+      "passed": false
+    },
+    {
+      "caseId": "realistic-user-guide-revision",
+      "commentId": "guide-intro",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "guide-intro",
+        "status": "fuzzy",
+        "score": 0.9413333333333332,
+        "newLine": 3,
+        "newEndLine": 3,
+        "newStartColumn": 0,
+        "newEndColumn": 75,
+        "anchoredText": "This guide explains how teams organize and govern documents in a workspace.",
+        "previousSelectedText": "This guide explains how teams organize documents in a workspace.",
+        "reason": "High-confidence fuzzy match (score 0.941)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-user-guide-revision",
+      "commentId": "guide-name-rules",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "guide-name-rules",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 9,
+        "newEndLine": 9,
+        "newStartColumn": 0,
+        "newEndColumn": 48,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-user-guide-revision",
+      "commentId": "guide-invite-heading",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "guide-invite-heading",
+        "status": "fuzzy",
+        "score": 0.5,
+        "newLine": 13,
+        "anchoredText": "## Organize documents",
+        "previousSelectedText": "## Invite collaborators",
+        "reason": "Lone exact match at line 21 is beyond the proximity window (±5) of original line 13 and the text at the original position changed; kept at original position, needs re-anchoring."
+      },
+      "statusCorrect": false,
+      "rangeCorrect": false,
+      "passed": false
+    },
+    {
+      "caseId": "realistic-user-guide-revision",
+      "commentId": "guide-member-settings",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "guide-member-settings",
+        "status": "anchored",
+        "score": 0.8,
+        "newLine": 15,
+        "reason": "Line/column fallback."
+      },
+      "statusCorrect": false,
+      "rangeCorrect": false,
+      "passed": false
+    },
+    {
+      "caseId": "realistic-user-guide-revision",
+      "commentId": "guide-create-folders",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "guide-create-folders",
+        "status": "fuzzy",
+        "score": 0.5,
+        "newLine": 23,
+        "anchoredText": "Open **Workspace settings** and select **Members**.",
+        "previousSelectedText": "Create folders for stable subject areas.",
+        "reason": "Lone exact match at line 15 is beyond the proximity window (±5) of original line 23 and the text at the original position changed; kept at original position, needs re-anchoring."
+      },
+      "statusCorrect": false,
+      "rangeCorrect": false,
+      "passed": false
+    },
+    {
+      "caseId": "realistic-user-guide-revision",
+      "commentId": "guide-tags",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "guide-tags",
+        "status": "fuzzy",
+        "score": 0.9485714285714286,
+        "newLine": 17,
+        "newEndLine": 17,
+        "newStartColumn": 0,
+        "newEndColumn": 34,
+        "anchoredText": "Use tags for temporary initiatives",
+        "previousSelectedText": "Use tags for temporary initiatives.",
+        "reason": "High-confidence fuzzy match (score 0.949)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-user-guide-revision",
+      "commentId": "guide-quoted-search",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "guide-quoted-search",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 33,
+        "newEndLine": 33,
+        "newStartColumn": 0,
+        "newEndColumn": 40,
+        "reason": "Exact text match (unique)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "realistic-user-guide-revision",
+      "commentId": "guide-archive-retention",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "guide-archive-retention",
+        "status": "fuzzy",
+        "score": 0.9745498652291105,
+        "newLine": 40,
+        "newEndLine": 41,
+        "newStartColumn": 0,
+        "newEndColumn": 52,
+        "anchoredText": "\nArchived workspaces remain readable for ninety days.",
+        "previousSelectedText": "Archived workspaces remain readable for thirty days.",
+        "reason": "High-confidence fuzzy match (score 0.975)."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": false,
+      "passed": false
     },
     {
       "caseId": "exact-shift",

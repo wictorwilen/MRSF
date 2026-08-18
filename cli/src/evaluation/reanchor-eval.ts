@@ -100,6 +100,12 @@ export interface EvaluationSummary {
   statusMatches: number;
   incorrectConfidentRelocations: number;
   durationMs: number;
+  timingMs: {
+    median: number;
+    p95: number;
+    max: number;
+    perComment: number;
+  };
   results: EvaluationCommentResult[];
 }
 
@@ -212,6 +218,11 @@ export async function evaluateCases(
     }
   }
 
+  const durationMs = performance.now() - startedAt;
+  const timings = results
+    .map((result) => result.durationMs)
+    .sort((left, right) => left - right);
+
   return {
     algorithm: "baseline",
     cases: cases.length,
@@ -230,9 +241,24 @@ export async function evaluateCases(
               || result.expected.status === "orphaned"
         ),
     ).length,
-    durationMs: performance.now() - startedAt,
+    durationMs,
+    timingMs: {
+      median: percentile(timings, 0.5),
+      p95: percentile(timings, 0.95),
+      max: timings.at(-1) ?? 0,
+      perComment: results.length > 0 ? durationMs / results.length : 0,
+    },
     results,
   };
+}
+
+function percentile(sortedValues: number[], quantile: number): number {
+  if (sortedValues.length === 0) return 0;
+  const index = Math.max(
+    0,
+    Math.ceil(sortedValues.length * quantile) - 1,
+  );
+  return sortedValues[index];
 }
 
 export function createEvaluationBaseline(

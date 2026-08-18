@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "algorithm": "baseline",
+  "environment": {
+    "node": "v24.14.0",
+    "os": "Linux x86_64"
+  },
+  "committed_corpus": {
+    "cases": 55,
+    "comments": 77,
+    "passed": 53,
+    "failed": 24,
+    "incorrect_confident_relocations": 11,
+    "total_ms": 345.37,
+    "per_comment_ms": 4.485,
+    "p95_comment_ms": 30.36,
+    "max_comment_ms": 48.257
+  },
+  "workloads": {
+    "small": {
+      "cases": 100,
+      "comments": 500,
+      "passed": 375,
+      "failed": 125,
+      "incorrect_confident_relocations": 6,
+      "total_ms": 1486.462,
+      "per_comment_ms": 2.973,
+      "p95_comment_ms": 22.061,
+      "max_comment_ms": 42.213
+    },
+    "medium": {
+      "cases": 100,
+      "comments": 2000,
+      "passed": 1594,
+      "failed": 406,
+      "incorrect_confident_relocations": 4,
+      "total_ms": 6386.218,
+      "per_comment_ms": 3.193,
+      "p95_comment_ms": 0.118,
+      "max_comment_ms": 229.163
+    },
+    "large": {
+      "cases": 20,
+      "comments": 2000,
+      "passed": 1302,
+      "failed": 698,
+      "incorrect_confident_relocations": 0,
+      "total_ms": 15169.528,
+      "per_comment_ms": 7.585,
+      "p95_comment_ms": 1.002,
+      "max_comment_ms": 2073.477
+    }
+  },
+  "notes": [
+    "Timing is informational and is not used as a deterministic regression gate.",
+    "The stress profile was not run for this initial checkpoint.",
+    "Low p95 with a high maximum reflects many cheap exact matches and a small number of expensive fuzzy searches."
+  ]
+}

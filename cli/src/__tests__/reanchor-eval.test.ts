@@ -60,6 +60,11 @@ describe("reanchoring evaluation", () => {
     expect(summary.comments).toBe(1);
     expect(summary.passed).toBe(1);
     expect(summary.incorrectConfidentRelocations).toBe(0);
+    expect(summary.timingMs.median).toBeGreaterThanOrEqual(0);
+    expect(summary.timingMs.p95).toBeGreaterThanOrEqual(
+      summary.timingMs.median,
+    );
+    expect(summary.timingMs.max).toBeGreaterThanOrEqual(summary.timingMs.p95);
   });
 
   it("counts a wrong confident result as a safety failure", async () => {
@@ -162,7 +167,7 @@ describe("reanchoring evaluation", () => {
       )),
     );
 
-    expect(cases.length).toBeGreaterThanOrEqual(50);
+    expect(cases.length).toBeGreaterThanOrEqual(54);
     expect(new Set(cases.map((item) => item.value.id)).size).toBe(cases.length);
   });
 
