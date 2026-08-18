@@ -383,11 +383,24 @@ def _retrieve_candidate_blocks(
 def _closest_block(blocks: list[MarkdownBlock], line: int) -> int | None:
     if not blocks:
         return None
-    return min(
-        range(len(blocks)),
-        key=lambda index: min(
-            abs(blocks[index].start_line - line), abs(blocks[index].end_line - line)
-        ),
+    low, high = 0, len(blocks) - 1
+    while low <= high:
+        middle = (low + high) // 2
+        block = blocks[middle]
+        if line < block.start_line:
+            high = middle - 1
+        elif line > block.end_line:
+            low = middle + 1
+        else:
+            return middle
+    if low >= len(blocks):
+        return len(blocks) - 1
+    if high < 0:
+        return 0
+    return (
+        low
+        if abs(blocks[low].start_line - line) < abs(blocks[high].end_line - line)
+        else high
     )
 
 

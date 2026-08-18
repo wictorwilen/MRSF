@@ -26,6 +26,7 @@ import {
   getLineShift,
   isGitAvailable,
   parseDiffHunks,
+  resolveCommit,
 } from "./git.js";
 import {
   applyReanchorResults,
@@ -106,6 +107,7 @@ export async function reanchorDocument(
         RevisionProjectionIndex | undefined
       >();
       const contextCache = new Map<string, AnchorContextIndex | undefined>();
+      const canonicalCommitCache = new Map<string, string>();
       const reconciliationGroups = new Map<
         string,
         {
@@ -116,8 +118,26 @@ export async function reanchorDocument(
       >();
 
       for (const comment of doc.comments) {
-        const commentCommit = globalFrom ?? comment.commit;
-        if (commentCommit && head && commentCommit !== head) {
+        const rawCommentCommit = globalFrom ?? comment.commit;
+        if (rawCommentCommit && head) {
+          const cachedCommit = canonicalCommitCache.get(rawCommentCommit);
+          const commentCommit = cachedCommit
+            ?? await resolveCommit(rawCommentCommit, repoRoot)
+            ?? rawCommentCommit;
+          if (!cachedCommit) {
+            canonicalCommitCache.set(rawCommentCommit, commentCommit);
+          }
+          if (commentCommit === head) {
+            results.push(
+              reanchorComment(comment, documentLines, {
+                threshold,
+                commitIsStale: false,
+                proximityWindow,
+                getFuzzySearchIndex,
+              }),
+            );
+            continue;
+          }
           let hunks = diffCache.get(commentCommit);
           if (!hunks) {
             hunks = await getDiff(commentCommit, head, relPath, repoRoot);

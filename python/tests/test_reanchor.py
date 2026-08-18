@@ -3,6 +3,7 @@
 import os
 from unittest.mock import patch
 
+from mrsf.anchor_context import create_anchor_context_index
 from mrsf.reanchor import (
     _extract_text,
     apply_reanchor_results,
@@ -10,6 +11,7 @@ from mrsf.reanchor import (
     reanchor_document,
     reanchor_file,
 )
+from mrsf.revision_projection import create_revision_projection
 from mrsf.types import Comment, DiffHunk, MrsfDocument, ReanchorOptions, ReanchorResult
 
 
@@ -32,6 +34,34 @@ def make_comment(**overrides) -> Comment:
 
 def make_doc(comments: list[Comment]) -> MrsfDocument:
     return MrsfDocument(mrsf_version="1.0", document="test.md", comments=comments)
+
+
+def test_rewritten_anchor_beats_copied_exact_pair():
+    source = lines1(
+        "## Active",
+        "Selected statement.",
+        "Supporting context.",
+    )
+    target = lines1(
+        "## Active",
+        "Revised selected statement.",
+        "Revised supporting context.",
+        "## Archive",
+        "Selected statement.",
+        "Supporting context.",
+    )
+    comment = make_comment(line=2, selected_text="Selected statement.")
+
+    result = reanchor_comment(
+        comment,
+        target,
+        revision_projection=create_revision_projection(source, target),
+        anchor_context=create_anchor_context_index(source, target),
+    )
+
+    assert result.status == "fuzzy"
+    assert result.new_line == 2
+    assert result.anchored_text == "Revised selected statement."
 
 
 # ---------------------------------------------------------------------------
@@ -109,6 +139,58 @@ class TestReanchorCommentExactMatch:
         assert result.status == "anchored"
         assert result.new_line == 3
         assert result.new_end_line == 5
+
+    def test_guards_repeated_far_exact_matches_after_in_place_edit(self):
+        lines = lines1(
+            "The data sourZZZe is here.",
+            "",
+            "filler a",
+            "filler b",
+            "filler c",
+            "filler d",
+            "",
+            "See the other source for details.",
+            "",
+            "A third source is also available.",
+        )
+        comment = make_comment(
+            selected_text="source",
+            line=1,
+            start_column=9,
+            end_column=15,
+        )
+
+        result = reanchor_comment(comment, lines)
+
+        assert result.status == "fuzzy"
+        assert result.new_line == 1
+
+    def test_batch_options_forward_custom_proximity_window(self):
+        lines = lines1(
+            "The data sourZZZe is here.",
+            "",
+            "filler a",
+            "filler b",
+            "filler c",
+            "filler d",
+            "",
+            "See the other source for details.",
+        )
+        comment = make_comment(
+            selected_text="source",
+            line=1,
+            start_column=9,
+            end_column=15,
+        )
+
+        result = reanchor_document(
+            make_doc([comment]),
+            lines,
+            ReanchorOptions(no_git=True, proximity_window=20),
+        )[0]
+
+        assert result.status == "anchored"
+        assert result.new_line == 8
 
 
 # ---------------------------------------------------------------------------
@@ -744,6 +826,48 @@ class TestReanchorDocumentGitAware:
         assert len(results) == 1
         # get_diff should be called with override-sha, not comment.commit
         mock_diff.assert_called_once_with("override-sha", "head-sha", "doc.md", "/repo")
+
+    def test_groups_short_and_full_forms_of_the_same_commit(self):
+        full_commit = "0123456789012345678901234567890123456789"
+        lines = lines1("# Title", "Some text here.")
+        doc = make_doc(
+            [
+                make_comment(
+                    id="c1",
+                    line=2,
+                    selected_text="Some text here.",
+                    commit=full_commit[:8],
+                ),
+                make_comment(
+                    id="c2",
+                    line=2,
+                    selected_text="Some text here.",
+                    commit=full_commit,
+                ),
+            ]
+        )
+
+        with (
+            patch("mrsf.reanchor.is_git_available", return_value=True),
+            patch("mrsf.reanchor.find_repo_root", return_value="/repo"),
+            patch("mrsf.reanchor.get_current_commit", return_value="new-head"),
+            patch("mrsf.reanchor.resolve_commit", return_value=full_commit),
+            patch("mrsf.reanchor.get_diff", return_value=[]) as mock_diff,
+            patch(
+                "mrsf.reanchor.get_file_at_commit",
+                return_value="# Title\nSome text here.",
+            ) as mock_source,
+        ):
+            results = reanchor_document(
+                doc,
+                lines,
+                document_path="/repo/doc.md",
+                repo_root="/repo",
+            )
+
+        assert len(results) == 2
+        assert mock_diff.call_count == 1
+        assert mock_source.call_count == 1
 
 
 # ---------------------------------------------------------------------------

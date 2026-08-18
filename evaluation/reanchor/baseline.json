@@ -183,7 +183,7 @@
         "newEndLine": 5,
         "newStartColumn": 0,
         "newEndColumn": 11,
-        "reason": "Source revision and neighboring line evidence confirm exact relocation."
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -325,9 +325,7 @@
         "score": 1,
         "newLine": 2,
         "newEndLine": 2,
-        "newStartColumn": 0,
-        "newEndColumn": 11,
-        "reason": "Source revision and neighboring line evidence confirm exact relocation."
+        "reason": "Source-verified anchor remains exact at its stored position."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -887,7 +885,7 @@
         "newEndLine": 17,
         "newStartColumn": 0,
         "newEndColumn": 22,
-        "reason": "Source revision and neighboring line evidence confirm exact relocation."
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -923,7 +921,7 @@
         "newEndLine": 25,
         "newStartColumn": 0,
         "newEndColumn": 18,
-        "reason": "Source revision and neighboring line evidence confirm exact relocation."
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -1013,7 +1011,7 @@
         "newEndLine": 39,
         "newStartColumn": 0,
         "newEndColumn": 58,
-        "reason": "Source revision and neighboring line evidence confirm exact relocation."
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -1085,7 +1083,7 @@
         "newEndLine": 22,
         "newStartColumn": 0,
         "newEndColumn": 36,
-        "reason": "Source revision and neighboring line evidence confirm exact relocation."
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -1121,7 +1119,7 @@
         "newEndLine": 29,
         "newStartColumn": 0,
         "newEndColumn": 51,
-        "reason": "Source revision and neighboring line evidence confirm exact relocation."
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -1229,7 +1227,7 @@
         "newEndLine": 7,
         "newStartColumn": 0,
         "newEndColumn": 33,
-        "reason": "Source revision and neighboring line evidence confirm exact relocation."
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -1337,7 +1335,7 @@
         "newEndLine": 15,
         "newStartColumn": 0,
         "newEndColumn": 40,
-        "reason": "Source revision and neighboring line evidence confirm exact relocation."
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,

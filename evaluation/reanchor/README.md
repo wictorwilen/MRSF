@@ -70,8 +70,9 @@ npm run --silent eval:reanchor:profile -- --profile medium --json
 ```
 
 Profile reports include pass rate, incorrect confident relocations, total and
-per-comment time, median, p95, and worst-case comment time. Large and stress
-profiles are intended for deliberate performance runs rather than normal CI.
+per-comment time, median, p95, worst-case comment time, and worst-case global
+reconciliation time. Large and stress profiles are intended for deliberate
+performance runs rather than normal CI.
 
 `reports/initial-baseline.json` records the first small, medium, and large runs.
 It is informational because timings depend on hardware and runtime conditions;
@@ -87,8 +88,8 @@ Subsequent algorithm checkpoints may add informational comparison reports under
 - **correctness** gates enforce the seeded pass-rate floor and zero incorrect
   confident relocations without considering timing;
 - **performance** gates additionally enforce broad per-comment, p95, and
-  worst-case ceilings intended to catch algorithmic regressions rather than
-  normal runner variance.
+  worst-case comment and reconciliation ceilings intended to catch algorithmic
+  regressions rather than normal runner variance.
 
 `.github/workflows/reanchor-evaluation.yml` runs the committed TypeScript
 baseline, all seeded correctness profiles, and Python corpus parity for relevant

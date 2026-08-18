@@ -22,6 +22,7 @@ describe("library entrypoints", () => {
     expect(api.writeSidecar).toBe(writer.writeSidecar);
     expect(api.validateFile).toBe(validator.validateFile);
     expect(api.findRepoRoot).toBe(git.findRepoRoot);
+    expect(api.resolveCommit).toBe(git.resolveCommit);
     expect(api.reanchorFile).toBe(reanchor.reanchorFile);
     expect(api.resolveAnchor).toBe(reanchor.resolveAnchor);
     expect(api.createAnchorContextIndex).toBe(

@@ -89,6 +89,7 @@ export const combinedScore = fuzzy.combinedScore;
 export const isGitAvailable = git.isGitAvailable;
 export const findRepoRoot = git.findRepoRoot;
 export const getCurrentCommit = git.getCurrentCommit;
+export const resolveCommit = git.resolveCommit;
 export const isStale = git.isStale;
 export const getDiff = git.getDiff;
 export const getLineShift = git.getLineShift;

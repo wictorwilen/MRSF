@@ -18,6 +18,7 @@ const policy: ReanchorGatePolicy = {
       maximum_ms_per_comment: 2,
       maximum_p95_comment_ms: 5,
       maximum_single_comment_ms: 100,
+      maximum_reconciliation_ms: 50,
     },
   },
 };
@@ -35,6 +36,7 @@ function report(
       perComment: 0.4,
       p95: 1.5,
       max: 10,
+      reconciliationMax: 2,
     },
     ...overrides,
   };
@@ -56,6 +58,7 @@ describe("reanchoring profile gates", () => {
         perComment: 20,
         p95: 50,
         max: 500,
+        reconciliationMax: 500,
       },
     });
 
@@ -72,12 +75,13 @@ describe("reanchoring profile gates", () => {
           perComment: 3,
           p95: 6,
           max: 101,
+          reconciliationMax: 51,
         },
       }),
       policy,
       "performance",
     );
 
-    expect(failures).toHaveLength(3);
+    expect(failures).toHaveLength(4);
   });
 });

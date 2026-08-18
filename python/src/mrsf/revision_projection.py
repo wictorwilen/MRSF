@@ -65,7 +65,10 @@ def project_comment_anchor(
     exact_candidates = exact_match(projection.target_lines, comment.selected_text)
     if len(exact_candidates) == 1:
         candidate = exact_candidates[0]
-        if _has_independent_exact_support(comment, candidate.line, projection):
+        context_support = _count_independent_exact_support(
+            comment, candidate.line, projection
+        )
+        if context_support >= 2:
             return ProjectedAnchor(
                 line=candidate.line,
                 end_line=candidate.end_line,
@@ -74,7 +77,7 @@ def project_comment_anchor(
                 text=candidate.text,
                 score=1.0,
                 exact=True,
-                context_support=1,
+                context_support=context_support,
                 context_margin=1.0,
                 reason="Source revision and neighboring line evidence confirm exact relocation.",
             )
@@ -126,11 +129,11 @@ def _collect_line_occurrences(lines: list[str]) -> dict[str, list[int]]:
     return occurrences
 
 
-def _has_independent_exact_support(
+def _count_independent_exact_support(
     comment: Comment,
     candidate_line: int,
     projection: RevisionProjectionIndex,
-) -> bool:
+) -> int:
     assert comment.line is not None
     source_end_line = comment.end_line or comment.line
     expected_shift = candidate_line - comment.line
@@ -138,15 +141,16 @@ def _has_independent_exact_support(
         (comment.start_column is not None or comment.end_column is not None)
         and projection.line_map.get(comment.line) == candidate_line
     ):
-        return True
+        return 2
+    support = 0
     for distance in range(1, CONTEXT_RADIUS + 1):
         for source_line in (comment.line - distance, source_end_line + distance):
             if source_line < 1 or source_line >= len(projection.source_lines):
                 continue
             target_line = projection.line_map.get(source_line)
             if target_line is not None and target_line - source_line == expected_shift:
-                return True
-    return False
+                support += 1
+    return support
 
 
 def _project_line_from_context(

@@ -245,7 +245,10 @@ def fuzzy_search_thresholds(
     candidate_lines = _retrieve_candidate_lines(index, needle, hint_line)
 
     min_window = max(1, int(needle_line_count * 0.7))
-    max_window = min(len(lines) - 1, int(needle_line_count * 1.3) + 1)
+    max_window = min(
+        len(lines) - 1,
+        math.ceil(needle_line_count * 1.3) + 1,
+    )
 
     for win_size in range(min_window, max_window + 1):
         start_lines = {

@@ -39,6 +39,7 @@ from .git import (
     get_file_at_commit,
     get_line_shift,
     is_git_available,
+    resolve_commit,
 )
 from .global_reconciliation import reconcile_comment_anchors
 from .parser import parse_sidecar, read_document_lines
@@ -190,10 +191,21 @@ def reanchor_comment(
                 ),
             )
 
+        chosen = None
+        chosen_reason = ""
         if len(exact_candidates) == 1:
-            c = exact_candidates[0]
+            chosen = exact_candidates[0]
+            chosen_reason = "Exact text match (unique)."
+        elif len(exact_candidates) > 1 and comment.line is not None:
+            chosen = _closest_to_line(exact_candidates, comment.line)
+            chosen_reason = (
+                f"Exact text match ({len(exact_candidates)} occurrences;"
+                f" chose nearest to original line {comment.line})."
+            )
+
+        if chosen is not None:
             if _is_implausible_exact_relocation(
-                comment, c, document_lines, proximity_window
+                comment, chosen, document_lines, proximity_window
             ):
                 text_at_origin = _extract_text(
                     document_lines,
@@ -213,7 +225,7 @@ def reanchor_comment(
                     anchored_text=text_at_origin,
                     previous_selected_text=selected_text,
                     reason=(
-                        f"Lone exact match at line {c.line} is beyond the proximity window "
+                        f"Lone exact match at line {chosen.line} is beyond the proximity window "
                         f"(±{proximity_window}) of original line {comment.line} and the text "
                         "at the original position changed; kept at original position, "
                         "needs re-anchoring."
@@ -223,27 +235,11 @@ def reanchor_comment(
                 comment_id=comment_id,
                 status="anchored",
                 score=1.0,
-                new_line=c.line,
-                new_end_line=c.end_line,
-                new_start_column=c.start_column,
-                new_end_column=c.end_column,
-                reason="Exact text match (unique).",
-            )
-
-        if len(exact_candidates) > 1 and comment.line is not None:
-            best = _closest_to_line(exact_candidates, comment.line)
-            return ReanchorResult(
-                comment_id=comment_id,
-                status="anchored",
-                score=1.0,
-                new_line=best.line,
-                new_end_line=best.end_line,
-                new_start_column=best.start_column,
-                new_end_column=best.end_column,
-                reason=(
-                    f"Exact text match ({len(exact_candidates)} occurrences;"
-                    f" chose nearest to original line {comment.line})."
-                ),
+                new_line=chosen.line,
+                new_end_line=chosen.end_line,
+                new_start_column=chosen.start_column,
+                new_end_column=chosen.end_column,
+                reason=chosen_reason,
             )
 
         # Step 1.5: Normalized + high-threshold fuzzy
@@ -404,6 +400,7 @@ def reanchor_document(
 
     results: list[ReanchorResult] = []
     threshold = opts.threshold
+    proximity_window = opts.proximity_window
     fuzzy_index: FuzzySearchIndex | None = None
 
     def get_fuzzy_index() -> FuzzySearchIndex:
@@ -423,10 +420,29 @@ def reanchor_document(
             projection_cache: dict[str, RevisionProjectionIndex | None] = {}
             context_cache: dict[str, AnchorContextIndex | None] = {}
             groups: dict[str, tuple[list[Comment], list[int], AnchorContextIndex]] = {}
+            canonical_cache: dict[str, str] = {}
 
             for comment in doc.comments:
-                comment_commit = global_from or comment.commit
-                if comment_commit and head and comment_commit != head:
+                raw_comment_commit = global_from or comment.commit
+                if raw_comment_commit and head:
+                    comment_commit = canonical_cache.get(raw_comment_commit)
+                    if comment_commit is None:
+                        comment_commit = (
+                            resolve_commit(raw_comment_commit, effective_repo_root)
+                            or raw_comment_commit
+                        )
+                        canonical_cache[raw_comment_commit] = comment_commit
+                    if comment_commit == head:
+                        results.append(
+                            reanchor_comment(
+                                comment,
+                                document_lines,
+                                threshold=threshold,
+                                proximity_window=proximity_window,
+                                get_fuzzy_search_index=get_fuzzy_index,
+                            )
+                        )
+                        continue
                     if comment_commit not in diff_cache:
                         diff_cache[comment_commit] = get_diff(
                             comment_commit, head, rel_path, effective_repo_root
@@ -455,6 +471,7 @@ def reanchor_document(
                         diff_hunks=hunks,
                         threshold=threshold,
                         commit_is_stale=True,
+                        proximity_window=proximity_window,
                         revision_projection=projection,
                         anchor_context=context,
                         get_fuzzy_search_index=get_fuzzy_index,
@@ -473,6 +490,7 @@ def reanchor_document(
                         comment,
                         document_lines,
                         threshold=threshold,
+                        proximity_window=proximity_window,
                         get_fuzzy_search_index=get_fuzzy_index,
                     )
                 )
@@ -492,6 +510,7 @@ def reanchor_document(
                 comment,
                 document_lines,
                 threshold=threshold,
+                proximity_window=proximity_window,
                 get_fuzzy_search_index=get_fuzzy_index,
             )
         )

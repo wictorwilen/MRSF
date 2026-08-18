@@ -88,6 +88,25 @@ def get_current_commit(repo_root: str) -> str | None:
     return None
 
 
+def resolve_commit(revision: str, repo_root: str) -> str | None:
+    """Resolve a revision name or abbreviated SHA to its full commit SHA."""
+    if not is_git_available():
+        return None
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--verify", f"{revision}^{{commit}}"],
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+            timeout=GIT_TIMEOUT,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except (subprocess.SubprocessError, FileNotFoundError):
+        pass
+    return None
+
+
 def is_stale(comment_commit: str, repo_root: str) -> bool:
     """Check if a commit hash differs from HEAD."""
     head = get_current_commit(repo_root)

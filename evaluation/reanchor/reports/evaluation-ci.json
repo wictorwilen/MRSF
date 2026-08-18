@@ -8,12 +8,12 @@
       "incorrect_confident_relocations": 0
     },
     "small": {
-      "passed": 401,
+      "passed": 394,
       "comments": 500,
       "incorrect_confident_relocations": 0
     },
     "medium": {
-      "passed": 1948,
+      "passed": 1945,
       "comments": 2000,
       "incorrect_confident_relocations": 0
     },
@@ -48,6 +48,7 @@
   "notes": [
     "PR correctness gates do not evaluate wall-clock timing.",
     "Scheduled timing ceilings are broad enough for runner variance and target algorithmic regressions.",
+    "Small and medium floors reflect stricter abstention when an exact relocation has only one independent context signal.",
     "All profiles require zero incorrect confident relocations."
   ]
 }

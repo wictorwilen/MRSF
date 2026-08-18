@@ -137,6 +137,15 @@ class TestFuzzySearch:
         results = fuzzy_search(self.lines, "", 0.5)
         assert len(results) == 0
 
+    def test_matches_a_two_line_selection_expanded_to_four_lines(self):
+        results = fuzzy_search(
+            lines1("alpha", "beta", "gamma", "delta"),
+            "alpha beta\ngamma delta",
+            0.6,
+        )
+
+        assert any(result.line == 1 and result.end_line == 4 for result in results)
+
 
 # ---------------------------------------------------------------------------
 # tokenLcsScore

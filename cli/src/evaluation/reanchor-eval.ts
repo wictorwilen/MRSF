@@ -112,6 +112,7 @@ export interface EvaluationSummary {
     p95: number;
     max: number;
     perComment: number;
+    reconciliationMax: number;
   };
   results: EvaluationCommentResult[];
 }
@@ -187,6 +188,7 @@ export async function evaluateCases(
 ): Promise<EvaluationSummary> {
   const startedAt = performance.now();
   const results: EvaluationCommentResult[] = [];
+  const reconciliationTimings: number[] = [];
 
   for (const loadedCase of cases) {
     const sourceText = await readEvaluationDocument(
@@ -238,11 +240,13 @@ export async function evaluateCases(
         durationMs,
       });
     }
+    const reconciliationStartedAt = performance.now();
     const reconciled = reconcileCommentAnchors(
       caseComments,
       caseResults.map((result) => result.actual),
       anchorContext,
     );
+    reconciliationTimings.push(performance.now() - reconciliationStartedAt);
 
     for (const [index, caseResult] of caseResults.entries()) {
       const {
@@ -300,6 +304,7 @@ export async function evaluateCases(
       p95: percentile(timings, 0.95),
       max: timings.at(-1) ?? 0,
       perComment: results.length > 0 ? durationMs / results.length : 0,
+      reconciliationMax: Math.max(0, ...reconciliationTimings),
     },
     results,
   };

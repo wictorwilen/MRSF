@@ -5,6 +5,7 @@ const mockGetCurrentCommit = vi.fn();
 const mockGetDiff = vi.fn();
 const mockGetFileAtCommit = vi.fn();
 const mockIsGitAvailable = vi.fn();
+const mockResolveCommit = vi.fn();
 
 const mockApplyReanchorResults = vi.fn();
 const mockReanchorComment = vi.fn();
@@ -23,6 +24,7 @@ vi.mock("../lib/git.js", () => ({
   getLineShift: vi.fn(),
   isGitAvailable: (...args: unknown[]) => mockIsGitAvailable(...args),
   parseDiffHunks: vi.fn(),
+  resolveCommit: (...args: unknown[]) => mockResolveCommit(...args),
 }));
 
 vi.mock("../lib/reanchor-core.js", () => ({
@@ -72,6 +74,7 @@ describe("reanchorDocument wrapper", () => {
     mockGetCurrentCommit.mockResolvedValue("head-commit");
     mockGetDiff.mockResolvedValue([{ oldStart: 1, oldCount: 0, newStart: 1, newCount: 1, lines: ["+added"] }]);
     mockGetFileAtCommit.mockResolvedValue("old line");
+    mockResolveCommit.mockImplementation(async (revision: string) => revision);
     mockReanchorComment.mockImplementation((comment, _lines, options) => ({
       commentId: comment.id,
       status: options.commitIsStale ? "shifted" : "anchored",
@@ -176,6 +179,28 @@ describe("reanchorDocument wrapper", () => {
     expect(mockGetDiff).toHaveBeenCalledTimes(1);
     expect(mockGetFileAtCommit).toHaveBeenCalledTimes(1);
     expect(mockReanchorComment).toHaveBeenCalledTimes(2);
+  });
+
+  it("groups abbreviated and full forms of the same source commit", async () => {
+    const fullCommit = "0123456789012345678901234567890123456789";
+    mockResolveCommit.mockResolvedValue(fullCommit);
+    const doc = {
+      mrsf_version: "1.0",
+      document: "docs/doc.md",
+      comments: [
+        makeComment("first", "0123456"),
+        makeComment("second", fullCommit),
+      ],
+    };
+
+    await reanchorDocument(doc, ["", "line one"], {
+      cwd: "/repo",
+      documentPath: "/repo/docs/doc.md",
+      repoRoot: "/repo",
+    });
+
+    expect(mockGetDiff).toHaveBeenCalledTimes(1);
+    expect(mockGetFileAtCommit).toHaveBeenCalledTimes(1);
   });
 
   it("falls back to plain document reanchoring when git is available but documentPath is missing", async () => {

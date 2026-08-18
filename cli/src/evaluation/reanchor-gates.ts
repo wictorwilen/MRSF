@@ -10,6 +10,7 @@ export interface ReanchorProfileReport {
     perComment: number;
     p95: number;
     max: number;
+    reconciliationMax: number;
   };
 }
 
@@ -28,6 +29,7 @@ export interface ReanchorGatePolicy {
       maximum_ms_per_comment: number;
       maximum_p95_comment_ms: number;
       maximum_single_comment_ms: number;
+      maximum_reconciliation_ms: number;
     }
   >;
 }
@@ -83,6 +85,16 @@ export function evaluateReanchorGate(
         failures.push(
           `maximum ${report.timingMs.max.toFixed(3)} ms exceeds `
           + `${performance.maximum_single_comment_ms.toFixed(3)} ms.`,
+        );
+      }
+      if (
+        report.timingMs.reconciliationMax
+        > performance.maximum_reconciliation_ms
+      ) {
+        failures.push(
+          `reconciliation maximum `
+          + `${report.timingMs.reconciliationMax.toFixed(3)} ms exceeds `
+          + `${performance.maximum_reconciliation_ms.toFixed(3)} ms.`,
         );
       }
     }

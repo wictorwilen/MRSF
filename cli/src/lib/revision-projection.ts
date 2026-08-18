@@ -62,7 +62,12 @@ export function projectCommentAnchor(
   );
   if (exactCandidates.length === 1) {
     const candidate = exactCandidates[0];
-    if (hasIndependentExactSupport(comment, candidate.line, projection)) {
+    const contextSupport = countIndependentExactSupport(
+      comment,
+      candidate.line,
+      projection,
+    );
+    if (contextSupport >= 2) {
       return {
         line: candidate.line,
         endLine: candidate.endLine,
@@ -71,7 +76,7 @@ export function projectCommentAnchor(
         text: candidate.text,
         score: 1,
         exact: true,
-        contextSupport: 1,
+        contextSupport,
         contextMargin: 1,
         reason: "Source revision and neighboring line evidence confirm exact relocation.",
       };
@@ -139,11 +144,11 @@ function collectLineOccurrences(lines: string[]): Map<string, number[]> {
   return occurrences;
 }
 
-function hasIndependentExactSupport(
+function countIndependentExactSupport(
   comment: Comment,
   candidateLine: number,
   projection: RevisionProjectionIndex,
-): boolean {
+): number {
   const sourceEndLine = comment.end_line ?? (comment.line as number);
   const expectedShift = candidateLine - (comment.line as number);
 
@@ -152,9 +157,10 @@ function hasIndependentExactSupport(
     || comment.end_column != null
   ) {
     const mappedContainerLine = projection.lineMap.get(comment.line as number);
-    if (mappedContainerLine === candidateLine) return true;
+    if (mappedContainerLine === candidateLine) return 2;
   }
 
+  let support = 0;
   for (
     let distance = 1;
     distance <= CONTEXT_RADIUS;
@@ -169,12 +175,12 @@ function hasIndependentExactSupport(
       }
       const targetLine = projection.lineMap.get(sourceLine);
       if (targetLine != null && targetLine - sourceLine === expectedShift) {
-        return true;
+        support += 1;
       }
     }
   }
 
-  return false;
+  return support;
 }
 
 function projectLineFromContext(

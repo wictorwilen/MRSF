@@ -52,6 +52,7 @@ from .git import (
     is_git_available,
     is_stale,
     parse_diff_hunks,
+    resolve_commit,
 )
 from .global_reconciliation import reconcile_comment_anchors
 
@@ -181,6 +182,7 @@ __all__ = [
     "is_git_available",
     "is_stale",
     "parse_diff_hunks",
+    "resolve_commit",
     # Re-anchoring
     "apply_reanchor_results",
     "reanchor_comment",
