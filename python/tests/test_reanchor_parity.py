@@ -19,7 +19,7 @@ def test_shared_reanchor_corpus() -> None:
     failures: list[str] = []
     comments_evaluated = 0
     for case_path in sorted(CASES_ROOT.rglob("*.json")):
-        parsed = json.loads(case_path.read_text())
+        parsed = json.loads(case_path.read_text(encoding="utf-8"))
         cases = parsed if isinstance(parsed, list) else [parsed]
         for case in cases:
             source = _document_text(case["source"], case_path)
@@ -56,7 +56,7 @@ def test_shared_reanchor_corpus() -> None:
 def _document_text(value: dict[str, str], case_path: Path) -> str:
     if "text" in value:
         return value["text"]
-    return (case_path.parent / value["path"]).read_text()
+    return (case_path.parent / value["path"]).read_text(encoding="utf-8")
 
 
 def _comment(value: dict[str, Any]) -> Comment:

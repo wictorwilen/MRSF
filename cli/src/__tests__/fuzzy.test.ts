@@ -195,4 +195,16 @@ describe("fuzzySearch", () => {
 
     expect(results[0]).toMatchObject({ line: 201 });
   });
+
+  it("falls back to scanning when a short needle has no posting signals", () => {
+    const results = fuzzySearch(
+      lines1("unrelated", "ac"),
+      "ab",
+      0.19,
+    );
+
+    expect(results).toEqual(
+      expect.arrayContaining([expect.objectContaining({ line: 2 })]),
+    );
+  });
 });

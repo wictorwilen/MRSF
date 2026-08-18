@@ -394,6 +394,10 @@ function retrieveCandidateLines(
     }
   }
 
+  if (votes.size === 0) {
+    return Array.from({ length: lineCount }, (_, index) => index + 1);
+  }
+
   return [...votes.entries()]
     .sort((left, right) =>
       right[1] - left[1]

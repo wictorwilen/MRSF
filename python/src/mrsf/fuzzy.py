@@ -350,6 +350,8 @@ def _retrieve_candidate_lines(
             line = hint_line + offset
             if 1 <= line <= line_count:
                 votes[line] = votes.get(line, 0.0) + 0.25
+    if not votes:
+        return list(range(1, line_count + 1))
     return [
         line
         for line, _ in sorted(
