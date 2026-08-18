@@ -113,6 +113,14 @@ describe("reanchorDocument wrapper", () => {
         revisionProjection: expect.objectContaining({
           lineMap: expect.any(Map),
         }),
+        anchorContext: expect.objectContaining({
+          source: expect.objectContaining({
+            blocks: expect.any(Array),
+          }),
+          target: expect.objectContaining({
+            blocks: expect.any(Array),
+          }),
+        }),
       }),
     );
     expect(mockReanchorComment).toHaveBeenNthCalledWith(

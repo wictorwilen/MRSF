@@ -7,6 +7,7 @@ import path from "node:path";
 import { performance } from "node:perf_hooks";
 import { reanchorComment, toReanchorLines } from "../lib/reanchor-core.js";
 import { createRevisionProjection } from "../lib/revision-projection.js";
+import { createAnchorContextIndex } from "../lib/anchor-context.js";
 import type { Comment, ReanchorResult, ReanchorStatus } from "../lib/types.js";
 
 const Ajv2020 = Ajv2020Module as unknown as new (
@@ -198,12 +199,17 @@ export async function evaluateCases(
       sourceLines,
       documentLines,
     );
+    const anchorContext = createAnchorContextIndex(
+      sourceLines,
+      documentLines,
+    );
 
     for (const evaluationComment of loadedCase.value.comments) {
       const comment = toComment(evaluationComment);
       const commentStartedAt = performance.now();
       const actual = reanchorComment(comment, documentLines, {
         revisionProjection,
+        anchorContext,
       });
       const durationMs = performance.now() - commentStartedAt;
       const statusCorrect = actual.status === evaluationComment.expected.status;

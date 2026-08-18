@@ -16,6 +16,10 @@ import {
   projectCommentAnchor,
   type RevisionProjectionIndex,
 } from "./revision-projection.js";
+import {
+  resolveContextAnchor,
+  type AnchorContextIndex,
+} from "./anchor-context.js";
 
 export const HIGH_THRESHOLD = 0.8;
 export const DEFAULT_THRESHOLD = 0.6;
@@ -43,6 +47,7 @@ export function reanchorComment(
     commitIsStale?: boolean;
     proximityWindow?: number;
     revisionProjection?: RevisionProjectionIndex;
+    anchorContext?: AnchorContextIndex;
   } = {},
 ): ReanchorResult {
   const threshold = opts.threshold ?? DEFAULT_THRESHOLD;
@@ -135,8 +140,40 @@ export function reanchorComment(
     }
   }
 
+  if (selectedText && opts.anchorContext) {
+    const contextual = resolveContextAnchor(comment, opts.anchorContext);
+    if (contextual) {
+      return {
+        commentId,
+        status: contextual.status,
+        score: contextual.score,
+        newLine: contextual.line,
+        newEndLine: contextual.endLine,
+        newStartColumn: contextual.startColumn,
+        newEndColumn: contextual.endColumn,
+        anchoredText: contextual.status === "fuzzy"
+          ? contextual.text
+          : undefined,
+        previousSelectedText: contextual.status === "fuzzy"
+          ? selectedText
+          : undefined,
+        reason: contextual.reason,
+      };
+    }
+  }
+
   if (selectedText) {
     const exactCandidates = exactMatch(documentLines, selectedText);
+    if (exactCandidates.length > 1 && comment.line == null) {
+      return {
+        commentId,
+        status: "ambiguous",
+        score: 1,
+        reason:
+          `Ambiguous: ${exactCandidates.length} exact matches and no position `
+          + "or source context to disambiguate them.",
+      };
+    }
 
     // Pick the best exact candidate: the only one, or — when several remain —
     // the one nearest to the original line (§7.4 step 1b).

@@ -319,7 +319,7 @@
     "categories": ["rewrite", "ambiguous"],
     "source": { "text": "Original selected statement with unique intent.\n" },
     "target": { "text": "Completely unrelated replacement content.\n" },
-    "comments": [{ "id": "c46", "anchor": { "line": 1, "selected_text": "Original selected statement with unique intent." }, "expected": { "status": "ambiguous" } }]
+    "comments": [{ "id": "c46", "anchor": { "line": 1, "selected_text": "Original selected statement with unique intent." }, "expected": { "status": "orphaned" } }]
   },
   {
     "id": "repeated-paragraphs-reordered",

@@ -4,11 +4,11 @@
   "cases": 55,
   "comments": 77,
   "metrics": {
-    "passed": 60,
-    "failed": 17,
-    "exactRangeMatches": 67,
-    "statusMatches": 60,
-    "incorrectConfidentRelocations": 11
+    "passed": 77,
+    "failed": 0,
+    "exactRangeMatches": 77,
+    "statusMatches": 77,
+    "incorrectConfidentRelocations": 0
   },
   "results": [
     {
@@ -21,9 +21,7 @@
         "score": 1,
         "newLine": 1,
         "newEndLine": 1,
-        "newStartColumn": 0,
-        "newEndColumn": 21,
-        "reason": "Exact text match (unique)."
+        "reason": "Source-verified anchor remains exact at its stored position."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -41,7 +39,7 @@
         "newEndLine": 3,
         "newStartColumn": 0,
         "newEndColumn": 17,
-        "reason": "Exact text match (unique)."
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -59,7 +57,7 @@
         "newEndLine": 1,
         "newStartColumn": 0,
         "newEndColumn": 17,
-        "reason": "Exact text match (unique)."
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -77,7 +75,7 @@
         "newEndLine": 1,
         "newStartColumn": 7,
         "newEndColumn": 20,
-        "reason": "Exact text match (unique)."
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -95,7 +93,7 @@
         "newEndLine": 1,
         "newStartColumn": 0,
         "newEndColumn": 13,
-        "reason": "Exact text match (unique)."
+        "reason": "Source-verified anchor remains exact at its stored position."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -108,14 +106,12 @@
       "actual": {
         "commentId": "c06",
         "status": "fuzzy",
-        "score": 1,
+        "score": 0.6000000000000001,
         "newLine": 1,
         "newEndLine": 1,
-        "newStartColumn": 0,
-        "newEndColumn": 28,
         "anchoredText": "Text  with   regular spaces.",
         "previousSelectedText": "Text with regular spaces.",
-        "reason": "High-confidence fuzzy match (score 1.000)."
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -128,14 +124,12 @@
       "actual": {
         "commentId": "c07",
         "status": "fuzzy",
-        "score": 0.9351851851851852,
+        "score": 0.5258333333333334,
         "newLine": 1,
         "newEndLine": 1,
-        "newStartColumn": 0,
-        "newEndColumn": 26,
         "anchoredText": "The algorithm is reliable.",
         "previousSelectedText": "The algorithmm is reliable.",
-        "reason": "High-confidence fuzzy match (score 0.935)."
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -148,11 +142,12 @@
       "actual": {
         "commentId": "c08",
         "status": "fuzzy",
-        "score": 0.6486842105263158,
+        "score": 0.45,
         "newLine": 1,
+        "newEndLine": 1,
         "anchoredText": "The revised sentence describes the behavior more clearly.",
         "previousSelectedText": "The original sentence explains the behavior clearly.",
-        "reason": "Line-fallback with fuzzy text match (score 0.649)."
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -170,7 +165,7 @@
         "newEndLine": 3,
         "newStartColumn": 0,
         "newEndColumn": 18,
-        "reason": "Exact text match (unique)."
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -200,14 +195,17 @@
       "expectedStatus": "fuzzy",
       "actual": {
         "commentId": "c11",
-        "status": "anchored",
-        "score": 0.8,
+        "status": "fuzzy",
+        "score": 0.393,
         "newLine": 1,
-        "reason": "Line/column fallback."
+        "newEndLine": 1,
+        "anchoredText": "## Setup and installation",
+        "previousSelectedText": "## Installation",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
       },
-      "statusCorrect": false,
+      "statusCorrect": true,
       "rangeCorrect": true,
-      "passed": false
+      "passed": true
     },
     {
       "caseId": "heading-moved-and-renamed",
@@ -215,14 +213,17 @@
       "expectedStatus": "fuzzy",
       "actual": {
         "commentId": "c12",
-        "status": "anchored",
-        "score": 0.8,
-        "newLine": 1,
-        "reason": "Line/column fallback."
+        "status": "fuzzy",
+        "score": 0.542,
+        "newLine": 3,
+        "newEndLine": 3,
+        "anchoredText": "## Setup and installation",
+        "previousSelectedText": "## Installation",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
       },
-      "statusCorrect": false,
-      "rangeCorrect": false,
-      "passed": false
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
     },
     {
       "caseId": "paragraph-split",
@@ -230,14 +231,17 @@
       "expectedStatus": "fuzzy",
       "actual": {
         "commentId": "c13",
-        "status": "anchored",
-        "score": 0.8,
+        "status": "fuzzy",
+        "score": 0.5357142857142857,
         "newLine": 1,
-        "reason": "Line/column fallback."
+        "newEndLine": 3,
+        "anchoredText": "First idea continues.\n\nThe second idea follows.",
+        "previousSelectedText": "First idea continues into the second idea.",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
       },
-      "statusCorrect": false,
-      "rangeCorrect": false,
-      "passed": false
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
     },
     {
       "caseId": "paragraphs-merged",
@@ -246,14 +250,12 @@
       "actual": {
         "commentId": "c14",
         "status": "fuzzy",
-        "score": 1,
+        "score": 0.6000000000000001,
         "newLine": 1,
         "newEndLine": 1,
-        "newStartColumn": 0,
-        "newEndColumn": 24,
         "anchoredText": "First idea. Second idea.",
         "previousSelectedText": "First idea.\nSecond idea.",
-        "reason": "High-confidence fuzzy match (score 1.000)."
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -271,7 +273,7 @@
         "newEndLine": 1,
         "newStartColumn": 2,
         "newEndColumn": 18,
-        "reason": "Exact text match (unique)."
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -289,7 +291,7 @@
         "newEndLine": 1,
         "newStartColumn": 1,
         "newEndColumn": 16,
-        "reason": "Exact text match (unique)."
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -302,11 +304,12 @@
       "actual": {
         "commentId": "c17",
         "status": "fuzzy",
-        "score": 0.776470588235294,
+        "score": 0.6000000000000001,
         "newLine": 1,
+        "newEndLine": 1,
         "anchoredText": "Is this reliable!",
         "previousSelectedText": "Is this reliable?",
-        "reason": "Line-fallback with fuzzy text match (score 0.776)."
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -342,7 +345,7 @@
         "newEndLine": 4,
         "newStartColumn": 0,
         "newEndColumn": 10,
-        "reason": "Exact text match (unique)."
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -355,14 +358,12 @@
       "actual": {
         "commentId": "c20",
         "status": "fuzzy",
-        "score": 1,
+        "score": 0.6000000000000001,
         "newLine": 1,
         "newEndLine": 2,
-        "newStartColumn": 0,
-        "newEndColumn": 12,
         "anchoredText": "Alpha  line.\nBeta   line.",
         "previousSelectedText": "Alpha line.\nBeta line.",
-        "reason": "High-confidence fuzzy match (score 1.000)."
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -392,19 +393,13 @@
       "expectedStatus": "ambiguous",
       "actual": {
         "commentId": "c22",
-        "status": "fuzzy",
+        "status": "ambiguous",
         "score": 1,
-        "newLine": 1,
-        "newEndLine": 1,
-        "newStartColumn": 0,
-        "newEndColumn": 19,
-        "anchoredText": "const value = true;",
-        "previousSelectedText": "const value = true;",
-        "reason": "High-confidence fuzzy match (score 1.000)."
+        "reason": "Ambiguous: 2 exact matches and no position or source context to disambiguate them."
       },
-      "statusCorrect": false,
+      "statusCorrect": true,
       "rangeCorrect": true,
-      "passed": false
+      "passed": true
     },
     {
       "caseId": "table-row-moved",
@@ -418,7 +413,7 @@
         "newEndLine": 3,
         "newStartColumn": 0,
         "newEndColumn": 11,
-        "reason": "Exact text match (unique)."
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -436,7 +431,7 @@
         "newEndLine": 3,
         "newStartColumn": 0,
         "newEndColumn": 12,
-        "reason": "Exact text match (unique)."
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -454,7 +449,7 @@
         "newEndLine": 1,
         "newStartColumn": 2,
         "newEndColumn": 18,
-        "reason": "Exact text match (unique)."
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -467,14 +462,12 @@
       "actual": {
         "commentId": "c26",
         "status": "fuzzy",
-        "score": 0.926470588235294,
+        "score": 0.5219117647058824,
         "newLine": 1,
         "newEndLine": 1,
-        "newStartColumn": 0,
-        "newEndColumn": 17,
         "anchoredText": "The café is open.",
         "previousSelectedText": "The cafe is open.",
-        "reason": "High-confidence fuzzy match (score 0.926)."
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -487,11 +480,12 @@
       "actual": {
         "commentId": "c27",
         "status": "fuzzy",
-        "score": 0.7652173913043478,
+        "score": 0.6000000000000001,
         "newLine": 1,
+        "newEndLine": 1,
         "anchoredText": "Deployment ✅ succeeded.",
         "previousSelectedText": "Deployment succeeded.",
-        "reason": "Line-fallback with fuzzy text match (score 0.765)."
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -504,11 +498,12 @@
       "actual": {
         "commentId": "c28",
         "status": "fuzzy",
-        "score": 0.6764705882352942,
+        "score": 0.6000000000000001,
         "newLine": 1,
+        "newEndLine": 1,
         "anchoredText": "API configuration",
         "previousSelectedText": "API Configuration",
-        "reason": "Line-fallback with fuzzy text match (score 0.676)."
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -524,9 +519,7 @@
         "score": 1,
         "newLine": 3,
         "newEndLine": 3,
-        "newStartColumn": 0,
-        "newEndColumn": 16,
-        "reason": "Exact text match (2 occurrences; chose nearest to original line 3)."
+        "reason": "Source-verified anchor remains exact at its stored position."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -538,19 +531,13 @@
       "expectedStatus": "ambiguous",
       "actual": {
         "commentId": "c30",
-        "status": "fuzzy",
+        "status": "ambiguous",
         "score": 1,
-        "newLine": 1,
-        "newEndLine": 1,
-        "newStartColumn": 0,
-        "newEndColumn": 16,
-        "anchoredText": "Repeated phrase.",
-        "previousSelectedText": "Repeated phrase.",
-        "reason": "High-confidence fuzzy match (score 1.000)."
+        "reason": "Ambiguous: 2 exact matches and no position or source context to disambiguate them."
       },
-      "statusCorrect": false,
+      "statusCorrect": true,
       "rangeCorrect": true,
-      "passed": false
+      "passed": true
     },
     {
       "caseId": "far-exact-after-origin-rewrite",
@@ -559,11 +546,12 @@
       "actual": {
         "commentId": "c31",
         "status": "fuzzy",
-        "score": 0.5,
+        "score": 0.48000000000000004,
         "newLine": 1,
+        "newEndLine": 1,
         "anchoredText": "Origin setting revised.",
         "previousSelectedText": "Source setting.",
-        "reason": "Lone exact match at line 8 is beyond the proximity window (±5) of original line 1 and the text at the original position changed; kept at original position, needs re-anchoring."
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -581,7 +569,7 @@
         "newEndLine": 3,
         "newStartColumn": 0,
         "newEndColumn": 14,
-        "reason": "Exact text match (unique)."
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -615,9 +603,7 @@
         "score": 1,
         "newLine": 1,
         "newEndLine": 1,
-        "newStartColumn": 0,
-        "newEndColumn": 16,
-        "reason": "Exact text match (2 occurrences; chose nearest to original line 1)."
+        "reason": "Source-verified anchor remains exact at its stored position."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -629,17 +615,17 @@
       "expectedStatus": "fuzzy",
       "actual": {
         "commentId": "c35",
-        "status": "anchored",
-        "score": 1,
-        "newLine": 5,
-        "newEndLine": 5,
-        "newStartColumn": 0,
-        "newEndColumn": 16,
-        "reason": "Exact text match (unique)."
+        "status": "fuzzy",
+        "score": 0.6600000000000001,
+        "newLine": 1,
+        "newEndLine": 1,
+        "anchoredText": "Revised original phrase.",
+        "previousSelectedText": "Original phrase.",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
       },
-      "statusCorrect": false,
-      "rangeCorrect": false,
-      "passed": false
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
     },
     {
       "caseId": "nearby-rewrite-versus-distant-exact",
@@ -648,11 +634,12 @@
       "actual": {
         "commentId": "c36",
         "status": "fuzzy",
-        "score": 0.5,
+        "score": 0.550543956043956,
         "newLine": 2,
+        "newEndLine": 2,
         "anchoredText": "Revised original statement for this section.",
         "previousSelectedText": "Precise original statement for this section.",
-        "reason": "Lone exact match at line 8 is beyond the proximity window (±5) of original line 2 and the text at the original position changed; kept at original position, needs re-anchoring."
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -664,14 +651,13 @@
       "expectedStatus": "orphaned",
       "actual": {
         "commentId": "c37",
-        "status": "anchored",
-        "score": 0.8,
-        "newLine": 1,
-        "reason": "Line/column fallback."
+        "status": "orphaned",
+        "score": 0,
+        "reason": "Source block has no plausible structural or contextual match."
       },
-      "statusCorrect": false,
+      "statusCorrect": true,
       "rangeCorrect": true,
-      "passed": false
+      "passed": true
     },
     {
       "caseId": "section-deleted-and-position-gone",
@@ -681,7 +667,7 @@
         "commentId": "c38",
         "status": "orphaned",
         "score": 0,
-        "reason": "No match found. Comment is orphaned."
+        "reason": "Source block has no plausible structural or contextual match."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -693,17 +679,19 @@
       "expectedStatus": "fuzzy",
       "actual": {
         "commentId": "c39",
-        "status": "anchored",
-        "score": 1,
-        "newLine": 3,
-        "newEndLine": 3,
-        "newStartColumn": 8,
-        "newEndColumn": 14,
-        "reason": "Exact text match (unique)."
+        "status": "fuzzy",
+        "score": 0.6375000000000001,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 4,
+        "newEndColumn": 10,
+        "anchoredText": "origin",
+        "previousSelectedText": "source",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
       },
-      "statusCorrect": false,
-      "rangeCorrect": false,
-      "passed": false
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
     },
     {
       "caseId": "repeated-heading-nearest-original",
@@ -715,9 +703,7 @@
         "score": 1,
         "newLine": 5,
         "newEndLine": 5,
-        "newStartColumn": 0,
-        "newEndColumn": 8,
-        "reason": "Exact text match (2 occurrences; chose nearest to original line 5)."
+        "reason": "Source-verified anchor remains exact at its stored position."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -784,14 +770,12 @@
       "actual": {
         "commentId": "c44",
         "status": "fuzzy",
-        "score": 1,
+        "score": 0.6000000000000001,
         "newLine": 1,
         "newEndLine": 3,
-        "newStartColumn": 0,
-        "newEndColumn": 10,
         "anchoredText": "Alpha line.\n\nBeta line.",
         "previousSelectedText": "Alpha line.\nBeta line.",
-        "reason": "High-confidence fuzzy match (score 1.000)."
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -804,11 +788,12 @@
       "actual": {
         "commentId": "c45",
         "status": "fuzzy",
-        "score": 0.7997116077865898,
+        "score": 0.5148648648648649,
         "newLine": 1,
+        "newEndLine": 1,
         "anchoredText": "This long paragraph describes the revised architecture, its safety constraints, and the intended runtime behavior for every supported integration.",
         "previousSelectedText": "This long paragraph describes the original architecture, its constraints, and the expected operational behavior for every supported integration.",
-        "reason": "Line-fallback with fuzzy text match (score 0.800)."
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -817,17 +802,16 @@
     {
       "caseId": "unrelated-content-at-original-position",
       "commentId": "c46",
-      "expectedStatus": "ambiguous",
+      "expectedStatus": "orphaned",
       "actual": {
         "commentId": "c46",
-        "status": "anchored",
-        "score": 0.8,
-        "newLine": 1,
-        "reason": "Line/column fallback."
+        "status": "orphaned",
+        "score": 0,
+        "reason": "Source block has no plausible structural or contextual match."
       },
-      "statusCorrect": false,
+      "statusCorrect": true,
       "rangeCorrect": true,
-      "passed": false
+      "passed": true
     },
     {
       "caseId": "repeated-paragraphs-reordered",
@@ -835,19 +819,13 @@
       "expectedStatus": "ambiguous",
       "actual": {
         "commentId": "c47",
-        "status": "fuzzy",
+        "status": "ambiguous",
         "score": 1,
-        "newLine": 1,
-        "newEndLine": 1,
-        "newStartColumn": 0,
-        "newEndColumn": 17,
-        "anchoredText": "Shared paragraph.",
-        "previousSelectedText": "Shared paragraph.",
-        "reason": "High-confidence fuzzy match (score 1.000)."
+        "reason": "Ambiguous: 2 exact matches and no position or source context to disambiguate them."
       },
-      "statusCorrect": false,
+      "statusCorrect": true,
       "rangeCorrect": true,
-      "passed": false
+      "passed": true
     },
     {
       "caseId": "list-duplicate-origin-edited",
@@ -855,17 +833,17 @@
       "expectedStatus": "fuzzy",
       "actual": {
         "commentId": "c48",
-        "status": "anchored",
-        "score": 1,
-        "newLine": 2,
-        "newEndLine": 2,
-        "newStartColumn": 0,
-        "newEndColumn": 19,
-        "reason": "Exact text match (unique)."
+        "status": "fuzzy",
+        "score": 0.5357142857142857,
+        "newLine": 1,
+        "newEndLine": 1,
+        "anchoredText": "- Configure the primary service",
+        "previousSelectedText": "- Configure service",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
       },
-      "statusCorrect": false,
-      "rangeCorrect": false,
-      "passed": false
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
     },
     {
       "caseId": "duplicate-heading-paths-without-context",
@@ -873,19 +851,13 @@
       "expectedStatus": "ambiguous",
       "actual": {
         "commentId": "c49",
-        "status": "fuzzy",
+        "status": "ambiguous",
         "score": 1,
-        "newLine": 3,
-        "newEndLine": 3,
-        "newStartColumn": 0,
-        "newEndColumn": 12,
-        "anchoredText": "Target body.",
-        "previousSelectedText": "Target body.",
-        "reason": "High-confidence fuzzy match (score 1.000)."
+        "reason": "Ambiguous: 2 exact matches and no position or source context to disambiguate them."
       },
-      "statusCorrect": false,
+      "statusCorrect": true,
       "rangeCorrect": true,
-      "passed": false
+      "passed": true
     },
     {
       "caseId": "equivalent-duplicate-ranges",
@@ -897,9 +869,7 @@
         "score": 1,
         "newLine": 1,
         "newEndLine": 1,
-        "newStartColumn": 0,
-        "newEndColumn": 18,
-        "reason": "Exact text match (2 occurrences; chose nearest to original line 1)."
+        "reason": "Source-verified anchor remains exact at its stored position."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -966,14 +936,12 @@
       "actual": {
         "commentId": "api-rollout-default",
         "status": "fuzzy",
-        "score": 0.898,
+        "score": 0.7625324675324676,
         "newLine": 21,
         "newEndLine": 21,
-        "newStartColumn": 0,
-        "newEndColumn": 34,
-        "anchoredText": "The default rollout strategy is pr",
+        "anchoredText": "The default rollout strategy is progressive.",
         "previousSelectedText": "The default rollout strategy is gradual.",
-        "reason": "High-confidence fuzzy match (score 0.898)."
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -1027,7 +995,7 @@
         "newEndLine": 7,
         "newStartColumn": 0,
         "newEndColumn": 34,
-        "reason": "Exact text match (unique)."
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -1045,7 +1013,7 @@
         "newEndLine": 15,
         "newStartColumn": 0,
         "newEndColumn": 38,
-        "reason": "Exact text match (unique)."
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -1112,14 +1080,12 @@
       "actual": {
         "commentId": "architecture-intro",
         "status": "fuzzy",
-        "score": 0.9760000000000001,
+        "score": 0.8726794258373206,
         "newLine": 3,
         "newEndLine": 3,
-        "newStartColumn": 0,
-        "newEndColumn": 75,
         "anchoredText": "The worker service processes durable jobs from partitioned regional queues.",
         "previousSelectedText": "The worker service processes durable jobs from regional queues.",
-        "reason": "High-confidence fuzzy match (score 0.976)."
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -1131,14 +1097,17 @@
       "expectedStatus": "fuzzy",
       "actual": {
         "commentId": "architecture-dispatcher-heading",
-        "status": "anchored",
-        "score": 0.8,
-        "newLine": 7,
-        "reason": "Line/column fallback."
+        "status": "fuzzy",
+        "score": 0.7424761904761905,
+        "newLine": 13,
+        "newEndLine": 13,
+        "anchoredText": "### Scheduler",
+        "previousSelectedText": "### Dispatcher",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
       },
-      "statusCorrect": false,
-      "rangeCorrect": false,
-      "passed": false
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
     },
     {
       "caseId": "realistic-architecture-revision",
@@ -1164,14 +1133,17 @@
       "expectedStatus": "fuzzy",
       "actual": {
         "commentId": "architecture-worker",
-        "status": "anchored",
-        "score": 0.8,
-        "newLine": 15,
-        "reason": "Line/column fallback."
+        "status": "fuzzy",
+        "score": 0.6647500000000001,
+        "newLine": 21,
+        "newEndLine": 21,
+        "anchoredText": "The worker can execute up to four independent jobs concurrently.",
+        "previousSelectedText": "The worker executes one job at a time.",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
       },
-      "statusCorrect": false,
-      "rangeCorrect": false,
-      "passed": false
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
     },
     {
       "caseId": "realistic-architecture-revision",
@@ -1215,14 +1187,17 @@
       "expectedStatus": "fuzzy",
       "actual": {
         "commentId": "architecture-scaling",
-        "status": "anchored",
-        "score": 0.8,
-        "newLine": 33,
-        "reason": "Line/column fallback."
+        "status": "fuzzy",
+        "score": 0.9255714285714286,
+        "newLine": 39,
+        "newEndLine": 39,
+        "anchoredText": "Workers scale from queue depth, processing latency, and lease pressure.",
+        "previousSelectedText": "Workers scale from queue depth and processing latency.",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
       },
-      "statusCorrect": false,
-      "rangeCorrect": false,
-      "passed": false
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
     },
     {
       "caseId": "realistic-user-guide-revision",
@@ -1266,16 +1241,17 @@
       "expectedStatus": "anchored",
       "actual": {
         "commentId": "guide-invite-heading",
-        "status": "fuzzy",
-        "score": 0.5,
-        "newLine": 13,
-        "anchoredText": "## Organize documents",
-        "previousSelectedText": "## Invite collaborators",
-        "reason": "Lone exact match at line 21 is beyond the proximity window (±5) of original line 13 and the text at the original position changed; kept at original position, needs re-anchoring."
+        "status": "anchored",
+        "score": 1,
+        "newLine": 21,
+        "newEndLine": 21,
+        "newStartColumn": 0,
+        "newEndColumn": 23,
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
       },
-      "statusCorrect": false,
-      "rangeCorrect": false,
-      "passed": false
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
     },
     {
       "caseId": "realistic-user-guide-revision",
@@ -1283,14 +1259,17 @@
       "expectedStatus": "fuzzy",
       "actual": {
         "commentId": "guide-member-settings",
-        "status": "anchored",
-        "score": 0.8,
-        "newLine": 15,
-        "reason": "Line/column fallback."
+        "status": "fuzzy",
+        "score": 0.9109732620320855,
+        "newLine": 23,
+        "newEndLine": 23,
+        "anchoredText": "Open **Workspace settings** and select **Members**.",
+        "previousSelectedText": "Open **Settings** and select **Members**.",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
       },
-      "statusCorrect": false,
-      "rangeCorrect": false,
-      "passed": false
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
     },
     {
       "caseId": "realistic-user-guide-revision",
@@ -1317,14 +1296,12 @@
       "actual": {
         "commentId": "guide-tags",
         "status": "fuzzy",
-        "score": 0.9485714285714286,
+        "score": 0.6122762951334381,
         "newLine": 17,
         "newEndLine": 17,
-        "newStartColumn": 0,
-        "newEndColumn": 34,
-        "anchoredText": "Use tags for temporary initiatives",
+        "anchoredText": "Use tags for temporary initiatives and cross-team projects.",
         "previousSelectedText": "Use tags for temporary initiatives.",
-        "reason": "High-confidence fuzzy match (score 0.949)."
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -1340,9 +1317,7 @@
         "score": 1,
         "newLine": 33,
         "newEndLine": 33,
-        "newStartColumn": 0,
-        "newEndColumn": 40,
-        "reason": "Exact text match (unique)."
+        "reason": "Source-verified anchor remains exact at its stored position."
       },
       "statusCorrect": true,
       "rangeCorrect": true,

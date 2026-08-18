@@ -38,6 +38,10 @@ import {
   createRevisionProjection,
   type RevisionProjectionIndex,
 } from "./revision-projection.js";
+import {
+  createAnchorContextIndex,
+  type AnchorContextIndex,
+} from "./anchor-context.js";
 import { readDocumentLines } from "./parser.js";
 import { discoverSidecar, sidecarToDocument } from "./discovery.js";
 import { parseSidecar } from "./parser.js";
@@ -91,6 +95,7 @@ export async function reanchorDocument(
         string,
         RevisionProjectionIndex | undefined
       >();
+      const contextCache = new Map<string, AnchorContextIndex | undefined>();
 
       for (const comment of doc.comments) {
         const commentCommit = globalFrom ?? comment.commit;
@@ -101,6 +106,7 @@ export async function reanchorDocument(
             diffCache.set(commentCommit, hunks);
           }
           let revisionProjection = projectionCache.get(commentCommit);
+          let anchorContext = contextCache.get(commentCommit);
           if (!projectionCache.has(commentCommit)) {
             const sourceText = await getFileAtCommit(
               commentCommit,
@@ -113,7 +119,14 @@ export async function reanchorDocument(
                 toReanchorLines(sourceText),
                 documentLines,
               );
+            anchorContext = sourceText == null
+              ? undefined
+              : createAnchorContextIndex(
+                toReanchorLines(sourceText),
+                documentLines,
+              );
             projectionCache.set(commentCommit, revisionProjection);
+            contextCache.set(commentCommit, anchorContext);
           }
           const result = reanchorComment(comment, documentLines, {
             diffHunks: hunks,
@@ -121,6 +134,7 @@ export async function reanchorDocument(
             commitIsStale: true,
             proximityWindow,
             revisionProjection,
+            anchorContext,
           });
           results.push(result);
           continue;
