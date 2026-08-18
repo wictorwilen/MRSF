@@ -9,7 +9,7 @@ import { discoverSidecar, findWorkspaceRoot, sidecarToDocument } from "../lib/di
 import { parseSidecar, readDocumentLines } from "../lib/parser.js";
 import { writeSidecar } from "../lib/writer.js";
 import { addComment, populateSelectedText } from "../lib/comments.js";
-import { findRepoRoot } from "../lib/git.js";
+import { findRepoRoot, getGitUserName } from "../lib/git.js";
 import type { CommentExtensions, MrsfDocument } from "../lib/types.js";
 
 function collectOptionValues(value: string, previous: string[]): string[] {
@@ -66,7 +66,7 @@ export function registerAdd(program: Command): void {
   program
     .command("add <document>")
     .description("Add a review comment to a document's sidecar")
-    .requiredOption("-a, --author <name>", "Comment author")
+    .option("-a, --author <name>", "Comment author (defaults to repository-local Git user.name)")
     .requiredOption("-t, --text <text>", "Comment text")
     .option("-l, --line <n>", "Line number (1-based)")
     .option("--end-line <n>", "End line (inclusive)")
@@ -81,7 +81,7 @@ export function registerAdd(program: Command): void {
       async (
         document: string,
         opts: {
-          author: string;
+          author?: string;
           text: string;
           line?: string;
           endLine?: string;
@@ -116,12 +116,20 @@ export function registerAdd(program: Command): void {
           };
         }
 
-        const repoRoot = await findRepoRoot(cwd);
+        const repoRoot = await findRepoRoot(path.dirname(docPath));
+        const author = opts.author?.trim()
+          || (repoRoot ? await getGitUserName(repoRoot) : null);
+        if (!author) {
+          throw new Error(
+            "Comment author is required. Pass --author or configure "
+            + "repository-local Git identity with: git config --local user.name \"Your Name\"",
+          );
+        }
 
         const comment = await addComment(
           doc,
           {
-            author: opts.author,
+            author,
             text: opts.text,
             line: opts.line ? parseInt(opts.line, 10) : undefined,
             end_line: opts.endLine ? parseInt(opts.endLine, 10) : undefined,

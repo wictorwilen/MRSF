@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+- `mrsf add` can resolve the comment author from repository-local Git `user.name` when `--author` is omitted.
+- Exported `getGitUserName()` for repository-aware integrations such as the VS Code extension.
+
 ## [0.7.0] - 2026-08-18
 
 ### Added

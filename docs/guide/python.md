@@ -23,7 +23,7 @@ All 9 commands from the Node.js CLI are available:
 mrsf init docs/architecture.md
 
 # Add a review comment
-mrsf add docs/architecture.md -a "Alice" -t "Needs more detail" -l 12
+mrsf add docs/architecture.md -t "Needs more detail" -l 12
 
 # Validate all sidecars
 mrsf validate
@@ -49,6 +49,9 @@ mrsf rename old.md new.md
 # Watch for changes
 mrsf watch docs/ --reanchor
 ```
+
+The Python CLI uses repository-local Git `user.name` when `--author` is
+omitted. An explicit `--author` always takes precedence.
 
 ### Global Options
 

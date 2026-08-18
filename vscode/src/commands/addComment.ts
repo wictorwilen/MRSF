@@ -4,6 +4,7 @@
 import * as vscode from "vscode";
 import type { SidecarStore } from "../store/SidecarStore.js";
 import { vscodeSelectionToMrsf } from "../util/positions.js";
+import { resolveAuthor } from "../util/author.js";
 
 const COMMENT_TYPES = [
   { label: "suggestion", description: "Suggest an improvement" },
@@ -21,24 +22,6 @@ const SEVERITY_LEVELS = [
   { label: "low", description: "Nice to have" },
   { label: "(none)", description: "No severity" },
 ];
-
-async function getAuthor(): Promise<string | undefined> {
-  const config = vscode.workspace.getConfiguration("sidemark");
-  let author = config.get<string>("author");
-
-  if (!author) {
-    author = await vscode.window.showInputBox({
-      prompt: "Enter your author name (e.g., 'Your Name (username)')",
-      placeHolder: "Name (identifier)",
-    });
-    if (author) {
-      // Save for future use
-      await config.update("author", author, vscode.ConfigurationTarget.Global);
-    }
-  }
-
-  return author;
-}
 
 function toUri(uriArg?: vscode.Uri | string | { fsPath?: string; path?: string }): vscode.Uri | undefined {
   if (!uriArg) return undefined;
@@ -171,7 +154,7 @@ export function registerAddLineComment(store: SidecarStore): vscode.Disposable {
           ? (sevPick.label as "low" | "medium" | "high")
           : undefined;
 
-      const author = await getAuthor();
+      const author = await resolveAuthor(docUri);
       if (!author) return;
 
       try {
@@ -241,7 +224,7 @@ export function registerAddInlineComment(
           ? (sevPick.label as "low" | "medium" | "high")
           : undefined;
 
-      const author = await getAuthor();
+      const author = await resolveAuthor(editor.document.uri);
       if (!author) return;
 
       try {

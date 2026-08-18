@@ -110,13 +110,17 @@ All settings are under the **Sidemark** section in VS Code Settings.
 
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `sidemark.author` | `string` | `""` | Default author name for new comments |
+| `sidemark.author` | `string` | `""` | Author override; when empty, use repository-local Git `user.name` |
 | `sidemark.showResolved` | `boolean` | `true` | Show resolved comments in decorations and sidebar |
 | `sidemark.gutterIcons` | `boolean` | `true` | Show gutter icons for commented lines |
 | `sidemark.inlineHighlights` | `boolean` | `true` | Show inline background highlights for text-specific comments |
 | `sidemark.reanchorOnSave` | `boolean` | `true` | Automatically reanchor comments on save |
 | `sidemark.reanchorThreshold` | `number` | `0.6` | Fuzzy match threshold for reanchoring (0.0–1.0) |
 | `sidemark.reanchorAutoAcceptScore` | `number` | `1.0` | Auto-accept reanchor results at or above this confidence |
+
+Author resolution uses `sidemark.author` when explicitly configured, then the
+repository-local Git `user.name`, then a one-time input prompt. Prompted names
+are not saved as a global override.
 
 ## How It Works
 

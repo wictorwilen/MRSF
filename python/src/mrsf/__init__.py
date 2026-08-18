@@ -47,6 +47,7 @@ from .git import (
     get_current_commit,
     get_diff,
     get_file_at_commit,
+    get_git_user_name,
     get_line_shift,
     get_staged_files,
     is_git_available,
@@ -174,6 +175,7 @@ __all__ = [
     # Git
     "detect_renames",
     "find_repo_root",
+    "get_git_user_name",
     "get_current_commit",
     "get_diff",
     "get_file_at_commit",

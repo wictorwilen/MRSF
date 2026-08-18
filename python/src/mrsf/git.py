@@ -69,6 +69,26 @@ def find_repo_root(cwd: str | None = None) -> str | None:
     return None
 
 
+def get_git_user_name(repo_root: str) -> str | None:
+    """Read user.name from the repository-local Git configuration."""
+    if not is_git_available():
+        return None
+    try:
+        result = subprocess.run(
+            ["git", "config", "--local", "--get", "user.name"],
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+            timeout=GIT_TIMEOUT,
+        )
+        if result.returncode == 0:
+            name = result.stdout.strip()
+            return name or None
+    except (subprocess.SubprocessError, FileNotFoundError):
+        pass
+    return None
+
+
 def get_current_commit(repo_root: str) -> str | None:
     """Get the full HEAD commit SHA."""
     if not is_git_available():

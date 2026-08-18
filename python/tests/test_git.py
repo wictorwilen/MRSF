@@ -3,14 +3,13 @@
 import subprocess
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from mrsf.git import (
     detect_renames,
     find_repo_root,
     get_current_commit,
     get_diff,
     get_file_at_commit,
+    get_git_user_name,
     get_line_shift,
     get_staged_files,
     is_git_available,
@@ -20,7 +19,6 @@ from mrsf.git import (
     resolve_commit,
 )
 from mrsf.types import DiffHunk
-
 
 # ---------------------------------------------------------------------------
 # parseDiffHunks
@@ -182,6 +180,39 @@ class TestFindRepoRoot:
     def test_returns_none_when_git_unavailable(self, mock_run):
         result = find_repo_root()
         assert result is None
+
+
+class TestGetGitUserName:
+    def setup_method(self):
+        reset_git_cache()
+
+    def teardown_method(self):
+        reset_git_cache()
+
+    @patch("mrsf.git.subprocess.run")
+    def test_returns_repository_local_name(self, mock_run):
+        mock_run.side_effect = [
+            MagicMock(returncode=0),
+            MagicMock(returncode=0, stdout="Repository Author\n"),
+        ]
+
+        assert get_git_user_name("/repo") == "Repository Author"
+        assert mock_run.call_args_list[1].args[0] == [
+            "git",
+            "config",
+            "--local",
+            "--get",
+            "user.name",
+        ]
+
+    @patch("mrsf.git.subprocess.run")
+    def test_returns_none_when_local_name_is_missing(self, mock_run):
+        mock_run.side_effect = [
+            MagicMock(returncode=0),
+            MagicMock(returncode=1, stdout=""),
+        ]
+
+        assert get_git_user_name("/repo") is None
 
 
 # ---------------------------------------------------------------------------

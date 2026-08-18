@@ -156,7 +156,7 @@
         "sidemark.author": {
           "type": "string",
           "default": "",
-          "description": "Default author name for new comments (e.g., 'Your Name (username)')"
+          "description": "Author override for new comments. When empty, Sidemark uses the repository-local Git user.name."
         },
         "sidemark.showResolved": {
           "type": "boolean",

@@ -154,6 +154,7 @@ async function loadAddCommand() {
   const addComment = vi.fn();
   const populateSelectedText = vi.fn();
   const findRepoRoot = vi.fn();
+  const getGitUserName = vi.fn();
 
   vi.doMock("../lib/discovery.js", async (importOriginal) => ({
     ...((await importOriginal()) as object),
@@ -174,6 +175,7 @@ async function loadAddCommand() {
   }));
   vi.doMock("../lib/git.js", () => ({
     findRepoRoot,
+    getGitUserName,
   }));
 
   const module = await import("../commands/add.js");
@@ -187,6 +189,7 @@ async function loadAddCommand() {
     addComment,
     populateSelectedText,
     findRepoRoot,
+    getGitUserName,
   };
 }
 
@@ -529,7 +532,7 @@ describe("add command", () => {
   it("passes parsed fields and extensions to addComment", async () => {
     const sidecarPath = path.join(tmpDir, "guide.md.review.yaml");
     const doc = { mrsf_version: "1.0", document: "guide.md", comments: [] as unknown[] };
-    const { registerAdd, findWorkspaceRoot, discoverSidecar, parseSidecar, addComment, writeSidecar, findRepoRoot } =
+    const { registerAdd, findWorkspaceRoot, discoverSidecar, parseSidecar, addComment, writeSidecar, findRepoRoot, getGitUserName } =
       await loadAddCommand();
 
     findWorkspaceRoot.mockResolvedValue(tmpDir);
@@ -596,6 +599,7 @@ describe("add command", () => {
       x_meta: { ok: true },
     });
     expect(writeSidecar).toHaveBeenCalledWith(sidecarPath, doc);
+    expect(getGitUserName).not.toHaveBeenCalled();
   });
 
   it("creates a new sidecar document and auto-populates selected text", async () => {
@@ -636,6 +640,77 @@ describe("add command", () => {
         comments: [],
       }),
     );
+  });
+
+  it("uses repository-local Git identity when --author is omitted", async () => {
+    const sidecarPath = path.join(tmpDir, "guide.md.review.yaml");
+    const doc = { mrsf_version: "1.0", document: "guide.md", comments: [] };
+    const {
+      registerAdd,
+      findWorkspaceRoot,
+      discoverSidecar,
+      parseSidecar,
+      addComment,
+      findRepoRoot,
+      getGitUserName,
+    } = await loadAddCommand();
+
+    findWorkspaceRoot.mockResolvedValue(tmpDir);
+    discoverSidecar.mockResolvedValue(sidecarPath);
+    parseSidecar.mockResolvedValue(doc);
+    findRepoRoot.mockResolvedValue(tmpDir);
+    getGitUserName.mockResolvedValue("Repository Author");
+    addComment.mockResolvedValue({ id: "c-3" });
+
+    await runCommand(registerAdd, [
+      "--cwd",
+      tmpDir,
+      "add",
+      "guide.md",
+      "--text",
+      "Git-authored note",
+    ]);
+
+    expect(addComment).toHaveBeenCalledWith(
+      doc,
+      expect.objectContaining({ author: "Repository Author" }),
+      tmpDir,
+    );
+  });
+
+  it("requires an author when neither the option nor local Git config provides one", async () => {
+    const {
+      registerAdd,
+      findWorkspaceRoot,
+      discoverSidecar,
+      parseSidecar,
+      findRepoRoot,
+      getGitUserName,
+      addComment,
+    } = await loadAddCommand();
+
+    findWorkspaceRoot.mockResolvedValue(tmpDir);
+    discoverSidecar.mockResolvedValue(path.join(tmpDir, "guide.md.review.yaml"));
+    parseSidecar.mockResolvedValue({
+      mrsf_version: "1.0",
+      document: "guide.md",
+      comments: [],
+    });
+    findRepoRoot.mockResolvedValue(tmpDir);
+    getGitUserName.mockResolvedValue(null);
+
+    await expect(
+      runCommand(registerAdd, [
+        "--cwd",
+        tmpDir,
+        "add",
+        "guide.md",
+        "--text",
+        "Missing author",
+      ]),
+    ).rejects.toThrow("Comment author is required");
+
+    expect(addComment).not.toHaveBeenCalled();
   });
 
   it("rejects malformed extension flags", async () => {

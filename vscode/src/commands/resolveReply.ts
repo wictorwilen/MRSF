@@ -3,6 +3,7 @@
  */
 import * as vscode from "vscode";
 import type { SidecarStore } from "../store/SidecarStore.js";
+import { resolveAuthor } from "../util/author.js";
 
 /**
  * Dismiss and re-show the hover so the user sees updated state
@@ -82,20 +83,8 @@ export function registerReplyToComment(
       });
       if (!text) return;
 
-      const config = vscode.workspace.getConfiguration("sidemark");
-      let author = config.get<string>("author");
-      if (!author) {
-        author = await vscode.window.showInputBox({
-          prompt: "Enter your author name",
-          placeHolder: "Name (identifier)",
-        });
-        if (!author) return;
-        await config.update(
-          "author",
-          author,
-          vscode.ConfigurationTarget.Global,
-        );
-      }
+      const author = await resolveAuthor(active.uri);
+      if (!author) return;
 
       try {
         await store.replyToComment(active.uri, commentId, text, author);

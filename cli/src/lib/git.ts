@@ -62,6 +62,27 @@ export async function findRepoRoot(cwd?: string): Promise<string | null> {
 }
 
 /**
+ * Read the repository-local Git author name.
+ *
+ * Only `.git/config` is considered; global Git identity is intentionally
+ * ignored so callers can distinguish repository identity from user defaults.
+ */
+export async function getGitUserName(repoRoot: string): Promise<string | null> {
+  if (!(await isGitAvailable())) return null;
+  try {
+    const { stdout } = await execFile(
+      "git",
+      ["config", "--local", "--get", "user.name"],
+      { cwd: repoRoot, timeout: GIT_TIMEOUT },
+    );
+    const name = stdout.trim();
+    return name || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Get the full HEAD commit SHA.
  */
 export async function getCurrentCommit(repoRoot: string): Promise<string | null> {

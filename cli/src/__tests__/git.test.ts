@@ -9,6 +9,7 @@ import {
   isGitAvailable,
   resetGitCache,
   findRepoRoot,
+  getGitUserName,
   getCurrentCommit,
   isStale,
   getDiff,
@@ -169,6 +170,22 @@ describe("git operations with real repo", () => {
     fs.mkdirSync(nested, { recursive: true });
     const root = await findRepoRoot(nested);
     expect(root).toBe(tmpDir);
+  });
+
+  it("getGitUserName returns the repository-local user.name", async () => {
+    await execFile("git", ["config", "--local", "user.name", "Repository Author"], {
+      cwd: tmpDir,
+    });
+
+    expect(await getGitUserName(tmpDir)).toBe("Repository Author");
+  });
+
+  it("getGitUserName ignores global identity when no local name exists", async () => {
+    await execFile("git", ["config", "--local", "--unset", "user.name"], {
+      cwd: tmpDir,
+    });
+
+    expect(await getGitUserName(tmpDir)).toBeNull();
   });
 
   it("getCurrentCommit returns HEAD SHA after a commit", async () => {
