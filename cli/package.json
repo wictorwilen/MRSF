@@ -30,6 +30,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
+    "eval:reanchor": "npm run build --silent && node dist/evaluation/run-reanchor-eval.js",
     "prepublishOnly": "cp ../LICENSE . && npm run build && npm test",
     "postpublish": "rm -f LICENSE"
   },
