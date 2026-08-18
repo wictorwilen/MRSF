@@ -52,6 +52,7 @@ export interface ContextAnchorResolution {
   startColumn?: number;
   endColumn?: number;
   text?: string;
+  candidateMargin: number;
   reason: string;
 }
 
@@ -107,6 +108,7 @@ export function resolveContextAnchor(
       startColumn: comment.start_column,
       endColumn: comment.end_column,
       text: comment.selected_text,
+      candidateMargin: 1,
       reason: "Source-verified anchor remains exact at its stored position.",
     };
   }
@@ -122,6 +124,7 @@ export function resolveContextAnchor(
     return {
       status: "orphaned",
       score: 0,
+      candidateMargin: 1,
       reason: "Source block has no plausible structural or contextual match.",
     };
   }
@@ -132,6 +135,7 @@ export function resolveContextAnchor(
       score: best.score,
       line: best.line,
       endLine: best.endLine,
+      candidateMargin: best.score - candidates[1].score,
       reason:
         `Structural candidates are too close (${best.score.toFixed(3)} vs `
         + `${candidates[1].score.toFixed(3)}).`,
@@ -151,6 +155,7 @@ export function resolveContextAnchor(
     startColumn: best.startColumn,
     endColumn: best.endColumn,
     text: best.text,
+    candidateMargin: candidates[1] ? best.score - candidates[1].score : 1,
     reason: best.exact && !repeatedExactText
       ? "Markdown structure and bidirectional context disambiguate the exact anchor."
       : repeatedExactText

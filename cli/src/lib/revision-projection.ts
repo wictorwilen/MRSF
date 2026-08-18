@@ -17,6 +17,8 @@ export interface ProjectedAnchor {
   text: string;
   score: number;
   exact: boolean;
+  contextSupport: number;
+  contextMargin: number;
   reason: string;
 }
 
@@ -69,14 +71,17 @@ export function projectCommentAnchor(
         text: candidate.text,
         score: 1,
         exact: true,
+        contextSupport: 1,
+        contextMargin: 1,
         reason: "Source revision and neighboring line evidence confirm exact relocation.",
       };
     }
   }
   if (exactCandidates.length > 0) return undefined;
 
-  const projectedLine = projectLineFromContext(comment, projection);
-  if (projectedLine == null) return undefined;
+  const projected = projectLineFromContext(comment, projection);
+  if (projected == null) return undefined;
+  const projectedLine = projected.line;
 
   const lineSpan = (comment.end_line ?? comment.line) - comment.line;
   const projectedEndLine = projectedLine + lineSpan;
@@ -111,6 +116,8 @@ export function projectCommentAnchor(
     text: targetText,
     score,
     exact: targetText === comment.selected_text,
+    contextSupport: projected.support,
+    contextMargin: projected.margin,
     reason: "Source revision context projects the edited anchor range.",
   };
 }
@@ -173,7 +180,7 @@ function hasIndependentExactSupport(
 function projectLineFromContext(
   comment: Comment,
   projection: RevisionProjectionIndex,
-): number | undefined {
+): { line: number; support: number; margin: number } | undefined {
   const sourceLine = comment.line as number;
   const sourceEndLine = comment.end_line ?? sourceLine;
   const votes = new Map<number, { count: number; nearest: number }>();
@@ -215,7 +222,12 @@ function projectLineFromContext(
     return undefined;
   }
 
-  return sourceLine + best[0];
+  const runnerUpCount = ranked[1]?.[1].count ?? 0;
+  return {
+    line: sourceLine + best[0],
+    support: best[1].count,
+    margin: (best[1].count - runnerUpCount) / best[1].count,
+  };
 }
 
 function projectColumns(

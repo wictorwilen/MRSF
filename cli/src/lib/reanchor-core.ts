@@ -22,6 +22,7 @@ import {
   resolveContextAnchor,
   type AnchorContextIndex,
 } from "./anchor-context.js";
+import { calibrateAnchorEvidence } from "./confidence-calibration.js";
 
 export const HIGH_THRESHOLD = 0.8;
 export const DEFAULT_THRESHOLD = 0.6;
@@ -128,48 +129,32 @@ export function reanchorComment(
     }
   }
 
-  if (selectedText && opts.revisionProjection) {
-    const projected = projectCommentAnchor(
+  const projected = selectedText && opts.revisionProjection
+    ? projectCommentAnchor(
       comment,
       opts.revisionProjection,
       threshold,
+    )
+    : undefined;
+  if (selectedText && projected?.exact) {
+    const exactCalibration = calibrateAnchorEvidence(
+      commentId,
+      selectedText,
+      projected,
     );
-    if (projected) {
-      return {
-        commentId,
-        status: projected.exact ? "anchored" : "fuzzy",
-        score: projected.score,
-        newLine: projected.line,
-        newEndLine: projected.endLine,
-        newStartColumn: projected.startColumn,
-        newEndColumn: projected.endColumn,
-        anchoredText: projected.exact ? undefined : projected.text,
-        previousSelectedText: projected.exact ? undefined : selectedText,
-        reason: projected.reason,
-      };
-    }
+    if (exactCalibration) return exactCalibration.result;
   }
-
-  if (selectedText && opts.anchorContext) {
-    const contextual = resolveContextAnchor(comment, opts.anchorContext);
-    if (contextual) {
-      return {
-        commentId,
-        status: contextual.status,
-        score: contextual.score,
-        newLine: contextual.line,
-        newEndLine: contextual.endLine,
-        newStartColumn: contextual.startColumn,
-        newEndColumn: contextual.endColumn,
-        anchoredText: contextual.status === "fuzzy"
-          ? contextual.text
-          : undefined,
-        previousSelectedText: contextual.status === "fuzzy"
-          ? selectedText
-          : undefined,
-        reason: contextual.reason,
-      };
-    }
+  const contextual = selectedText && opts.anchorContext
+    ? resolveContextAnchor(comment, opts.anchorContext)
+    : undefined;
+  if (selectedText && (projected || contextual)) {
+    const calibrated = calibrateAnchorEvidence(
+      commentId,
+      selectedText,
+      projected,
+      contextual,
+    );
+    if (calibrated) return calibrated.result;
   }
 
   if (selectedText) {

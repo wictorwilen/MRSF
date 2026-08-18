@@ -11,6 +11,8 @@ describe("library entrypoints", () => {
     const reanchor = await import("../lib/reanchor.js");
     const anchorContext = await import("../lib/anchor-context.js");
     const globalReconciliation = await import("../lib/global-reconciliation.js");
+    const revisionProjection = await import("../lib/revision-projection.js");
+    const confidenceCalibration = await import("../lib/confidence-calibration.js");
     const comments = await import("../lib/comments.js");
     const identity = await import("../lib/identity.js");
     const validateCore = await import("../lib/validate-core.js");
@@ -28,6 +30,12 @@ describe("library entrypoints", () => {
     expect(api.reconcileCommentAnchors).toBe(
       globalReconciliation.reconcileCommentAnchors,
     );
+    expect(api.createRevisionProjection).toBe(
+      revisionProjection.createRevisionProjection,
+    );
+    expect(api.calibrateAnchorEvidence).toBe(
+      confidenceCalibration.calibrateAnchorEvidence,
+    );
     expect(api.validateDocument).toBe(validateCore.validateDocument);
     expect(api.newCommentId).toBe(identity.newCommentId);
     expect(api.addComment).toBe(comments.addComment);
@@ -41,6 +49,8 @@ describe("library entrypoints", () => {
     const reanchorCore = await import("../lib/reanchor-core.js");
     const anchorContext = await import("../lib/anchor-context.js");
     const globalReconciliation = await import("../lib/global-reconciliation.js");
+    const revisionProjection = await import("../lib/revision-projection.js");
+    const confidenceCalibration = await import("../lib/confidence-calibration.js");
     const validateCore = await import("../lib/validate-core.js");
 
     expect(browser.combinedScore).toBe(fuzzy.combinedScore);
@@ -57,6 +67,12 @@ describe("library entrypoints", () => {
     );
     expect(browser.reconcileCommentAnchors).toBe(
       globalReconciliation.reconcileCommentAnchors,
+    );
+    expect(browser.createRevisionProjection).toBe(
+      revisionProjection.createRevisionProjection,
+    );
+    expect(browser.calibrateAnchorEvidence).toBe(
+      confidenceCalibration.calibrateAnchorEvidence,
     );
     expect(browser.validateDocument).toBe(validateCore.validateDocument);
     expect(browser.newCommentId).toBe(identity.newCommentId);

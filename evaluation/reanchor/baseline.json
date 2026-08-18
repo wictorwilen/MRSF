@@ -1026,12 +1026,12 @@
       "actual": {
         "commentId": "runbook-intro",
         "status": "fuzzy",
-        "score": 0.8805128205128205,
+        "score": 0.95,
         "newLine": 3,
         "newEndLine": 3,
         "anchoredText": "Use this runbook for scheduled and emergency production releases.",
         "previousSelectedText": "Use this runbook for scheduled production releases.",
-        "reason": "Source revision context projects the edited anchor range."
+        "reason": "Probable anchor: revision projection and Markdown context agree (confidence 0.950)."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -1098,12 +1098,12 @@
       "actual": {
         "commentId": "runbook-rollback-condition",
         "status": "fuzzy",
-        "score": 0.9629310344827586,
+        "score": 0.95,
         "newLine": 35,
         "newEndLine": 35,
         "anchoredText": "Rollback when two consecutive regional health checks fail.",
         "previousSelectedText": "Rollback when two consecutive health checks fail.",
-        "reason": "Source revision context projects the edited anchor range."
+        "reason": "Probable anchor: revision projection and Markdown context agree (confidence 0.950)."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -1206,12 +1206,12 @@
       "actual": {
         "commentId": "architecture-reaper",
         "status": "fuzzy",
-        "score": 0.8171428571428571,
+        "score": 0.9188361344537815,
         "newLine": 27,
         "newEndLine": 27,
         "anchoredText": "The reaper returns expired assignments to the correct queue partition.",
         "previousSelectedText": "The reaper returns expired assignments to the queue.",
-        "reason": "Source revision context projects the edited anchor range."
+        "reason": "Probable anchor: revision projection and Markdown context agree (confidence 0.919)."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -1260,12 +1260,12 @@
       "actual": {
         "commentId": "guide-intro",
         "status": "fuzzy",
-        "score": 0.9413333333333332,
+        "score": 0.95,
         "newLine": 3,
         "newEndLine": 3,
         "anchoredText": "This guide explains how teams organize and govern documents in a workspace.",
         "previousSelectedText": "This guide explains how teams organize documents in a workspace.",
-        "reason": "Source revision context projects the edited anchor range."
+        "reason": "Probable anchor: revision projection and Markdown context agree (confidence 0.950)."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
@@ -1384,12 +1384,12 @@
       "actual": {
         "commentId": "guide-archive-retention",
         "status": "fuzzy",
-        "score": 0.9835164835164835,
+        "score": 0.9400494505494505,
         "newLine": 41,
         "newEndLine": 41,
         "anchoredText": "Archived workspaces remain readable for ninety days.",
         "previousSelectedText": "Archived workspaces remain readable for thirty days.",
-        "reason": "Source revision context projects the edited anchor range."
+        "reason": "Probable anchor: revision projection and Markdown context agree (confidence 0.940)."
       },
       "statusCorrect": true,
       "rangeCorrect": true,
