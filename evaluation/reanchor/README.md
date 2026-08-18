@@ -79,3 +79,32 @@ It is informational because timings depend on hardware and runtime conditions;
 
 Subsequent algorithm checkpoints may add informational comparison reports under
 `reports/`. They never replace the deterministic per-case baseline.
+
+## CI gates
+
+`gates.json` defines two gate classes:
+
+- **correctness** gates enforce the seeded pass-rate floor and zero incorrect
+  confident relocations without considering timing;
+- **performance** gates additionally enforce broad per-comment, p95, and
+  worst-case ceilings intended to catch algorithmic regressions rather than
+  normal runner variance.
+
+`.github/workflows/reanchor-evaluation.yml` runs the committed TypeScript
+baseline, all seeded correctness profiles, and Python corpus parity for relevant
+pull requests and pushes. Weekly and manual runs execute each performance
+profile separately and retain its JSON report as a workflow artifact.
+
+Run either gate locally from `cli/`:
+
+```bash
+npm run eval:reanchor:profile -- \
+  --profile medium \
+  --gate ../evaluation/reanchor/gates.json \
+  --gate-mode correctness
+
+npm run eval:reanchor:profile -- \
+  --profile stress \
+  --gate ../evaluation/reanchor/gates.json \
+  --gate-mode performance
+```

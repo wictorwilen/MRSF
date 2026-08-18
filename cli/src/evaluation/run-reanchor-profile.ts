@@ -5,6 +5,11 @@ import path from "node:path";
 import process from "node:process";
 import { generateEvaluationCases } from "./generate-reanchor-cases.js";
 import { evaluateCases, type LoadedEvaluationCase } from "./reanchor-eval.js";
+import {
+  evaluateReanchorGate,
+  type ReanchorGateMode,
+  type ReanchorGatePolicy,
+} from "./reanchor-gates.js";
 
 interface WorkloadConfig {
   seed: number;
@@ -64,6 +69,14 @@ async function main(): Promise<void> {
     },
   };
 
+  let gateFailures: string[] = [];
+  if (options.gatePath) {
+    const policy = JSON.parse(
+      await readFile(path.resolve(options.gatePath), "utf8"),
+    ) as ReanchorGatePolicy;
+    gateFailures = evaluateReanchorGate(report, policy, options.gateMode);
+  }
+
   if (options.json) {
     console.log(JSON.stringify(report, null, 2));
   } else {
@@ -81,16 +94,27 @@ async function main(): Promise<void> {
       + `${report.timingMs.p95.toFixed(3)} ms p95`,
     );
   }
+
+  if (gateFailures.length > 0) {
+    throw new Error(
+      `Reanchoring ${options.gateMode} gate failed for ${options.profile}:\n`
+      + gateFailures.map((failure) => `- ${failure}`).join("\n"),
+    );
+  }
 }
 
 function parseArguments(args: string[]): {
   profile: string;
   workloadsPath: string;
   json: boolean;
+  gatePath?: string;
+  gateMode: ReanchorGateMode;
 } {
   let profile = "small";
   let workloadsPath = "../evaluation/reanchor/workloads.json";
   let json = false;
+  let gatePath: string | undefined;
+  let gateMode: ReanchorGateMode = "correctness";
 
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
@@ -100,12 +124,20 @@ function parseArguments(args: string[]): {
       profile = args[index += 1];
     } else if (argument === "--workloads" && args[index + 1]) {
       workloadsPath = args[index += 1];
+    } else if (argument === "--gate" && args[index + 1]) {
+      gatePath = args[index += 1];
+    } else if (
+      argument === "--gate-mode"
+      && (args[index + 1] === "correctness"
+        || args[index + 1] === "performance")
+    ) {
+      gateMode = args[index += 1] as ReanchorGateMode;
     } else {
       throw new Error(`Unknown or incomplete argument: ${argument}`);
     }
   }
 
-  return { profile, workloadsPath, json };
+  return { profile, workloadsPath, json, gatePath, gateMode };
 }
 
 function assertWorkloadFile(value: unknown): asserts value is WorkloadFile {

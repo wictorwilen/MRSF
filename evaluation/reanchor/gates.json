@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "correctness": {
+    "small": {
+      "minimum_pass_rate": 0.802,
+      "maximum_incorrect_confident_relocations": 0
+    },
+    "medium": {
+      "minimum_pass_rate": 0.974,
+      "maximum_incorrect_confident_relocations": 0
+    },
+    "large": {
+      "minimum_pass_rate": 0.9935,
+      "maximum_incorrect_confident_relocations": 0
+    },
+    "stress": {
+      "minimum_pass_rate": 0.997,
+      "maximum_incorrect_confident_relocations": 0
+    }
+  },
+  "performance": {
+    "small": {
+      "maximum_ms_per_comment": 2,
+      "maximum_p95_comment_ms": 10,
+      "maximum_single_comment_ms": 250
+    },
+    "medium": {
+      "maximum_ms_per_comment": 2,
+      "maximum_p95_comment_ms": 10,
+      "maximum_single_comment_ms": 250
+    },
+    "large": {
+      "maximum_ms_per_comment": 5,
+      "maximum_p95_comment_ms": 15,
+      "maximum_single_comment_ms": 250
+    },
+    "stress": {
+      "maximum_ms_per_comment": 12,
+      "maximum_p95_comment_ms": 30,
+      "maximum_single_comment_ms": 250
+    }
+  }
+}
