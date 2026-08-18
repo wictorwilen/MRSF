@@ -168,7 +168,10 @@ matches = mrsf.fuzzy_search("search text", ["line 1", "line 2", "line 3"])
 
 The Python implementation uses the same revision projection, bounded candidate
 retrieval, Markdown structure, global reconciliation, and confidence calibration
-as the TypeScript and browser implementations.
+as the TypeScript implementation. Browser integrations can use the same pure
+building blocks when they retain a source document snapshot. See the
+[non-normative implementation guide](https://sidemark.org/guide/reanchoring)
+for the complete pipeline and runtime boundaries.
 
 ### Discovery
 

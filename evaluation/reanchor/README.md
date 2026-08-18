@@ -1,5 +1,8 @@
 # Reanchoring evaluation corpus
 
+This corpus evaluates the repository's non-normative
+[Anchor Mesh implementation](../../../docs/guide/reanchoring.md).
+
 The corpus records desired reanchoring outcomes independently of the current
 implementation. A case contains source and target Markdown, original comment
 anchors, and the acceptable target status and ranges.

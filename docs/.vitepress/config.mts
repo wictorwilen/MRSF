@@ -220,6 +220,7 @@ export default withMermaid(defineConfig({
             { text: "Quick Start", link: "/guide/quick-start" },
             { text: "Examples", link: "/guide/examples" },
             { text: "Agent Skill", link: "/guide/agent-skill" },
+            { text: "Reanchoring Implementation", link: "/guide/reanchoring" },
             { text: "Python CLI & SDK", link: "/guide/python" },
             { text: "CI/CD Integration", link: "/guide/ci-integration" },
             { text: "FAQ", link: "/guide/faq" },
