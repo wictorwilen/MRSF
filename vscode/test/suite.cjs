@@ -5,11 +5,29 @@ const vscode = require("vscode");
 const { chromium } = require("playwright-core");
 const path = require("node:path");
 
+async function clickPreviewControl(preview, selector, keyboard = false) {
+  await preview.evaluate((selector) => {
+    window.mrsfTrustedClick = null;
+    document.addEventListener("click", (event) => {
+      window.mrsfTrustedClick = {
+        trusted: event.isTrusted,
+        matches: event.target instanceof Element && !!event.target.closest(selector),
+      };
+    }, { capture: true, once: true });
+  }, selector);
+  if (keyboard) await preview.locator(selector).first().press("Enter");
+  else await preview.locator(selector).first().click();
+  assert.deepEqual(await preview.evaluate(() => window.mrsfTrustedClick), { trusted: true, matches: true },
+    `Preview must receive a trusted ${selector} click, keyboard=${keyboard}`);
+}
+
 async function verifyTooltipLayout(preview, page, artifacts) {
   const owner = await preview.frameElement();
   const originalStyle = await owner.getAttribute("style");
   const originalData = await preview.locator("#mrsf-comment-data").getAttribute("data-comments");
   const originalGutter = await preview.locator("#mrsf-comment-data").getAttribute("data-gutter-position");
+  const originalViewport = await preview.evaluate(() => ({ width: innerWidth, height: innerHeight }));
+  const originalText = await preview.locator(".mrsf-comment-body").first().textContent();
   try {
     for (const width of [650, 260]) {
       for (const gutter of ["left", "right"]) {
@@ -54,6 +72,11 @@ async function verifyTooltipLayout(preview, page, artifacts) {
       data.setAttribute("data-comments", originalData);
       data.setAttribute("data-gutter-position", originalGutter);
     }, { originalData, originalGutter });
+    await preview.waitForFunction(({ width, height, gutter, text }) => innerWidth === width && innerHeight === height
+      && document.querySelector(".mrsf-badge")?.dataset.gutterPosition === gutter
+      && document.querySelector(".mrsf-comment-body")?.textContent === text,
+    { ...originalViewport, gutter: originalGutter, text: originalText });
+    await preview.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   }
 }
 
@@ -128,19 +151,7 @@ async function verifyInteractions(target) {
                 await page.screenshot({ path: path.join(artifacts, "badge-hover.png") });
                 hoverVerified = true;
               }
-              await frame.evaluate((selector) => {
-                window.mrsfTrustedClick = null;
-                document.addEventListener("click", (event) => {
-                  window.mrsfTrustedClick = {
-                    trusted: event.isTrusted,
-                    matches: event.target instanceof Element && !!event.target.closest(selector),
-                  };
-                }, { capture: true, once: true });
-              }, selector);
-              if (keyboard) await frame.locator(selector).first().press("Enter");
-              else await frame.locator(selector).first().click();
-              assert.deepEqual(await frame.evaluate(() => window.mrsfTrustedClick), { trusted: true, matches: true },
-                `Preview must receive a trusted ${selector} click, keyboard=${keyboard}`);
+              await clickPreviewControl(frame, selector, keyboard);
               preview = frame;
               return true;
             }
@@ -186,7 +197,7 @@ async function verifyInteractions(target) {
     await page.screenshot({ path: path.join(artifacts, "preview-click.png") });
     await verifyTooltipLayout(preview, page, artifacts);
 
-    await preview.locator('.mrsf-add-button[data-line="1"]').click();
+    await clickPreviewControl(preview, '.mrsf-add-button[data-line="1"]');
     const commentInput = page.getByPlaceholder("Enter your comment...", { exact: true });
     await commentInput.fill("Added from preview plus");
     await commentInput.press("Enter");
