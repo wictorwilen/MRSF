@@ -26,7 +26,7 @@ export class MrsfHoverProvider implements vscode.HoverProvider, vscode.Disposabl
     const mrsfDoc = this.store.get(document.uri);
     if (!mrsfDoc) return null;
 
-    const config = vscode.workspace.getConfiguration("sidemark");
+    const config = vscode.workspace.getConfiguration("sidemark", document.uri);
     if (!config.get<boolean>("commentsEnabled", true)) {
       return null;
     }
@@ -52,13 +52,13 @@ export class MrsfHoverProvider implements vscode.HoverProvider, vscode.Disposabl
     if (matchingRoots.length === 0) return null;
 
     const md = new vscode.MarkdownString("", true);
-    md.isTrusted = true;
+    md.isTrusted = { enabledCommands: ["mrsf.resolveComment", "mrsf.unresolveComment", "mrsf.replyToComment", "mrsf.deleteComment"] };
     md.supportHtml = true;
 
     for (let i = 0; i < matchingRoots.length; i++) {
       if (i > 0) md.appendMarkdown("\n---\n\n");
       const root = matchingRoots[i];
-      this.renderThread(md, root, mrsfDoc.comments);
+      this.renderThread(md, root, mrsfDoc.comments, document.uri, position);
     }
 
     return new vscode.Hover(md);
@@ -68,6 +68,8 @@ export class MrsfHoverProvider implements vscode.HoverProvider, vscode.Disposabl
     md: vscode.MarkdownString,
     root: Comment,
     allComments: Comment[],
+    documentUri: vscode.Uri,
+    position: vscode.Position,
   ): void {
     // Root comment
     this.renderComment(md, root, true);
@@ -87,7 +89,7 @@ export class MrsfHoverProvider implements vscode.HoverProvider, vscode.Disposabl
 
     // Actions
     md.appendMarkdown("\n");
-    const idArg = encodeURIComponent(JSON.stringify(root.id));
+    const idArg = encodeURIComponent(JSON.stringify([root.id, documentUri.toString(), [position.line, position.character]]));
     if (!root.resolved) {
       md.appendMarkdown(
         `[$(check) Resolve](command:mrsf.resolveComment?${idArg}) `,

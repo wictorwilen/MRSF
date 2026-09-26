@@ -19,7 +19,7 @@ describe("FileWatcher", () => {
   it("reloads the document when a sidecar changes externally", async () => {
     const store = {
       isSaving: vi.fn().mockReturnValue(false),
-      load: vi.fn(),
+      reloadSidecar: vi.fn().mockResolvedValue(undefined),
       invalidateBySidecarPath: vi.fn(),
       invalidate: vi.fn(),
     };
@@ -28,13 +28,13 @@ describe("FileWatcher", () => {
 
     __mock.fileWatchers[0].fireChange(Uri.file("/tmp/doc.md.review.yaml"));
 
-    expect(store.load).toHaveBeenCalledWith(Uri.file("/tmp/doc.md"));
+    expect(store.reloadSidecar).toHaveBeenCalledWith(Uri.file("/tmp/doc.md.review.yaml"));
   });
 
   it("skips reloads for sidecars being saved by the extension", () => {
     const store = {
       isSaving: vi.fn().mockReturnValue(true),
-      load: vi.fn(),
+      reloadSidecar: vi.fn().mockResolvedValue(undefined),
       invalidateBySidecarPath: vi.fn(),
       invalidate: vi.fn(),
     };
@@ -43,13 +43,13 @@ describe("FileWatcher", () => {
 
     __mock.fileWatchers[0].fireCreate(Uri.file("/tmp/doc.md.review.yaml"));
 
-    expect(store.load).not.toHaveBeenCalled();
+    expect(store.reloadSidecar).not.toHaveBeenCalled();
   });
 
   it("invalidates by sidecar path and markdown uri on delete", () => {
     const store = {
       isSaving: vi.fn().mockReturnValue(false),
-      load: vi.fn(),
+      reloadSidecar: vi.fn().mockResolvedValue(undefined),
       invalidateBySidecarPath: vi.fn(),
       invalidate: vi.fn(),
     };
@@ -59,7 +59,7 @@ describe("FileWatcher", () => {
     __mock.fileWatchers[0].fireDelete(Uri.file("/tmp/doc.md.review.yaml"));
     __mock.fileWatchers[1].fireDelete(Uri.file("/tmp/doc.md"));
 
-    expect(store.invalidateBySidecarPath).toHaveBeenCalledWith("/tmp/doc.md.review.yaml");
+    expect(store.reloadSidecar).toHaveBeenCalledWith(Uri.file("/tmp/doc.md.review.yaml"));
     expect(store.invalidate).toHaveBeenCalledWith(Uri.file("/tmp/doc.md"));
   });
 });

@@ -32,6 +32,18 @@ function makeEditor(uri: Uri) {
 }
 
 describe("InlineDecorationProvider", () => {
+  it("updates every visible source editor while preview has focus", () => {
+    const first = makeEditor(Uri.file("/workspace/first.md"));
+    const second = makeEditor(Uri.file("/workspace/second.md"));
+    const changed = new EventEmitter<Uri>();
+    const provider = new InlineDecorationProvider({ onDidChange: changed.event, get: () => null } as never);
+    vscode.window.visibleTextEditors = [first, second] as never;
+    changed.fire(first.document.uri);
+    expect(first.setDecorations).toHaveBeenCalledTimes(3);
+    expect(second.setDecorations).toHaveBeenCalledTimes(3);
+    provider.dispose();
+  });
+
   beforeEach(() => {
     __mock.reset();
     vi.clearAllMocks();

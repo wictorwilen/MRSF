@@ -11,7 +11,7 @@ vi.mock("../../util/positions.js", () => ({
   mrsfToVscodeRange: (...args: unknown[]) => mockMrsfToVscodeRange(...args),
 }));
 
-vi.mock("../../extension.js", () => ({
+vi.mock("../../util/previewNavigation.js", () => ({
   setPreviewScrollTarget: (...args: unknown[]) => mockSetPreviewScrollTarget(...args),
 }));
 
@@ -42,7 +42,7 @@ function createWebviewView() {
     webviewView: { webview },
     emitMessage: async (message: unknown) => {
       if (handler) {
-        await handler(message);
+        await handler({ documentUri: Uri.file("/workspace/doc.md").toString(), ...message as object });
       }
     },
     postedMessages: messages,
@@ -65,7 +65,7 @@ function makeMarkdownEditor(uri: Uri, selection?: vscode.Selection) {
 }
 
 function createStore(overrides: Record<string, unknown> = {}) {
-  return {
+  const store = {
     onDidChange: vi.fn().mockImplementation(() => new vscode.Disposable()),
     get: vi.fn(),
     load: vi.fn(),
@@ -77,9 +77,32 @@ function createStore(overrides: Record<string, unknown> = {}) {
     findComment: vi.fn(),
     ...overrides,
   };
+  return { ...store, ensureLoaded: vi.fn((uri: Uri) => store.load(uri)) };
 }
 
 describe("SidebarViewProvider", () => {
+  it("captures the modern preview document before confirmation and rejects stale messages", async () => {
+    __mock.reset();
+    const first = Uri.file("/workspace/doc.md");
+    const second = Uri.file("/workspace/second.md");
+    __mock.emitActiveTab(new vscode.TabInputCustom(first, "vscode.markdown.preview.editor"));
+    const store = createStore({ get: vi.fn().mockReturnValue({ comments: [] }) });
+    const provider = new SidebarViewProvider(store as never, Uri.file("/workspace/ext"));
+    const view = createWebviewView();
+    provider.resolveWebviewView(view.webviewView as never, {} as never, {} as never);
+    const confirmation = vi.spyOn(vscode.window, "showWarningMessage").mockImplementationOnce(async () => {
+      __mock.emitActiveTab(new vscode.TabInputCustom(second, "vscode.markdown.preview.editor"));
+      return "Delete" as never;
+    });
+    await view.emitMessage({ type: "delete", commentId: "same-id" });
+    expect(store.deleteComment).toHaveBeenCalledWith(first, "same-id");
+    expect(store.get).toHaveBeenCalledWith(second);
+    await view.emitMessage({ type: "resolve", commentId: "same-id" });
+    expect(store.resolveComment).not.toHaveBeenCalled();
+    confirmation.mockRestore();
+    provider.dispose();
+  });
+
   beforeEach(() => {
     __mock.reset();
     vi.clearAllMocks();
@@ -88,6 +111,28 @@ describe("SidebarViewProvider", () => {
     __mock.configuration.set("sidemark.commentsEnabled", true);
     __mock.configuration.set("sidemark.showResolved", true);
     __mock.configuration.set("sidemark.author", "Tester");
+  });
+
+  it("renders distinct highlight requests for repeated clicks on the same comment", async () => {
+    const uri = Uri.file("/workspace/doc.md");
+    __mock.emitActiveTab(new vscode.TabInputCustom(uri, "vscode.markdown.preview.editor"));
+    const store = createStore({ get: vi.fn().mockReturnValue({ comments: [] }) });
+    const provider = new SidebarViewProvider(store as never, Uri.file("/workspace/ext"));
+    const view = createWebviewView();
+    provider.resolveWebviewView(view.webviewView as never, {} as never, {} as never);
+
+    await provider.revealComment(uri, "c1");
+    const firstHtml = view.webviewView.webview.html;
+    await provider.revealComment(uri, "c1");
+
+    expect(firstHtml).toContain('data-highlight-request-id="1"');
+    expect(view.webviewView.webview.html).toContain('data-highlight-request-id="2"');
+    expect(view.webviewView.webview.html).toContain('data-highlight-comment-id="c1"');
+    expect(view.postedMessages).toEqual([
+      { type: "highlightComment", commentId: "c1" },
+      { type: "highlightComment", commentId: "c1" },
+    ]);
+    provider.dispose();
   });
 
   it("renders comments for the active markdown document and persists the doc uri", async () => {
@@ -378,7 +423,7 @@ describe("SidebarViewProvider", () => {
 
     await (provider as any).navigateToComment("c1");
 
-    expect(mockSetPreviewScrollTarget).toHaveBeenCalledWith(9);
+    expect(mockSetPreviewScrollTarget).toHaveBeenCalledWith(uri, 9);
     expect(__mock.executedCommands).toContainEqual({ id: "markdown.preview.refresh", args: [] });
   });
 
@@ -424,6 +469,21 @@ describe("SidebarViewProvider", () => {
     provider.resolveWebviewView(view.webviewView as never, {} as never, {} as never);
 
     expect(view.webviewView.webview.html).toContain("No Markdown file open");
+  });
+
+  it("identifies unsupported Markdown Editor instead of reporting no open document", () => {
+    const uri = Uri.file("/workspace/doc.md");
+    __mock.emitActiveTab(new vscode.TabInputCustom(uri, "vscode.markdown.editor"));
+    const store = createStore();
+    const provider = new SidebarViewProvider(store as never, Uri.file("/workspace/ext"));
+    const view = createWebviewView();
+
+    provider.resolveWebviewView(view.webviewView as never, {} as never, {} as never);
+
+    expect(view.webviewView.webview.html).toContain("Sidemark comments are not supported in Markdown Editor.");
+    expect(view.webviewView.webview.html).not.toContain("No Markdown file open");
+    expect(store.ensureLoaded).not.toHaveBeenCalled();
+    provider.dispose();
   });
 
   it("routes init, reanchor, resolve, unresolve and navigate messages", async () => {

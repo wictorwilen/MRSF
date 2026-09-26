@@ -2,9 +2,7 @@
  * Extension entry point — activates and wires all MRSF components.
  */
 import * as vscode from "vscode";
-import * as fs from "node:fs";
 import * as path from "node:path";
-import { parseSidecarContent, type MrsfDocument } from "@mrsf/cli";
 import { SidecarStore } from "./store/SidecarStore.js";
 import { FileWatcher } from "./store/FileWatcher.js";
 import { GutterDecorationProvider } from "./decorations/GutterDecorationProvider.js";
@@ -23,58 +21,26 @@ import {
 } from "./commands/resolveReply.js";
 import { ReanchorController } from "./reanchor/ReanchorController.js";
 import { MrsfStatusBar } from "./statusBar.js";
+import { getPreviewScrollTarget } from "./util/previewNavigation.js";
+import { onDidChangeDocumentContext, resolveDocumentUri } from "./util/documentContext.js";
+export { setPreviewScrollTarget } from "./util/previewNavigation.js";
 
-function loadSidecarDocument(docPath: string): MrsfDocument | null {
-  if (!docPath) return null;
-
-  const yamlPath = docPath + ".review.yaml";
-  const jsonPath = docPath + ".review.json";
-
-  let raw: string | null = null;
-  let hint: string | null = null;
-
-  try {
-    if (fs.existsSync(yamlPath)) {
-      raw = fs.readFileSync(yamlPath, "utf-8");
-      hint = yamlPath;
-    } else if (fs.existsSync(jsonPath)) {
-      raw = fs.readFileSync(jsonPath, "utf-8");
-      hint = jsonPath;
-    }
-  } catch {
-    return null;
-  }
-
-  if (!raw) return null;
-
-  try {
-    return parseSidecarContent(raw, hint ?? undefined);
-  } catch {
-    return null;
-  }
-}
-
-function resolvePreviewDocumentPath(env: unknown): string | null {
+function resolvePreviewDocumentUri(env: unknown): vscode.Uri | null {
   if (!env || typeof env !== "object") return null;
   const currentDocument = (env as { currentDocument?: unknown }).currentDocument;
   if (!currentDocument) return null;
 
   if (typeof currentDocument === "string") {
-    return currentDocument.startsWith("file://")
-      ? decodeURIComponent(currentDocument.replace(/^file:\/\//, ""))
-      : currentDocument;
+    const uri = path.isAbsolute(currentDocument)
+      ? vscode.Uri.file(currentDocument)
+      : vscode.Uri.parse(currentDocument);
+    return uri.scheme === "file" && path.isAbsolute(uri.fsPath) ? uri : null;
   }
 
-  if (typeof currentDocument === "object" && currentDocument && "fsPath" in currentDocument) {
-    const fsPath = (currentDocument as { fsPath?: unknown }).fsPath;
-    return typeof fsPath === "string" ? fsPath : null;
-  }
-
-  if (typeof (currentDocument as { toString?: () => string }).toString === "function") {
-    const value = currentDocument.toString();
-    return value.startsWith("file://")
-      ? decodeURIComponent(value.replace(/^file:\/\//, ""))
-      : value;
+  if (typeof currentDocument === "object" && "fsPath" in currentDocument) {
+    const uri = currentDocument as vscode.Uri;
+    return (!uri.scheme || uri.scheme === "file") && typeof uri.fsPath === "string" && path.isAbsolute(uri.fsPath)
+      ? vscode.Uri.file(uri.fsPath) : null;
   }
 
   return null;
@@ -88,28 +54,13 @@ function escapeAttribute(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-// ── Preview scroll-target (sidebar → preview navigation) ─────────
-// When the sidebar needs to scroll the fullscreen preview to a
-// specific line, it sets this value and triggers a preview refresh.
-// The markdown-it renderer reads & clears it, embedding it in the
-// data div so the preview script can scroll to it.
-let _previewScrollTargetLine: number | null = null;
-
-/**
- * Set a line number that the preview should scroll to on next render.
- * Call `markdown.preview.refresh` after this to trigger the render.
- */
-export function setPreviewScrollTarget(line: number): void {
-  _previewScrollTargetLine = line;
-}
-
-function getPreviewOptions(): {
+function getPreviewOptions(uri?: vscode.Uri): {
   gutterPosition: "left" | "right";
   gutterForInline: boolean;
   inlineHighlights: boolean;
   lineHighlight: boolean;
 } {
-  const config = vscode.workspace.getConfiguration("sidemark");
+  const config = vscode.workspace.getConfiguration("sidemark", uri);
   const gutterPosition = config.get<"left" | "right">("previewGutterPosition", "left");
 
   return {
@@ -118,10 +69,6 @@ function getPreviewOptions(): {
     inlineHighlights: config.get<boolean>("previewInlineHighlights", true),
     lineHighlight: config.get<boolean>("previewLineHighlight", true),
   };
-}
-
-function areCommentsEnabled(): boolean {
-  return vscode.workspace.getConfiguration("sidemark").get<boolean>("commentsEnabled", true);
 }
 
 async function handleExtensionUri(uri: vscode.Uri): Promise<void> {
@@ -133,6 +80,7 @@ async function handleExtensionUri(uri: vscode.Uri): Promise<void> {
   let documentUri: vscode.Uri;
   try {
     documentUri = vscode.Uri.parse(documentUriRaw);
+    if (documentUri.scheme !== "file") return;
   } catch {
     return;
   }
@@ -147,18 +95,9 @@ async function handleExtensionUri(uri: vscode.Uri): Promise<void> {
   if (action !== "addLineComment") return;
 
   const lineRaw = params.get("line");
-  const line = lineRaw ? parseInt(lineRaw, 10) : NaN;
-  const doc = await vscode.workspace.openTextDocument(documentUri);
-  const editor = await vscode.window.showTextDocument(doc, { preserveFocus: false });
-
-  if (!Number.isNaN(line) && line > 0) {
-    const lineIndex = Math.max(0, Math.min(line - 1, editor.document.lineCount - 1));
-    const pos = new vscode.Position(lineIndex, 0);
-    editor.selection = new vscode.Selection(pos, pos);
-    editor.revealRange(new vscode.Range(pos, pos), vscode.TextEditorRevealType.InCenter);
-  }
-
-  await vscode.commands.executeCommand("mrsf.addLineComment", Number.isNaN(line) ? undefined : line, documentUri);
+  const line = Number(lineRaw);
+  if (!Number.isSafeInteger(line) || line < 1) return;
+  await vscode.commands.executeCommand("mrsf.addLineComment", line, documentUri);
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -233,8 +172,9 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand(
       "mrsf.navigateToComment",
-      async (commentId?: string) => {
-        const active = await store.getForActiveEditor();
+      async (commentId?: string, documentUri?: string | vscode.Uri) => {
+        const explicitUri = typeof documentUri === "string" ? vscode.Uri.parse(documentUri) : documentUri;
+        const active = await store.getForActiveOrVisible(explicitUri);
         if (!active) return;
         if (!commentId) return;
         const comment = store.findComment(active.uri, commentId);
@@ -254,26 +194,8 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Refresh comments
   context.subscriptions.push(
-    vscode.commands.registerCommand("mrsf.refreshComments", async () => {
-      // Try active editor first, then fall back to visible/open markdown docs
-      // (preview mode has no activeTextEditor).
-      let docUri: vscode.Uri | undefined;
-      const editor = vscode.window.activeTextEditor;
-      if (editor && editor.document.languageId === "markdown") {
-        docUri = editor.document.uri;
-      } else {
-        const mdEditor = vscode.window.visibleTextEditors.find(
-          (e) => e.document.languageId === "markdown",
-        );
-        if (mdEditor) {
-          docUri = mdEditor.document.uri;
-        } else {
-          const mdDoc = vscode.workspace.textDocuments.find(
-            (d) => d.languageId === "markdown",
-          );
-          if (mdDoc) docUri = mdDoc.uri;
-        }
-      }
+    vscode.commands.registerCommand("mrsf.refreshComments", async (explicitUri?: vscode.Uri) => {
+      const docUri = explicitUri ?? resolveDocumentUri();
       if (!docUri) return;
 
       await statusBar.withProgress("Refreshing...", () =>
@@ -290,6 +212,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Helper: update status bar comment count
   function updateStatusCount(uri: vscode.Uri): void {
+    if (resolveDocumentUri()?.toString() !== uri.toString()) return;
     const doc = store.get(uri);
     statusBar.setCommentCount(doc ? doc.comments.length : 0);
   }
@@ -298,10 +221,10 @@ export function activate(context: vscode.ExtensionContext) {
   async function checkStaleness(uri: vscode.Uri): Promise<void> {
     try {
       const stale = await store.checkStaleness(uri);
-      statusBar.setStaleCount(stale);
+      if (resolveDocumentUri()?.toString() === uri.toString()) statusBar.setStaleCount(stale);
     } catch {
       // Best effort — don't fail the extension on git errors
-      statusBar.setStaleCount(0);
+      if (resolveDocumentUri()?.toString() === uri.toString()) statusBar.setStaleCount(0);
     }
   }
 
@@ -428,36 +351,34 @@ export function activate(context: vscode.ExtensionContext) {
     }),
   );
 
-  // ── Initial load ──────────────────────────────────────────
-  // Load sidecar for current active editor if it's Markdown
-  const activeEditor = vscode.window.activeTextEditor;
-  if (activeEditor && activeEditor.document.languageId === "markdown") {
-    statusBar.withProgress("Loading...", () =>
-      store.load(activeEditor.document.uri),
-    ).then(() => {
-      gutterProvider.updateActiveEditor();
-      inlineProvider.updateActiveEditor();
-      updateStatusCount(activeEditor.document.uri);
-      checkStaleness(activeEditor.document.uri);
-    });
+  async function loadCurrentDocument(): Promise<void> {
+    const uri = resolveDocumentUri();
+    if (!uri) {
+      statusBar.setCommentCount(0);
+      statusBar.setStaleCount(0);
+      return;
+    }
+    await statusBar.withProgress("Loading...", () => store.ensureLoaded(uri));
+    gutterProvider.updateActiveEditor();
+    inlineProvider.updateActiveEditor();
+    updateStatusCount(uri);
+    void checkStaleness(uri);
   }
 
-  // Auto-load when switching editors
+  async function loadVisibleDocuments(editors: readonly vscode.TextEditor[]): Promise<void> {
+    for (const editor of editors) {
+      if (editor.document.languageId !== "markdown") continue;
+      await store.ensureLoaded(editor.document.uri);
+      gutterProvider.update(editor);
+      inlineProvider.update(editor);
+    }
+  }
+
+  void loadCurrentDocument();
+  void loadVisibleDocuments(vscode.window.visibleTextEditors);
   context.subscriptions.push(
-    vscode.window.onDidChangeActiveTextEditor(async (editor) => {
-      if (editor && editor.document.languageId === "markdown") {
-        await statusBar.withProgress("Loading...", () =>
-          store.load(editor.document.uri),
-        );
-        gutterProvider.update(editor);
-        inlineProvider.update(editor);
-        updateStatusCount(editor.document.uri);
-        checkStaleness(editor.document.uri);
-      } else {
-        // Clear stale warning when leaving markdown files
-        statusBar.setStaleCount(0);
-      }
-    }),
+    onDidChangeDocumentContext(() => { void loadCurrentDocument(); }),
+    vscode.window.onDidChangeVisibleTextEditors((editors) => { void loadVisibleDocuments(editors); }),
   );
 
   // ── Markdown preview integration ──────────────────────────
@@ -482,24 +403,25 @@ export function activate(context: vscode.ExtensionContext) {
         _options: any,
         env: any,
       ) => {
-        const config = vscode.workspace.getConfiguration("sidemark");
-        if (!areCommentsEnabled() || !config.get<boolean>("previewComments", true)) {
+        const uri = resolvePreviewDocumentUri(env);
+        if (!uri) return "";
+        const config = vscode.workspace.getConfiguration("sidemark", uri);
+        if (!config.get<boolean>("commentsEnabled", true) || !config.get<boolean>("previewComments", true)) {
           return "";
         }
 
-        const docPath = resolvePreviewDocumentPath(env);
-        if (!docPath || !path.isAbsolute(docPath)) return "";
+        const review = store.get(uri);
+        if (store.getLoadState(uri) === "unloaded") void store.ensureLoaded(uri);
 
-        const cached = store.get(vscode.Uri.file(docPath));
-        const review = cached ?? loadSidecarDocument(docPath);
-        if (!review || review.comments.length === 0) {
-          return "";
-        }
-
-        const previewOptions = getPreviewOptions();
-        const payload = escapeAttribute(JSON.stringify(review.comments));
-        const documentUri = escapeAttribute(vscode.Uri.file(docPath).toString());
+        const previewOptions = getPreviewOptions(uri);
+        const comments = review?.comments ?? [];
+        const payload = escapeAttribute(JSON.stringify(comments));
+        const documentUri = escapeAttribute(uri.toString());
         return `<div id="mrsf-comment-data"
+          data-version="1"
+          data-load-state="${store.getLoadState(uri)}"
+          data-uri-scheme="${escapeAttribute(vscode.env.uriScheme)}"
+          data-show-resolved="${config.get<boolean>("showResolved", true)}"
           data-comments="${payload}"
           data-document-uri="${documentUri}"
           data-gutter-position="${previewOptions.gutterPosition}"
@@ -518,17 +440,19 @@ export function activate(context: vscode.ExtensionContext) {
         _tokens: any,
         _idx: number,
         _options: any,
-        _env: any,
+        env: any,
       ) => {
-        const config = vscode.workspace.getConfiguration("sidemark");
+        const uri = resolvePreviewDocumentUri(env);
+        const config = vscode.workspace.getConfiguration("sidemark", uri ?? undefined);
+        const target = uri ? getPreviewScrollTarget(uri) : undefined;
         let scrollAttr = "";
-        if (_previewScrollTargetLine != null) {
-          scrollAttr = ` data-scroll-to-line="${_previewScrollTargetLine}"`;
-          _previewScrollTargetLine = null;
+        if (target) {
+          scrollAttr = ` data-scroll-to-line="${target.line}" data-scroll-request-id="${target.id}"`;
         }
 
         return `<div id="mrsf-preview-meta"
-          data-comments-enabled="${areCommentsEnabled()}"
+          data-document-uri="${escapeAttribute(uri?.toString() ?? "")}"
+          data-comments-enabled="${config.get<boolean>("commentsEnabled", true)}"
           data-preview-comments="${config.get<boolean>("previewComments", true)}"
           ${scrollAttr}
           aria-hidden="true"></div>`;

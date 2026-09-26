@@ -1,6 +1,9 @@
 type Listener<T> = (event: T) => unknown;
 
 class Disposable {
+  static from(...disposables: Disposable[]): Disposable {
+    return new Disposable(() => disposables.forEach((item) => item.dispose()));
+  }
   constructor(private readonly callback: () => void = () => {}) {}
 
   dispose(): void {
@@ -105,6 +108,11 @@ export class Range {
     const endsAfter = position.line < this.end.line
       || (position.line === this.end.line && position.character <= this.end.character);
     return startsBefore && endsAfter;
+  }
+
+  isEqual(other: Range): boolean {
+    return this.start.line === other.start.line && this.start.character === other.start.character
+      && this.end.line === other.end.line && this.end.character === other.end.character;
   }
 }
 
@@ -307,7 +315,20 @@ export const ConfigurationTarget = {
   Workspace: 2,
 } as const;
 
-export class TabInputWebview {}
+export class TabInputWebview {
+  constructor(public readonly viewType = "mainThreadWebview-markdown.preview") {}
+}
+
+export class TabInputCustom {
+  constructor(public readonly uri: Uri, public readonly viewType: string) {}
+}
+
+export class TabInputText {
+  constructor(public readonly uri: Uri) {}
+}
+
+const onDidChangeTabsEmitter = new EventEmitter<void>();
+export const env = { uriScheme: "vscode" };
 
 export const workspace = {
   workspaceFolders: [] as Array<{ uri: Uri }>,
@@ -333,6 +354,9 @@ export const window = {
   visibleTextEditors: [] as TextEditor[],
   tabGroups: {
     all: [] as Array<{ tabs: Array<{ isActive: boolean; input: unknown }> }>,
+    activeTabGroup: { activeTab: undefined as { input: unknown } | undefined },
+    onDidChangeTabs: onDidChangeTabsEmitter.event,
+    onDidChangeTabGroups: onDidChangeTabsEmitter.event,
   },
   createStatusBarItem,
   createTextEditorDecorationType,
@@ -485,6 +509,12 @@ export const __mock = {
     window.activeTextEditor = undefined;
     window.visibleTextEditors = [];
     window.tabGroups.all = [];
+    window.tabGroups.activeTabGroup.activeTab = undefined;
+    env.uriScheme = "vscode";
+  },
+  emitActiveTab(input: unknown): void {
+    window.tabGroups.activeTabGroup.activeTab = { input };
+    onDidChangeTabsEmitter.fire();
   },
   emitActiveTextEditor(editor?: TextEditor): void {
     window.activeTextEditor = editor;

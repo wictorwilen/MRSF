@@ -20,7 +20,7 @@ describe("ReanchorController", () => {
     const store = {
       get: vi.fn().mockReturnValue(null),
       load: vi.fn().mockResolvedValue(null),
-      getForActiveEditor: vi.fn().mockResolvedValue(null),
+      getForActiveOrVisible: vi.fn().mockResolvedValue(null),
     };
     const statusBar = {
       withProgress: vi.fn().mockImplementation(async (_label, fn) => fn()),
@@ -41,7 +41,7 @@ describe("ReanchorController", () => {
     __mock.configuration.set("sidemark.reanchorAutoAcceptScore", 1);
 
     const store = {
-      getForActiveEditor: vi.fn().mockResolvedValue({
+      getForActiveOrVisible: vi.fn().mockResolvedValue({
         uri,
         doc: { comments: [{ id: "c1", line: 2, text: "hello" }] },
       }),
@@ -96,7 +96,7 @@ describe("ReanchorController", () => {
     } as never;
 
     const store = {
-      getForActiveEditor: vi.fn().mockResolvedValue({
+      getForActiveOrVisible: vi.fn().mockResolvedValue({
         uri,
         doc: { comments: [{ id: "c1", line: 2, text: "hello" }] },
       }),
@@ -139,6 +139,7 @@ describe("ReanchorController", () => {
     __mock.configuration.set("sidemark.reanchorThreshold", 0.6);
     const store = {
       get: vi.fn().mockReturnValue({ comments: [{ id: "c1" }] }),
+      getForActiveOrVisible: vi.fn().mockResolvedValue({ uri, doc: { comments: [{ id: "c1" }] } }),
       load: vi.fn().mockResolvedValue({ comments: [{ id: "c1" }] }),
       reanchorComments: vi.fn().mockResolvedValue([]),
     };
@@ -164,7 +165,9 @@ describe("ReanchorController", () => {
     __mock.configuration.set("sidemark.reanchorThreshold", 0.6);
 
     const store = {
-      getForActiveEditor: vi.fn().mockResolvedValue(null),
+      getForActiveOrVisible: vi.fn()
+        .mockResolvedValueOnce({ uri: visibleUri, doc: { comments: [{ id: "c1" }] } })
+        .mockResolvedValueOnce({ uri: openUri, doc: { comments: [{ id: "c2" }] } }),
       get: vi.fn().mockReturnValue(null),
       load: vi.fn()
         .mockResolvedValueOnce({ comments: [{ id: "c1" }] })
@@ -211,6 +214,7 @@ describe("ReanchorController", () => {
     const uri = Uri.file("/workspace/doc.md");
     const store = {
       get: vi.fn().mockReturnValue({ comments: [{ id: "c1" }] }),
+      getForActiveOrVisible: vi.fn().mockResolvedValue({ uri, doc: { comments: [{ id: "c1" }] } }),
       load: vi.fn().mockResolvedValue({ comments: [{ id: "c1" }] }),
       reanchorComments: vi.fn().mockResolvedValue([]),
     };
@@ -248,7 +252,7 @@ describe("ReanchorController", () => {
     } as never;
 
     const store = {
-      getForActiveEditor: vi.fn().mockResolvedValue({
+      getForActiveOrVisible: vi.fn().mockResolvedValue({
         uri,
         doc: { comments: [{ id: "c1", line: 2, text: "hello" }] },
       }),
@@ -288,7 +292,7 @@ describe("ReanchorController", () => {
     } as never;
 
     const store = {
-      getForActiveEditor: vi.fn().mockResolvedValue({
+      getForActiveOrVisible: vi.fn().mockResolvedValue({
         uri,
         doc: { comments: [{ id: "c1", line: 2, text: "hello" }] },
       }),
@@ -340,7 +344,7 @@ describe("ReanchorController", () => {
     vscode.window.activeTextEditor = activeEditor as never;
 
     const store = {
-      getForActiveEditor: vi.fn().mockResolvedValue({
+      getForActiveOrVisible: vi.fn().mockResolvedValue({
         uri,
         doc: { comments: [{ id: "c1", line: 2, text: "hello" }, { id: "c2", line: 5, text: "skip me" }] },
       }),

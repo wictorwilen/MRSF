@@ -7,10 +7,12 @@ import type { Comment, CommentSummary } from "@mrsf/cli";
 import type { SidecarStore } from "../store/SidecarStore.js";
 import { relativeTime, mrsfToVscodeRange } from "../util/positions.js";
 import { resolveAuthor } from "../util/author.js";
-import { setPreviewScrollTarget } from "../extension.js";
+import { setPreviewScrollTarget } from "../util/previewNavigation.js";
+import { MARKDOWN_PREVIEW, isLegacyMarkdownPreview, onDidChangeDocumentContext, resolveDocumentUri } from "../util/documentContext.js";
 
 interface WebviewMessage {
   type: string;
+  documentUri?: string;
   commentId?: string;
   parentId?: string;
   text?: string;
@@ -34,6 +36,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
   private pendingFilterSelectionStart?: number;
   private pendingFilterSelectionEnd?: number;
   private pendingHighlightCommentId?: string;
+  private highlightRequestId = 0;
   private refreshGeneration = 0;
   private static readonly STATE_KEY = "mrsf.lastDocUri";
 
@@ -54,28 +57,21 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
       this.store.onDidChange(() => this.refresh()),
     );
     this.disposables.push(
-      vscode.window.onDidChangeActiveTextEditor((editor) => {
-        if (editor && editor.document.languageId === "markdown") {
-          this.currentDocUri = editor.document.uri;
-          this.persistDocUri();
-          this.refresh();
-        }
-        // When no editor is active (e.g., preview focused), keep
-        // showing the last document's comments — don't clear.
+      onDidChangeDocumentContext(() => {
+        this.currentDocUri = resolveDocumentUri(this.currentDocUri);
+        this.persistDocUri();
+        void this.refresh();
       }),
     );
     // Also detect when the visible editors list changes (e.g., opening
     // a markdown file side-by-side with preview), and retain the last
     // known markdown document URI.
     this.disposables.push(
-      vscode.window.onDidChangeVisibleTextEditors((editors) => {
+      vscode.window.onDidChangeVisibleTextEditors(() => {
         if (this.currentDocUri) return; // already tracking
-        const md = editors.find((e) => e.document.languageId === "markdown");
-        if (md) {
-          this.currentDocUri = md.document.uri;
-          this.persistDocUri();
-          this.refresh();
-        }
+        this.currentDocUri = resolveDocumentUri();
+        this.persistDocUri();
+        void this.refresh();
       }),
     );
   }
@@ -98,31 +94,8 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
       this.disposables,
     );
 
-    // Set current doc from active editor, or any visible markdown editor
-    const editor = vscode.window.activeTextEditor;
-    if (editor && editor.document.languageId === "markdown") {
-      this.currentDocUri = editor.document.uri;
-      this.persistDocUri();
-    } else if (!this.currentDocUri) {
-      // Preview may be focused — fall back to any visible markdown editor
-      const mdEditor = vscode.window.visibleTextEditors.find(
-        (e) => e.document.languageId === "markdown",
-      );
-      if (mdEditor) {
-        this.currentDocUri = mdEditor.document.uri;
-        this.persistDocUri();
-      } else {
-        // Last resort: check open text documents (VS Code loads the
-        // document model even for previewed markdown files).
-        const mdDoc = vscode.workspace.textDocuments.find(
-          (d) => d.languageId === "markdown" && d.uri.scheme === "file",
-        );
-        if (mdDoc) {
-          this.currentDocUri = mdDoc.uri;
-          this.persistDocUri();
-        }
-      }
-    }
+    this.currentDocUri = resolveDocumentUri(this.currentDocUri);
+    this.persistDocUri();
 
     this.refresh();
   }
@@ -142,13 +115,17 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
     const generation = ++this.refreshGeneration;
 
     if (!this.currentDocUri) {
-      this.view.webview.html = this.getEmptyHtml("No Markdown file open");
+      const input = vscode.window.tabGroups.activeTabGroup?.activeTab?.input;
+      const isMarkdownEditor = input instanceof vscode.TabInputCustom && input.viewType === "vscode.markdown.editor";
+      this.view.webview.html = this.getEmptyHtml(isMarkdownEditor
+        ? "Sidemark comments are not supported in Markdown Editor."
+        : "No Markdown file open");
       return;
     }
 
     let doc = this.store.get(this.currentDocUri);
     if (!doc) {
-      doc = await this.store.load(this.currentDocUri);
+      doc = await this.store.ensureLoaded(this.currentDocUri);
       if (generation !== this.refreshGeneration) return;
     }
 
@@ -190,24 +167,29 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
   async revealComment(documentUri: vscode.Uri, commentId: string): Promise<void> {
     this.currentDocUri = documentUri;
     this.pendingHighlightCommentId = commentId;
+    this.highlightRequestId += 1;
     this.refreshGeneration += 1;
     this.persistDocUri();
     await vscode.commands.executeCommand("mrsf.commentsView.focus");
     await this.refresh();
+    if (this.currentDocUri?.toString() === documentUri.toString()) {
+      await this.view?.webview.postMessage({ type: "highlightComment", commentId });
+    }
   }
 
   private async handleMessage(msg: WebviewMessage): Promise<void> {
-    if (!this.currentDocUri) return;
+    const documentUri = this.currentDocUri;
+    if (!documentUri || msg.documentUri !== documentUri.toString()) return;
 
     switch (msg.type) {
       case "resolve":
         if (msg.commentId) {
-          await this.store.resolveComment(this.currentDocUri, msg.commentId);
+          await this.store.resolveComment(documentUri, msg.commentId);
         }
         break;
       case "unresolve":
         if (msg.commentId) {
-          await this.store.unresolveComment(this.currentDocUri, msg.commentId);
+          await this.store.unresolveComment(documentUri, msg.commentId);
         }
         break;
       case "delete":
@@ -218,16 +200,16 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
             "Delete",
           );
           if (confirmed === "Delete") {
-            await this.store.deleteComment(this.currentDocUri, msg.commentId);
+            await this.store.deleteComment(documentUri, msg.commentId);
           }
         }
         break;
       case "reply":
         if (msg.parentId && msg.text) {
-          const author = await resolveAuthor(this.currentDocUri);
+          const author = await resolveAuthor(documentUri);
           if (!author) break;
           await this.store.replyToComment(
-            this.currentDocUri,
+            documentUri,
             msg.parentId,
             msg.text,
             author,
@@ -236,13 +218,13 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
         break;
       case "edit":
         if (msg.commentId && typeof msg.text === "string") {
-          const actor = await resolveAuthor(this.currentDocUri);
+          const actor = await resolveAuthor(documentUri);
           if (!actor) {
             break;
           }
 
           try {
-            await this.store.editComment(this.currentDocUri, msg.commentId, {
+            await this.store.editComment(documentUri, msg.commentId, {
               text: msg.text,
               actor,
             });
@@ -255,17 +237,17 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
         break;
       case "navigate":
         if (msg.commentId) {
-          await this.navigateToComment(msg.commentId);
+          await this.navigateToComment(msg.commentId, documentUri);
         }
         break;
       case "init":
-        await vscode.commands.executeCommand("mrsf.addLineComment", undefined, this.currentDocUri);
+        await vscode.commands.executeCommand("mrsf.addLineComment", undefined, documentUri);
         break;
       case "addComment":
-        await this.addCommentFromSidebar();
+        await this.addCommentFromSidebar(documentUri);
         break;
       case "reanchor":
-        await vscode.commands.executeCommand("mrsf.reanchor", this.currentDocUri);
+        await vscode.commands.executeCommand("mrsf.reanchor", documentUri);
         break;
       case "sort":
         if (msg.sortMode === "line" || msg.sortMode === "date") {
@@ -297,13 +279,13 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
     }
   }
 
-  private async addCommentFromSidebar(): Promise<void> {
-    if (!this.currentDocUri) return;
+  private async addCommentFromSidebar(documentUri = this.currentDocUri): Promise<void> {
+    if (!documentUri) return;
 
     const selectedEditor = vscode.window.visibleTextEditors.find(
       (editor) =>
         editor.document.languageId === "markdown"
-        && editor.document.uri.toString() === this.currentDocUri?.toString()
+        && editor.document.uri.toString() === documentUri.toString()
         && !editor.selection.isEmpty,
     );
 
@@ -312,35 +294,38 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
         viewColumn: selectedEditor.viewColumn,
         preserveFocus: false,
       });
-      await vscode.commands.executeCommand("mrsf.addInlineComment", this.currentDocUri);
+      await vscode.commands.executeCommand("mrsf.addInlineComment", documentUri);
       return;
     }
 
-    await vscode.commands.executeCommand("mrsf.addLineComment", undefined, this.currentDocUri);
+    await vscode.commands.executeCommand("mrsf.addLineComment", undefined, documentUri);
   }
 
-  private async navigateToComment(commentId: string): Promise<void> {
-    if (!this.currentDocUri) return;
-    const comment = this.store.findComment(this.currentDocUri, commentId);
+  private async navigateToComment(commentId: string, documentUri = this.currentDocUri): Promise<void> {
+    if (!documentUri) return;
+    const comment = this.store.findComment(documentUri, commentId);
     if (!comment || comment.line == null) return;
 
     // Check whether a source editor is already visible for this document
     const sourceEditorVisible = vscode.window.visibleTextEditors.some(
-      (e) => e.document.uri.toString() === this.currentDocUri?.toString(),
+      (e) => e.document.uri.toString() === documentUri.toString(),
     );
+    const previewVisible = vscode.window.tabGroups.all.some((group) =>
+      group.tabs.some((tab) => tab.isActive && (
+        (tab.input instanceof vscode.TabInputCustom && tab.input.viewType === MARKDOWN_PREVIEW
+          && tab.input.uri.toString() === documentUri.toString())
+        || isLegacyMarkdownPreview(tab.input)
+      )),
+    );
+    if (previewVisible || !sourceEditorVisible) {
+      setPreviewScrollTarget(documentUri, comment.line);
+      await vscode.commands.executeCommand("markdown.preview.refresh");
+    }
 
     if (sourceEditorVisible) {
       // Source editor is open (side-by-side or otherwise) — navigate
       // directly and let VS Code's scroll-sync handle the preview.
-      const previewVisible = vscode.window.tabGroups.all.some((group) =>
-        group.tabs.some(
-          (tab) =>
-            tab.isActive &&
-            tab.input instanceof vscode.TabInputWebview,
-        ),
-      );
-
-      const editor = await vscode.window.showTextDocument(this.currentDocUri, {
+      const editor = await vscode.window.showTextDocument(documentUri, {
         preserveFocus: previewVisible,
       });
       const range = mrsfToVscodeRange(comment, editor.document);
@@ -348,12 +333,6 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
         editor.selection = new vscode.Selection(range.start, range.start);
         editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
       }
-    } else {
-      // Preview is fullscreen — no source editor visible.
-      // Scroll the preview directly by embedding a scroll target
-      // in the data div, then triggering a preview refresh.
-      setPreviewScrollTarget(comment.line);
-      await vscode.commands.executeCommand("markdown.preview.refresh");
     }
   }
 
@@ -496,6 +475,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
 </head>
 <body
   data-highlight-comment-id="${initialHighlightCommentId}"
+  data-highlight-request-id="${this.highlightRequestId}"
   data-refocus-filter="${shouldRefocusFilter}"
   data-filter-selection-start="${filterSelectionStart}"
   data-filter-selection-end="${filterSelectionEnd}"
@@ -953,7 +933,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
       const vscode = acquireVsCodeApi();
 
       function postMessage(msg) {
-        vscode.postMessage(msg);
+        vscode.postMessage({ ...msg, documentUri: ${JSON.stringify(this.currentDocUri?.toString() ?? "").replace(/</g, "\\u003c")} });
       }
 
       function restoreFilterFocus() {
@@ -1030,6 +1010,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider, vscode.D
           return;
         }
 
+        void threadEl.offsetWidth;
         threadEl.classList.add('highlighted');
         threadEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }

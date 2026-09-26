@@ -18,16 +18,22 @@
   const HIGHLIGHT_CLASS = "mrsf-line-highlight";
   const ANCHOR_CLASS = "mrsf-preview-anchor";
   const TOOLTIP_VISIBLE_CLASS = "mrsf-tooltip-visible";
-  const EXTENSION_URI_BASE = "vscode://wictor.mrsf-vscode";
   const GUTTER_CLASS = "mrsf-preview-gutter";
   const GUTTER_ITEM_CLASS = "mrsf-preview-gutter-item";
   let renderQueued = false;
+  let disposed = false;
+  let renderFrame = 0;
+  let scrollFrame = 0;
+  let flashTimer = 0;
+  let lastScrollRequest = "";
 
   function getPreviewConfig() {
     const el = document.getElementById("mrsf-comment-data");
     const metaEl = document.getElementById("mrsf-preview-meta");
     return {
-      documentUri: el?.getAttribute("data-document-uri") || "",
+      documentUri: el?.getAttribute("data-document-uri") || metaEl?.getAttribute("data-document-uri") || "",
+      uriScheme: el?.getAttribute("data-uri-scheme") || "vscode",
+      showResolved: el?.getAttribute("data-show-resolved") !== "false",
       commentsEnabled: metaEl?.getAttribute("data-comments-enabled") !== "false",
       previewComments: metaEl?.getAttribute("data-preview-comments") !== "false",
       gutterPosition: el?.getAttribute("data-gutter-position") === "left" ? "left" : "right",
@@ -37,12 +43,8 @@
     };
   }
 
-  function buildCommandUri(command, args) {
-    return `command:${command}?${encodeURIComponent(JSON.stringify(args))}`;
-  }
-
   function buildExtensionUri(path, params) {
-    const url = new URL(`${EXTENSION_URI_BASE}${path}`);
+    const url = new URL(`${getPreviewConfig().uriScheme}://wictor.mrsf-vscode${path}`);
     for (const [key, value] of Object.entries(params)) {
       if (value != null && value !== "") {
         url.searchParams.set(key, String(value));
@@ -51,21 +53,13 @@
     return url.toString();
   }
 
-  function openExtensionUri(path, params) {
-    const anchor = document.createElement("a");
-    anchor.href = buildExtensionUri(path, params);
-    anchor.style.display = "none";
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-  }
-
-  function revealCommentInSidebar(commentId, previewConfig) {
-    if (!commentId || !previewConfig.documentUri) return;
-    openExtensionUri("/revealComment", {
+  function setCommentLink(element, commentId, previewConfig, label) {
+    element.href = buildExtensionUri("/revealComment", {
       commentId,
       documentUri: previewConfig.documentUri,
     });
+    element.setAttribute("aria-label", label);
+    element.addEventListener("click", (event) => event.preventDefault());
   }
 
   // ── Data ───────────────────────────────────────────────
@@ -115,8 +109,13 @@
     if (!metaEl) return null;
     const scrollLine = metaEl.getAttribute("data-scroll-to-line");
     if (!scrollLine) return null;
+    const requestId = metaEl.getAttribute("data-scroll-request-id");
+    const documentUri = metaEl.getAttribute("data-document-uri");
+    if (!requestId || !documentUri || documentUri !== getPreviewConfig().documentUri) return null;
+    const request = `${documentUri}:${requestId}`;
+    if (request === lastScrollRequest) return null;
     const targetLine = parseInt(scrollLine, 10);
-    return Number.isNaN(targetLine) ? null : targetLine;
+    return Number.isSafeInteger(targetLine) && targetLine > 0 ? { targetLine, request } : null;
   }
 
   /**
@@ -158,11 +157,12 @@
     const line0 = line - 1;
 
     // Find the element with the exact line, or the nearest one before it
-    const all = document.querySelectorAll("[data-line]");
+    const all = (document.querySelector(".markdown-body") || document.body).querySelectorAll("[data-line]");
     let best = null;
     let bestLine = -1;
 
     for (const el of all) {
+      if (el.closest(`.${GUTTER_CLASS}, .${TOOLTIP_CLASS}`)) continue;
       const elLine = parseInt(el.getAttribute("data-line"), 10);
       if (isNaN(elLine)) continue;
       if (elLine <= line0 && elLine > bestLine) {
@@ -290,7 +290,7 @@
         range.setStart(node, idx);
         range.setEnd(node, idx + selectedText.length);
 
-        const mark = document.createElement("mark");
+        const mark = document.createElement("a");
         mark.className = INLINE_HIGHLIGHT_CLASS;
         mark.dataset.commentId = commentId;
         range.surroundContents(mark);
@@ -341,10 +341,11 @@
   }
 
   function createBadge(comments, line, previewConfig) {
-    const badge = document.createElement("span");
+    const badge = document.createElement("a");
     badge.className = BADGE_CLASS;
     badge.dataset.line = String(line);
     badge.dataset.gutterPosition = previewConfig.gutterPosition;
+    setCommentLink(badge, comments[0].id, previewConfig, `Comments on line ${line}`);
 
     const total = comments.reduce(
       (n, c) => n + 1 + (c.replies ? c.replies.length : 0),
@@ -383,12 +384,12 @@
     button.dataset.gutterPosition = previewConfig.gutterPosition;
     button.title = `Add comment on line ${line}`;
     button.textContent = "+";
-    if (!previewConfig.documentUri) {
-      button.addEventListener("click", (event) => {
-        event.preventDefault();
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      if (!previewConfig.documentUri) {
         event.stopPropagation();
-      });
-    }
+      }
+    });
     return button;
   }
 
@@ -420,6 +421,8 @@
     const tooltip = document.createElement("div");
     tooltip.className = TOOLTIP_CLASS;
     tooltip.dataset.line = String(line);
+    tooltip.dataset.documentUri = previewConfig.documentUri;
+    tooltip.dataset.threadIds = JSON.stringify(comments.map((comment) => comment.id));
 
     for (const c of comments) {
       const thread = document.createElement("div");
@@ -445,7 +448,7 @@
   }
 
   function createCommentEl(comment, isReply, previewConfig) {
-    const el = document.createElement("div");
+    const el = document.createElement("a");
     el.className = "mrsf-comment" + (isReply ? " mrsf-reply" : "");
     el.dataset.commentId = comment.id;
     if (comment.resolved) {
@@ -454,10 +457,7 @@
 
     if (previewConfig.documentUri) {
       el.style.cursor = "pointer";
-      el.addEventListener("click", (event) => {
-        event.stopPropagation();
-        revealCommentInSidebar(comment.id, previewConfig);
-      });
+      setCommentLink(el, comment.id, previewConfig, `Open comment by ${comment.author}`);
     }
 
     // Header: author + date + severity/type badges
@@ -525,6 +525,24 @@
     return el;
   }
 
+  function positionTooltip(tooltip) {
+    if (!tooltip.classList.contains(TOOLTIP_VISIBLE_CLASS)) return;
+    const padding = 8;
+    const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
+    const viewportHeight = document.documentElement.clientHeight || window.innerHeight;
+    tooltip.style.setProperty("--mrsf-tooltip-available-width", `${Math.max(0, viewportWidth - padding * 2)}px`);
+    tooltip.style.setProperty("--mrsf-tooltip-available-height", `${Math.max(0, viewportHeight - padding * 2)}px`);
+    tooltip.style.transform = "";
+    const bounds = tooltip.getBoundingClientRect();
+    const anchor = tooltip.closest(`.${GUTTER_ITEM_CLASS}`).getBoundingClientRect();
+    const left = Math.max(padding, Math.min(bounds.left, viewportWidth - bounds.width - padding));
+    const preferredTop = bounds.bottom > viewportHeight - padding
+      ? anchor.top - bounds.height - padding
+      : bounds.top;
+    const top = Math.max(padding, Math.min(preferredTop, viewportHeight - bounds.height - padding));
+    tooltip.style.transform = `translate(${left - bounds.left}px, ${top - bounds.top}px)`;
+  }
+
   function closeAllTooltips() {
     document
       .querySelectorAll(`.${TOOLTIP_VISIBLE_CLASS}`)
@@ -532,10 +550,10 @@
   }
 
   function scheduleRender() {
-    if (renderQueued) return;
+    if (disposed || renderQueued) return;
     renderQueued = true;
 
-    requestAnimationFrame(() => {
+    renderFrame = requestAnimationFrame(() => {
       renderQueued = false;
       render();
     });
@@ -544,14 +562,45 @@
   // ── Main ───────────────────────────────────────────────
 
   function render() {
+    contentObserver.disconnect();
+    const visible = document.querySelector(`.${TOOLTIP_VISIBLE_CLASS}`)?.dataset;
+    try {
+      renderAnnotations();
+      if (visible) {
+        Array.from(document.querySelectorAll(`.${TOOLTIP_CLASS}`))
+          .find((tooltip) => tooltip.dataset.line === visible.line
+            && tooltip.dataset.documentUri === visible.documentUri
+            && tooltip.dataset.threadIds === visible.threadIds)
+          ?.classList.add(TOOLTIP_VISIBLE_CLASS);
+        document.querySelectorAll(`.${TOOLTIP_VISIBLE_CLASS}`).forEach(positionTooltip);
+      }
+      navigateToRequestedLine();
+    } finally {
+      contentObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+        attributes: true,
+        attributeFilter: ["data-line", "data-comments", "data-document-uri", "data-comments-enabled", "data-preview-comments", "data-show-resolved", "data-gutter-position", "data-gutter-for-inline", "data-inline-highlights", "data-line-highlight", "data-scroll-request-id"],
+      });
+      const root = document.querySelector(".markdown-body");
+      if (root !== observedRoot) {
+        sizeObserver?.disconnect();
+        observedRoot = root;
+        if (root) sizeObserver?.observe(root);
+      }
+    }
+  }
+
+  function renderAnnotations() {
     clearPreviousAnnotations();
 
     const previewConfig = getPreviewConfig();
-    if (!previewConfig.commentsEnabled || !previewConfig.previewComments) {
+    if (!previewConfig.documentUri || !previewConfig.commentsEnabled || !previewConfig.previewComments) {
       return;
     }
 
-    const comments = getCommentData();
+    const comments = getCommentData().filter((comment) => previewConfig.showResolved || !comment.resolved);
     const commentedLines = new Set((comments || []).filter((comment) => !comment.reply_to && comment.line != null).map((comment) => comment.line));
 
     const lineTargets = new Map();
@@ -604,17 +653,12 @@
         }
       }
 
-      if (!shouldShowBadge) {
-        continue;
-      }
-
       // Create and position badge
-      const badge = createBadge(groupedComments, line, previewConfig);
+      const badge = shouldShowBadge ? createBadge(groupedComments, line, previewConfig) : null;
       const tooltip = createTooltip(groupedComments, line, previewConfig);
 
       // Attach tooltip toggle
-      badge.addEventListener("click", (e) => {
-        e.stopPropagation();
+      badge?.addEventListener("click", () => {
         // Close all other tooltips
         document
           .querySelectorAll(`.${TOOLTIP_VISIBLE_CLASS}`)
@@ -622,13 +666,13 @@
             if (el !== tooltip) el.classList.remove(TOOLTIP_VISIBLE_CLASS);
           });
         tooltip.classList.toggle(TOOLTIP_VISIBLE_CLASS);
-        revealCommentInSidebar(groupedComments[0]?.id, previewConfig);
+        positionTooltip(tooltip);
       });
 
       // ── Place badge + tooltip ──────────────────────────────
       placeGutterElement(targetEl, (() => {
         const wrapper = document.createElement("div");
-        wrapper.appendChild(badge);
+        if (badge) wrapper.appendChild(badge);
         wrapper.appendChild(tooltip);
         return wrapper;
       })(), previewConfig, gutterState);
@@ -640,8 +684,8 @@
     // toggle the tooltip for their line when clicked.
     document.querySelectorAll(`.${INLINE_HIGHLIGHT_CLASS}`).forEach((mark) => {
       mark.style.cursor = "pointer";
-      mark.addEventListener("click", (e) => {
-        e.stopPropagation();
+      setCommentLink(mark, mark.dataset.commentId, previewConfig, "Open comment");
+      mark.addEventListener("click", () => {
         // Walk up to find the mrsf-line-highlight parent to get the line
         const commentId = mark.dataset.commentId;
         if (!commentId) return;
@@ -664,22 +708,29 @@
             if (el !== tooltip) el.classList.remove(TOOLTIP_VISIBLE_CLASS);
           });
         tooltip.classList.toggle(TOOLTIP_VISIBLE_CLASS);
-        revealCommentInSidebar(commentId, previewConfig);
+        positionTooltip(tooltip);
       });
     });
 
-    // ── Scroll-to-line (sidebar "Go to" in fullscreen preview) ───
-    const targetLine = getScrollTargetLine();
-    if (targetLine != null) {
-      const el = findElementForLine(targetLine);
+  }
+
+  function navigateToRequestedLine() {
+    const scrollTarget = getScrollTargetLine();
+    if (scrollTarget) {
+      const el = findElementForLine(scrollTarget.targetLine);
       if (el) {
         // Use requestAnimationFrame to ensure layout is settled
-        requestAnimationFrame(() => {
+        cancelAnimationFrame(scrollFrame);
+        scrollFrame = requestAnimationFrame(() => {
+          if (disposed || !el.isConnected) return;
+          if (getScrollTargetLine()?.request !== scrollTarget.request) return;
+          lastScrollRequest = scrollTarget.request;
           el.scrollIntoView({ behavior: "smooth", block: "center" });
           // Brief flash to draw attention
           el.style.transition = "background-color 0.3s ease";
           el.style.backgroundColor = "rgba(255, 200, 0, 0.25)";
-          setTimeout(() => {
+          clearTimeout(flashTimer);
+          flashTimer = setTimeout(() => {
             el.style.backgroundColor = "";
           }, 1500);
         });
@@ -689,16 +740,56 @@
 
   // ── Lifecycle ──────────────────────────────────────────
 
+  let observedRoot = null;
+  const contentObserver = new MutationObserver((records) => {
+    const contentSelector = '.markdown-body, [data-line], #mrsf-comment-data, #mrsf-preview-meta, script[type="application/mrsf+json"]';
+    if (records.some((record) => {
+      const target = record.target instanceof Element ? record.target : record.target.parentElement;
+      if (target?.closest(contentSelector)) return true;
+      return [...record.addedNodes, ...record.removedNodes].some((node) =>
+        node instanceof Element && (node.matches(contentSelector) || node.querySelector(contentSelector)));
+    })) scheduleRender();
+  });
+  const sizeObserver = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(scheduleRender);
+  window.addEventListener("pagehide", () => {
+    disposed = true;
+    cancelAnimationFrame(renderFrame);
+    cancelAnimationFrame(scrollFrame);
+    clearTimeout(flashTimer);
+    contentObserver.disconnect();
+    sizeObserver?.disconnect();
+  }, { once: true });
+  window.addEventListener("vscode.markdown.updateContent", scheduleRender);
+  document.addEventListener("load", scheduleRender, true);
+  document.fonts?.ready.then(scheduleRender);
+
   // Run immediately if DOM is ready, otherwise wait
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", render);
+    document.addEventListener("DOMContentLoaded", render, { once: true });
   } else {
     render();
   }
 
-  document.addEventListener("click", closeAllTooltips);
-  window.addEventListener("resize", scheduleRender);
+  document.addEventListener("click", (event) => {
+    if (event.target instanceof Element && event.target.closest(`.${BADGE_CLASS}, .${INLINE_HIGHLIGHT_CLASS}, .${TOOLTIP_CLASS}`)) return;
+    closeAllTooltips();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeAllTooltips();
+  });
+  window.addEventListener("scroll", () => {
+    document.querySelectorAll(`.${TOOLTIP_VISIBLE_CLASS}`).forEach(positionTooltip);
+  }, { passive: true });
+  let viewportWidth = window.innerWidth;
+  let viewportHeight = window.innerHeight;
+  function onViewportResize() {
+    if (window.innerWidth === viewportWidth && window.innerHeight === viewportHeight) return;
+    viewportWidth = window.innerWidth;
+    viewportHeight = window.innerHeight;
+    scheduleRender();
+  }
+  window.addEventListener("resize", onViewportResize);
   if (window.visualViewport) {
-    window.visualViewport.addEventListener("resize", scheduleRender);
+    window.visualViewport.addEventListener("resize", onViewportResize);
   }
 })();

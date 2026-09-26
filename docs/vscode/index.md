@@ -12,7 +12,7 @@ description: "Sidemark for VS Code — gutter icons, inline previews, hover card
 
 Search for **"Sidemark"** in the VS Code Extensions view, or install from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=wictor.mrsf-vscode).
 
-**Requirements:** VS Code 1.85+ · Git recommended (enables commit-based staleness detection and diff-based reanchoring)
+**Requirements:** VS Code 1.137+ · Git recommended (enables commit-based staleness detection and diff-based reanchoring)
 
 ## Features
 

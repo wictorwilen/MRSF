@@ -27,6 +27,18 @@ function makeEditor(uri: Uri, lines = ["alpha", "beta text", "gamma", "delta"]) 
 }
 
 describe("GutterDecorationProvider", () => {
+  it("updates every visible source editor while preview has focus", () => {
+    const first = makeEditor(Uri.file("/workspace/first.md"));
+    const second = makeEditor(Uri.file("/workspace/second.md"));
+    const changed = new EventEmitter<Uri>();
+    const provider = new GutterDecorationProvider({ onDidChange: changed.event, get: () => null } as never, Uri.file("/ext"));
+    vscode.window.visibleTextEditors = [first, second] as never;
+    changed.fire(first.document.uri);
+    expect(first.setDecorations).toHaveBeenCalledTimes(4);
+    expect(second.setDecorations).toHaveBeenCalledTimes(4);
+    provider.dispose();
+  });
+
   beforeEach(() => {
     __mock.reset();
     vi.clearAllMocks();

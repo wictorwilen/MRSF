@@ -87,6 +87,7 @@ th.mrsf-line-highlight {
   z-index: 10;
 
   color: var(--vscode-badge-foreground, #fff);
+  text-decoration: none;
   background: linear-gradient(
     90deg,
     var(--mrsf-badge-accent) 0 4px,
@@ -94,7 +95,7 @@ th.mrsf-line-highlight {
   );
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
 
-  transition: opacity 0.15s ease, transform 0.1s ease;
+  transition: opacity 0.15s ease;
 }
 
 .mrsf-add-button {
@@ -124,7 +125,8 @@ th.mrsf-line-highlight {
 }
 
 .mrsf-preview-gutter-item[data-gutter-position="right"] .mrsf-tooltip {
-  left: 0;
+  left: auto;
+  right: 0;
 }
 
 /* For table elements the badge is placed in an overlay wrapper
@@ -155,8 +157,9 @@ th.mrsf-line-highlight {
 }
 
 .mrsf-badge:hover {
+  color: var(--vscode-badge-foreground, #fff);
+  text-decoration: none;
   opacity: 0.85;
-  transform: scale(1.05);
 }
 
 .mrsf-badge-resolved {
@@ -172,10 +175,12 @@ th.mrsf-line-highlight {
   left: 0;
   top: 100%;
   z-index: 1000;
-  min-width: 300px;
-  max-width: 480px;
-  max-height: 400px;
+  box-sizing: border-box;
+  min-width: min(300px, var(--mrsf-tooltip-available-width, calc(100vw - 16px)));
+  max-width: min(480px, var(--mrsf-tooltip-available-width, calc(100vw - 16px)));
+  max-height: min(400px, var(--mrsf-tooltip-available-height, calc(100vh - 16px)));
   overflow-y: auto;
+  overflow-wrap: anywhere;
   padding: 8px;
   margin-top: 4px;
   border-radius: 6px;
@@ -196,8 +201,8 @@ th.mrsf-line-highlight {
 }
 
 @keyframes mrsf-fade-in {
-  from { opacity: 0; transform: translateY(-4px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 /* ── Thread / Comment ───────────────────────────────────── */
@@ -212,7 +217,11 @@ th.mrsf-line-highlight {
   padding-top: 8px;
 }
 
-.mrsf-comment {
+.mrsf-comment,
+.mrsf-comment:hover {
+  display: block;
+  color: inherit;
+  text-decoration: none;
   padding: 4px 0;
 }
 
@@ -299,7 +308,10 @@ th.mrsf-line-highlight {
 
 /* ── Inline text highlight ──────────────────────────────── */
 
-.mrsf-inline-highlight {
+.mrsf-inline-highlight,
+.mrsf-inline-highlight:hover {
+  color: inherit;
+  text-decoration: none;
   background: rgba(255, 213, 79, 0.25);
   border-bottom: 2px solid rgba(255, 213, 79, 0.7);
   border-radius: 2px;

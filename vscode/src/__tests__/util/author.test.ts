@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { __mock, Uri } from "vscode";
+import * as path from "node:path";
 
 const mockFindRepoRoot = vi.fn();
 const mockGetGitUserName = vi.fn();
@@ -34,7 +35,7 @@ describe("resolveAuthor", () => {
     expect(await resolveAuthor(Uri.file("/workspace/docs/doc.md"))).toBe(
       "Repository Author",
     );
-    expect(mockFindRepoRoot).toHaveBeenCalledWith("/workspace/docs");
+    expect(mockFindRepoRoot).toHaveBeenCalledWith(path.resolve("/workspace/docs"));
     expect(mockGetGitUserName).toHaveBeenCalledWith("/workspace");
     expect(__mock.configuration.has("sidemark.author")).toBe(false);
   });
