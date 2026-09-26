@@ -12,12 +12,18 @@ async function clickPreviewControl(preview, selector, keyboard = false) {
       window.mrsfTrustedClick = {
         trusted: event.isTrusted,
         matches: event.target instanceof Element && !!event.target.closest(selector),
+        hasDocumentView: !!event.view?.document,
+        bubbled: false,
       };
     }, { capture: true, once: true });
+    window.addEventListener("click", () => {
+      if (window.mrsfTrustedClick) window.mrsfTrustedClick.bubbled = true;
+    }, { once: true });
   }, selector);
   if (keyboard) await preview.locator(selector).first().press("Enter");
   else await preview.locator(selector).first().click();
-  assert.deepEqual(await preview.evaluate(() => window.mrsfTrustedClick), { trusted: true, matches: true },
+  assert.deepEqual(await preview.evaluate(() => window.mrsfTrustedClick),
+    { trusted: true, matches: true, hasDocumentView: true, bubbled: true },
     `Preview must receive a trusted ${selector} click, keyboard=${keyboard}`);
 }
 
