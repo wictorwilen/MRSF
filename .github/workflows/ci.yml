@@ -63,6 +63,14 @@ jobs:
         env:
           VSCODE_TEST_VERSION: ${{ matrix.version }}
         run: xvfb-run -a npm --prefix vscode run test:host
+      - name: Upload host failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vscode-host-${{ matrix.os }}-${{ matrix.version }}
+          path: vscode/.vscode-test/screenshots/
+          include-hidden-files: true
+          if-no-files-found: ignore
       - name: Verify VSIX packaging
         run: npm --prefix vscode run package -- --out sidemark-smoke.vsix
 

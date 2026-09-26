@@ -128,8 +128,19 @@ async function verifyInteractions(target) {
                 await page.screenshot({ path: path.join(artifacts, "badge-hover.png") });
                 hoverVerified = true;
               }
+              await frame.evaluate((selector) => {
+                window.mrsfTrustedClick = null;
+                document.addEventListener("click", (event) => {
+                  window.mrsfTrustedClick = {
+                    trusted: event.isTrusted,
+                    matches: event.target instanceof Element && !!event.target.closest(selector),
+                  };
+                }, { capture: true, once: true });
+              }, selector);
               if (keyboard) await frame.locator(selector).first().press("Enter");
-              else await page.mouse.click(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+              else await frame.locator(selector).first().click();
+              assert.deepEqual(await frame.evaluate(() => window.mrsfTrustedClick), { trusted: true, matches: true },
+                `Preview must receive a trusted ${selector} click, keyboard=${keyboard}`);
               preview = frame;
               return true;
             }
@@ -207,13 +218,32 @@ async function verifyInteractions(target) {
     await page.screenshot({ path: path.join(artifacts, "hover-refresh.png") });
     console.log("Trusted preview clicks and live hover actions passed");
   } catch (error) {
+    const diagnostics = [];
     for (const frame of page.frames()) {
       try {
         const owner = frame.parentFrame() ? await frame.frameElement() : undefined;
-        console.log("UI frame", await owner?.getAttribute("id"), frame.url(),
-          await frame.locator(".mrsf-badge").count(), await frame.locator(".mrsf-badge").first().boundingBox({ timeout: 500 }).catch(() => null));
+        const state = await frame.evaluate(() => ({
+          focused: document.hasFocus(),
+          visibility: document.visibilityState,
+          click: window.mrsfTrustedClick,
+          highlightRequestId: document.body?.dataset.highlightRequestId,
+          threads: [...document.querySelectorAll(".thread.highlighted")].map((thread) => ({
+            commentId: thread.querySelector("[data-id]")?.getAttribute("data-id"),
+            animations: thread.getAnimations().map((animation) => ({
+              name: animation.animationName,
+              state: animation.playState,
+              time: animation.currentTime,
+            })),
+          })),
+        }));
+        const diagnostic = { frame: await owner?.getAttribute("id"), url: frame.url(), ...state,
+          badges: await frame.locator(".mrsf-badge").count(),
+          badgeBounds: await frame.locator(".mrsf-badge").first().boundingBox({ timeout: 500 }).catch(() => null) };
+        diagnostics.push(diagnostic);
+        console.log("UI frame", JSON.stringify(diagnostic));
       } catch {}
     }
+    await fs.writeFile(path.join(artifacts, "failure.json"), JSON.stringify({ error: error.stack, frames: diagnostics }, null, 2));
     await page.screenshot({ path: path.join(artifacts, "failure.png") });
     throw error;
   } finally {
