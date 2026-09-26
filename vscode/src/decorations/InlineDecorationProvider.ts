@@ -48,25 +48,26 @@ export class InlineDecorationProvider implements vscode.Disposable {
       vscode.window.onDidChangeActiveTextEditor(() =>
         this.updateActiveEditor(),
       ),
+      vscode.window.onDidChangeVisibleTextEditors(() => this.updateActiveEditor()),
     );
   }
 
   /**
-   * Re-compute inline decorations for the active editor.
+  * Re-compute inline decorations for visible Markdown editors.
    */
   updateActiveEditor(): void {
-    const editor = vscode.window.activeTextEditor;
-    if (!editor || editor.document.languageId !== "markdown") {
-      return;
+    const editors = new Set(vscode.window.visibleTextEditors);
+    if (vscode.window.activeTextEditor) editors.add(vscode.window.activeTextEditor);
+    for (const editor of editors) {
+      if (editor.document.languageId === "markdown") this.update(editor);
     }
-    this.update(editor);
   }
 
   /**
    * Apply inline decorations to a specific editor.
    */
   update(editor: vscode.TextEditor): void {
-    const config = vscode.workspace.getConfiguration("sidemark");
+    const config = vscode.workspace.getConfiguration("sidemark", editor.document.uri);
     if (!config.get<boolean>("commentsEnabled", true)) {
       this.clearAll(editor);
       return;

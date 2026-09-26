@@ -6,6 +6,8 @@ on:
       - "cli/**"
       - "plugins/**"
       - "examples/**"
+      - "vscode/**"
+      - ".github/workflows/ci.yml"
       - "package.json"
       - "vitest.config.ts"
   push:
@@ -14,11 +16,64 @@ on:
       - "cli/**"
       - "plugins/**"
       - "examples/**"
+      - "vscode/**"
+      - ".github/workflows/ci.yml"
       - "package.json"
       - "vitest.config.ts"
   workflow_dispatch:
 
 jobs:
+  vscode-compatibility:
+    name: VS Code ${{ matrix.version }} (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.version == 'insiders' }}
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        version: ["1.137.0", stable]
+        include:
+          - os: ubuntu-latest
+            version: insiders
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Prepare extension dependencies
+        run: |
+          npm --prefix cli ci
+          npm --prefix cli run build
+          npm --prefix plugins/monaco ci
+          npm --prefix vscode ci
+      - name: Type-check and unit tests
+        run: |
+          npm --prefix vscode run lint
+          npm --prefix vscode test
+      - name: Host smoke tests (Windows)
+        if: runner.os == 'Windows'
+        env:
+          VSCODE_TEST_VERSION: ${{ matrix.version }}
+        run: npm --prefix vscode run test:host
+      - name: Host smoke tests (Linux)
+        if: runner.os == 'Linux'
+        env:
+          VSCODE_TEST_VERSION: ${{ matrix.version }}
+        run: xvfb-run -a npm --prefix vscode run test:host
+      - name: Upload host failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vscode-host-${{ matrix.os }}-${{ matrix.version }}
+          path: vscode/.vscode-test/screenshots/
+          include-hidden-files: true
+          if-no-files-found: ignore
+      - name: Verify VSIX packaging
+        run: npm --prefix vscode run package -- --out sidemark-smoke.vsix
+
   renderer-coverage:
     name: Renderer Coverage (${{ matrix.package.name }})
     runs-on: ubuntu-latest

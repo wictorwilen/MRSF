@@ -1,8 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { __mock, Uri, workspace } from "vscode";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 const mockApplyLineShifts = vi.fn();
 const mockDiscoverSidecar = vi.fn();
+const mockLoadConfig = vi.fn();
+const mockSidecarToDocument = vi.fn();
 const mockParseSidecar = vi.fn();
 const mockReadDocumentLines = vi.fn();
 const mockWriteSidecar = vi.fn();
@@ -32,6 +36,8 @@ vi.mock("@mrsf/monaco-mrsf/browser", () => ({
 
 vi.mock("@mrsf/cli", () => ({
   discoverSidecar: (...args: unknown[]) => mockDiscoverSidecar(...args),
+  loadConfig: (...args: unknown[]) => mockLoadConfig(...args),
+  sidecarToDocument: (...args: unknown[]) => mockSidecarToDocument(...args),
   parseSidecar: (...args: unknown[]) => mockParseSidecar(...args),
   readDocumentLines: (...args: unknown[]) => mockReadDocumentLines(...args),
   writeSidecar: (...args: unknown[]) => mockWriteSidecar(...args),
@@ -58,6 +64,9 @@ describe("SidecarStore", () => {
   beforeEach(() => {
     __mock.reset();
     vi.clearAllMocks();
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    mockLoadConfig.mockResolvedValue(null);
+    mockSidecarToDocument.mockImplementation((value: string) => value.replace(/\.review\.(yaml|json)$/, ""));
     workspace.workspaceFolders = [{ uri: Uri.file("/workspace") }];
     mockFindWorkspaceRoot.mockReturnValue("/workspace");
     mockFindRepoRoot.mockResolvedValue("/repo");
@@ -94,6 +103,52 @@ describe("SidecarStore", () => {
     expect(doc?.document).toBe("doc.md");
     expect(store.get(uri)).toBe(doc);
     expect(store.getSidecarPath(uri)).toBe("/workspace/doc.md.review.yaml");
+  });
+
+  it("deduplicates preview loads and preserves cached live anchors", async () => {
+    const store = new SidecarStore();
+    const uri = Uri.file("/workspace/doc.md");
+    const first = store.ensureLoaded(uri);
+    expect(store.ensureLoaded(uri)).toBe(first);
+    await first;
+    await store.ensureLoaded(uri);
+    expect(mockParseSidecar).toHaveBeenCalledTimes(1);
+    expect(store.getLoadState(uri)).toBe("loaded");
+  });
+
+  it("loads a JSON sidecar when YAML is absent", async () => {
+    const store = new SidecarStore();
+    const uri = Uri.file("/workspace/doc.md");
+    vi.mocked(fs.existsSync).mockImplementation((value) => String(value).endsWith(".json"));
+    await store.ensureLoaded(uri);
+    expect(mockParseSidecar).toHaveBeenCalledWith("/workspace/doc.md.review.json");
+  });
+
+  it("maps external configured-root sidecars back to source documents", async () => {
+    const store = new SidecarStore();
+    mockLoadConfig.mockResolvedValue({ sidecar_root: ".reviews" });
+    await store.reloadSidecar(Uri.file(path.join("/workspace", ".reviews", "docs", "doc.md.review.yaml")));
+    expect(mockDiscoverSidecar).toHaveBeenCalledWith(path.join("/workspace", "docs", "doc.md"), { cwd: "/workspace" });
+  });
+
+  it("notifies once for missing sidecars without retrying on hydration", async () => {
+    const store = new SidecarStore();
+    const uri = Uri.file("/workspace/doc.md");
+    const changed = vi.fn();
+    store.onDidChange(changed);
+    vi.mocked(fs.existsSync).mockReturnValue(false);
+    await store.ensureLoaded(uri);
+    await store.ensureLoaded(uri);
+    expect(changed).toHaveBeenCalledTimes(1);
+    expect(store.getLoadState(uri)).toBe("loaded");
+  });
+
+  it("does not overwrite an unreadable sidecar when adding a comment", async () => {
+    const store = new SidecarStore();
+    const uri = Uri.file("/workspace/doc.md");
+    mockParseSidecar.mockRejectedValueOnce(new Error("invalid YAML"));
+    await expect(store.addComment(uri, { text: "hello", author: "tester", line: 1 })).rejects.toThrow("Cannot add");
+    expect(mockWriteSidecar).not.toHaveBeenCalled();
   });
 
   it("creates a new sidecar entry when adding the first comment", async () => {

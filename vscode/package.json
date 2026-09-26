@@ -2,7 +2,7 @@
   "name": "mrsf-vscode",
   "displayName": "Sidemark – MRSF Review Comments",
   "description": "Display, create, and manage Markdown Review Sidecar Format (MRSF) comments directly in VS Code",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "publisher": "wictor",
   "license": "MIT",
   "author": "Wictor Wilén (https://github.com/wictorwilen)",
@@ -16,7 +16,7 @@
     "directory": "vscode"
   },
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.137.0"
   },
   "categories": [
     "Programming Languages",
@@ -146,7 +146,8 @@
         {
           "type": "webview",
           "id": "mrsf.commentsView",
-          "name": "Comments"
+          "name": "Comments",
+          "icon": "media/icons/sidebar-icon.svg"
         }
       ]
     },
@@ -236,6 +237,8 @@
     "prewatch": "npm run build:deps",
     "watch": "node esbuild.config.mjs --watch",
     "test": "vitest run",
+    "pretest:host": "npm run build",
+    "test:host": "node test/run.mjs",
     "test:watch": "vitest",
     "prelint": "npm run build:deps",
     "lint": "tsc --noEmit",
@@ -247,12 +250,16 @@
     "@mrsf/cli": "file:../cli",
     "@mrsf/markdown-it-mrsf": "file:../plugins/markdown-it",
     "@mrsf/monaco-mrsf": "file:../plugins/monaco",
-    "@vitest/coverage-v8": "^3.2.4",
     "@types/js-yaml": "^4.0.9",
+    "@types/jsdom": "^21.1.7",
     "@types/node": "^22.13.10",
-    "@types/vscode": "^1.85.0",
+    "@types/vscode": "1.137.0",
+    "@vitest/coverage-v8": "^3.2.4",
+    "@vscode/test-electron": "^3.1.0",
     "@vscode/vsce": "^3.0.0",
     "esbuild": "^0.24.0",
+    "jsdom": "^26.1.0",
+    "playwright-core": "^1.63.0",
     "typescript": "^5.8.2",
     "vitest": "^3.0.9"
   }

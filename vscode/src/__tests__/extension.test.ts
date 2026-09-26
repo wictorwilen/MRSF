@@ -6,6 +6,8 @@ const mockParseSidecarContent = vi.fn();
 
 const mockStore = {
   load: vi.fn(),
+  ensureLoaded: vi.fn(),
+  getLoadState: vi.fn(),
   get: vi.fn(),
   checkStaleness: vi.fn(),
   clearPendingShifts: vi.fn(),
@@ -14,6 +16,7 @@ const mockStore = {
   reanchorComments: vi.fn(),
   applyReanchors: vi.fn(),
   getForActiveEditor: vi.fn(),
+  getForActiveOrVisible: vi.fn(),
   findComment: vi.fn(),
   onDidChange: vi.fn(),
 };
@@ -141,6 +144,8 @@ describe("extension activate", () => {
     __mock.reset();
     vi.clearAllMocks();
     mockStore.load.mockResolvedValue({ comments: [{ id: "c1" }] });
+    mockStore.ensureLoaded.mockResolvedValue({ comments: [] });
+    mockStore.getLoadState.mockReturnValue("loaded");
     mockStore.get.mockReturnValue({ comments: [{ id: "c1" }] });
     mockStore.getForActiveEditor.mockResolvedValue({
       uri: Uri.file("/workspace/doc.md"),
@@ -192,7 +197,7 @@ describe("extension activate", () => {
     const result = activate(context as never);
     await Promise.resolve();
 
-    expect(mockStore.load).toHaveBeenCalledWith(uri);
+    expect(mockStore.ensureLoaded).toHaveBeenCalledWith(uri);
     expect(__mock.commandRegistrations.map((entry) => entry.id)).toEqual(
       expect.arrayContaining([
         "mrsf.revealCommentInSidebar",
@@ -227,10 +232,13 @@ describe("extension activate", () => {
     };
 
     result.extendMarkdownIt(md);
-    setPreviewScrollTarget(12);
+    setPreviewScrollTarget(uri, 12);
 
     const html = md.renderer.rules["mrsf_comment_data"]([], 0, {}, { currentDocument: uri }) as string;
-    const meta = md.renderer.rules["mrsf_preview_meta"]([], 0, {}, {}) as string;
+    const otherMeta = md.renderer.rules["mrsf_preview_meta"]([], 0, {}, { currentDocument: Uri.file("/workspace/other.md") }) as string;
+    const meta = md.renderer.rules["mrsf_preview_meta"]([], 0, {}, { currentDocument: uri }) as string;
+    expect(otherMeta).not.toContain("data-scroll-to-line");
+    expect(md.renderer.rules["mrsf_preview_meta"]([], 0, {}, { currentDocument: uri })).toBe(meta);
 
     expect(html).toContain("mrsf-comment-data");
     expect(html).toContain("data-document-uri");
@@ -287,12 +295,12 @@ describe("extension activate", () => {
     expect(mockSidebarProvider.revealComment).toHaveBeenCalledWith(uri, "c1");
 
     await handler?.handleUri(Uri.parse(`file://addLineComment?documentUri=${encodeURIComponent(uri.toString())}&line=3`));
-    expect(__mock.showTextDocumentCalls).toHaveLength(1);
+    expect(__mock.showTextDocumentCalls).toHaveLength(0);
     expect(__mock.executedCommands).toContainEqual({
       id: "mrsf.addLineComment",
       args: [3, uri],
     });
-    expect(__mock.revealCalls).toHaveLength(1);
+    expect(__mock.revealCalls).toHaveLength(0);
   });
 
   it("refreshes comments from visible markdown editors and reacts to store changes", async () => {
@@ -531,7 +539,7 @@ describe("extension activate", () => {
     expect(mockStore.reanchorComments).not.toHaveBeenCalled();
   });
 
-  it("renders preview data from disk fallbacks and skips invalid preview cases", () => {
+  it("hydrates through the store and retains document identity for empty previews", () => {
     const uri = Uri.file("/workspace/doc.md");
     const context = {
       extensionUri: Uri.file("/workspace/ext"),
@@ -543,6 +551,7 @@ describe("extension activate", () => {
     };
 
     mockStore.get.mockReturnValue(null);
+    mockStore.getLoadState.mockReturnValue("unloaded");
     mockParseSidecarContent.mockReturnValue({ comments: [{ id: "disk" }] });
     vi.mocked(fs.existsSync).mockImplementation((candidate: any) => String(candidate).endsWith(".review.yaml"));
     vi.mocked(fs.readFileSync).mockReturnValue("comments: []" as never);
@@ -559,7 +568,10 @@ describe("extension activate", () => {
     const fromObjectUri = md.renderer.rules["mrsf_comment_data"]([], 0, {}, { currentDocument: { fsPath: "/workspace/doc.md" } }) as string;
 
     expect(fromStringUri).toContain("data-comments");
-    expect(fromObjectUri).toContain("disk");
+    expect(fromObjectUri).toContain('data-comments="[]"');
+    expect(fromObjectUri).toContain('data-version="1"');
+    expect(mockStore.ensureLoaded).toHaveBeenCalledWith(uri);
+    expect(mockParseSidecarContent).not.toHaveBeenCalled();
 
     __mock.configuration.set("sidemark.commentsEnabled", false);
     expect(md.renderer.rules["mrsf_comment_data"]([], 0, {}, { currentDocument: uri }) as string).toBe("");

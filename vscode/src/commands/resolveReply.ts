@@ -2,6 +2,7 @@
  * Reply, resolve/unresolve, and delete comment commands.
  */
 import * as vscode from "vscode";
+import type { Comment } from "@mrsf/cli";
 import type { SidecarStore } from "../store/SidecarStore.js";
 import { resolveAuthor } from "../util/author.js";
 
@@ -9,28 +10,38 @@ import { resolveAuthor } from "../util/author.js";
  * Dismiss and re-show the hover so the user sees updated state
  * after a resolve/unresolve/reply/delete action triggered from a hover link.
  */
-function refreshHover(): void {
-  // Small delay lets the store's onDidChange fire and decorations update first
-  setTimeout(() => {
-    vscode.commands.executeCommand("editor.action.showHover");
-  }, 120);
+async function refreshHover(uri: vscode.Uri, position?: [number, number]): Promise<void> {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor || editor.document.uri.toString() !== uri.toString()) return;
+  const selections = editor.selections;
+  const target = Array.isArray(position) && position.length === 2
+    && position.every((value) => Number.isSafeInteger(value) && value >= 0)
+    && position[0] < editor.document.lineCount
+    ? new vscode.Position(position[0], Math.min(position[1], editor.document.lineAt(position[0]).text.length))
+    : undefined;
+  await vscode.commands.executeCommand("editor.action.hideHover");
+  if (vscode.window.activeTextEditor !== editor) return;
+  const temporarySelection = target ? new vscode.Selection(target, target) : undefined;
+  if (temporarySelection) editor.selection = temporarySelection;
+  try {
+    await vscode.commands.executeCommand("editor.action.showHover", { focus: "noAutoFocus" });
+  } finally {
+    if (temporarySelection && vscode.window.activeTextEditor === editor
+      && editor.selection.isEqual(temporarySelection)) {
+      editor.selections = selections;
+    }
+  }
 }
 
 /**
  * Prompt the user to select a comment from the active document.
  */
 async function pickComment(
-  store: SidecarStore,
+  sourceComments: readonly Comment[],
   label: string,
   filterResolved?: boolean,
 ): Promise<string | undefined> {
-  const active = await store.getForActiveOrVisible();
-  if (!active) {
-    vscode.window.showWarningMessage("No review sidecar found for this file.");
-    return undefined;
-  }
-
-  const comments = active.doc.comments.filter((c) => {
+  const comments = sourceComments.filter((c) => {
     if (filterResolved === true) return !c.resolved;
     if (filterResolved === false) return c.resolved;
     return true;
@@ -55,20 +66,30 @@ async function pickComment(
   return pick?.commentId;
 }
 
+async function getTarget(store: SidecarStore, uriArg?: string | vscode.Uri) {
+  if (uriArg === undefined) return store.getForActiveOrVisible();
+  try {
+    const uri = typeof uriArg === "string" ? vscode.Uri.parse(uriArg) : uriArg;
+    return uri.scheme === "file" ? store.getForActiveOrVisible(uri) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function registerReplyToComment(
   store: SidecarStore,
 ): vscode.Disposable {
   return vscode.commands.registerCommand(
     "mrsf.replyToComment",
-    async (commentIdArg?: string) => {
-      const active = await store.getForActiveOrVisible();
+    async (commentIdArg?: string, documentUri?: string | vscode.Uri, hoverPosition?: [number, number]) => {
+      const active = await getTarget(store, documentUri);
       if (!active) {
         vscode.window.showWarningMessage("No review sidecar found.");
         return;
       }
 
       const commentId =
-        commentIdArg ?? (await pickComment(store, "Select comment to reply to"));
+        commentIdArg ?? (await pickComment(active.doc.comments, "Select comment to reply to"));
       if (!commentId) return;
 
       const parent = store.findComment(active.uri, commentId);
@@ -88,7 +109,7 @@ export function registerReplyToComment(
 
       try {
         await store.replyToComment(active.uri, commentId, text, author);
-        refreshHover();
+        await refreshHover(active.uri, hoverPosition);
       } catch (err: unknown) {
         vscode.window.showErrorMessage(
           `Failed to reply: ${err instanceof Error ? err.message : String(err)}`,
@@ -103,8 +124,8 @@ export function registerResolveComment(
 ): vscode.Disposable {
   return vscode.commands.registerCommand(
     "mrsf.resolveComment",
-    async (commentIdArg?: string) => {
-      const active = await store.getForActiveOrVisible();
+    async (commentIdArg?: string, documentUri?: string | vscode.Uri, hoverPosition?: [number, number]) => {
+      const active = await getTarget(store, documentUri);
       if (!active) {
         vscode.window.showWarningMessage("No review sidecar found.");
         return;
@@ -112,7 +133,7 @@ export function registerResolveComment(
 
       const commentId =
         commentIdArg ??
-        (await pickComment(store, "Select comment to resolve", true));
+        (await pickComment(active.doc.comments, "Select comment to resolve", true));
       if (!commentId) return;
 
       // Check if there are direct replies → offer cascade
@@ -137,7 +158,7 @@ export function registerResolveComment(
         cascade,
       );
       if (result) {
-        refreshHover();
+        await refreshHover(active.uri, hoverPosition);
       } else {
         vscode.window.showErrorMessage("Comment not found.");
       }
@@ -150,8 +171,8 @@ export function registerUnresolveComment(
 ): vscode.Disposable {
   return vscode.commands.registerCommand(
     "mrsf.unresolveComment",
-    async (commentIdArg?: string) => {
-      const active = await store.getForActiveOrVisible();
+    async (commentIdArg?: string, documentUri?: string | vscode.Uri, hoverPosition?: [number, number]) => {
+      const active = await getTarget(store, documentUri);
       if (!active) {
         vscode.window.showWarningMessage("No review sidecar found.");
         return;
@@ -159,12 +180,12 @@ export function registerUnresolveComment(
 
       const commentId =
         commentIdArg ??
-        (await pickComment(store, "Select comment to unresolve", false));
+        (await pickComment(active.doc.comments, "Select comment to unresolve", false));
       if (!commentId) return;
 
       const result = await store.unresolveComment(active.uri, commentId);
       if (result) {
-        refreshHover();
+        await refreshHover(active.uri, hoverPosition);
       } else {
         vscode.window.showErrorMessage("Comment not found.");
       }
@@ -177,15 +198,15 @@ export function registerDeleteComment(
 ): vscode.Disposable {
   return vscode.commands.registerCommand(
     "mrsf.deleteComment",
-    async (commentIdArg?: string) => {
-      const active = await store.getForActiveOrVisible();
+    async (commentIdArg?: string, documentUri?: string | vscode.Uri) => {
+      const active = await getTarget(store, documentUri);
       if (!active) {
         vscode.window.showWarningMessage("No review sidecar found.");
         return;
       }
 
       const commentId =
-        commentIdArg ?? (await pickComment(store, "Select comment to delete"));
+        commentIdArg ?? (await pickComment(active.doc.comments, "Select comment to delete"));
       if (!commentId) return;
 
       // Check if there are direct replies → offer cascade vs promote

@@ -2,13 +2,35 @@
 
 Add, manage, and navigate **Markdown Review Sidecar Format** ([MRSF](https://sidemark.org)) comments directly inside Visual Studio Code — without touching your Markdown source files.
 
-![VS Code](https://img.shields.io/badge/VS%20Code-1.85%2B-blue?logo=visual-studio-code)
+![VS Code](https://img.shields.io/badge/VS%20Code-1.137%2B-blue?logo=visual-studio-code)
 ![License](https://img.shields.io/badge/license-MIT-green)
 [![MRSF v1.0 Draft](https://img.shields.io/badge/MRSF-v1.0%20Draft-blue)](MRSF-v1.0.md)
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/wictor.mrsf-vscode?label=VS%20Code)](https://marketplace.visualstudio.com/items?itemName=wictor.mrsf-vscode)
 [![VS Code Installs](https://img.shields.io/visual-studio-marketplace/i/wictor.mrsf-vscode?label=VS%20Code%20installs)](https://marketplace.visualstudio.com/items?itemName=wictor.mrsf-vscode)
 
 ## Features
+
+### Preview Recovery Status (0.6.0 Development)
+
+The recovery targets VS Code's **Markdown Preview** and Markdown **Text Editor**, not the hybrid **Markdown Editor**.
+Modern Preview tabs expose a document URI and can drive document-bound sidebar actions. Legacy `markdown.showPreview*` webviews do not expose their source URI; automatic sidebar switching between multiple legacy previews remains a release blocker. This development version does not claim full compatibility until that gap is resolved.
+
+### Development Verification
+
+After installing and building the CLI dependency and installing the Monaco dependency, run these commands from `vscode/`:
+
+```sh
+npm ci
+npm run lint
+npm test
+npm run test:host -- 1.137.0
+npm run test:host -- stable
+npm run package
+```
+
+Host tests use temporary documents and an isolated VS Code profile. They check preview-only activation, JSON hydration, external updates and both preview tab types. Playwright connects to a loopback-only debugging port to test native preview comment clicks, Enter-key activation and immediate Resolve/Unresolve hover updates without changing the cursor selection. Screenshots are saved under `.vscode-test/screenshots/`. Complete visual parity, all action transports, multi-document legacy tracking and rich-anchor parity remain unverified.
+
+To run only the real-webview tooltip bounds checks (both gutters, narrow panes, long text), set `MRSF_TEST_FOCUS=tooltip` before `npm run test:host`. In PowerShell, use `$env:MRSF_TEST_FOCUS = "tooltip"`; remove it afterward with `Remove-Item Env:MRSF_TEST_FOCUS` to restore the full suite. This focused mode does not test native click transport, file watching, or comment persistence.
 
 ### Gutter icons & inline highlights
 
@@ -157,7 +179,7 @@ npx @mrsf/cli list --open
 
 ## Requirements
 
-- VS Code 1.85 or later
+- VS Code 1.137 or later
 - Git (optional — enables commit-based staleness detection and diff-based reanchoring)
 
 ## Links

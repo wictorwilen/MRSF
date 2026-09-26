@@ -3,7 +3,6 @@
  * and triggers SidecarStore cache invalidation.
  */
 import * as vscode from "vscode";
-import { sidecarToDocument } from "@mrsf/cli";
 import type { SidecarStore } from "./SidecarStore.js";
 
 export class FileWatcher implements vscode.Disposable {
@@ -31,25 +30,11 @@ export class FileWatcher implements vscode.Disposable {
     // Skip if this change was caused by our own save
     if (this.store.isSaving(sidecarUri.fsPath)) return;
 
-    try {
-      const docPath = sidecarToDocument(sidecarUri.fsPath);
-      const docUri = vscode.Uri.file(docPath);
-
-      // Always reload into cache so the sidebar, decorations and
-      // Markdown preview pick up external changes (e.g. from an AI
-      // review agent running in the background).
-      // load() fires _onDidChange which cascades to:
-      //  • sidebar refresh
-      //  • decoration update
-      //  • markdown.preview.refresh
-      this.store.load(docUri);
-    } catch {
-      // sidecarToDocument may fail if the naming is unexpected
-    }
+    void this.store.reloadSidecar(sidecarUri).catch(() => {});
   }
 
   private onSidecarDeleted(sidecarUri: vscode.Uri): void {
-    this.store.invalidateBySidecarPath(sidecarUri.fsPath);
+    void this.store.reloadSidecar(sidecarUri).catch(() => {});
   }
 
   private onMarkdownDeleted(_uri: vscode.Uri): void {

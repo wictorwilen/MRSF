@@ -5,6 +5,7 @@ import * as vscode from "vscode";
 import type { SidecarStore } from "../store/SidecarStore.js";
 import { vscodeSelectionToMrsf } from "../util/positions.js";
 import { resolveAuthor } from "../util/author.js";
+import { resolveDocumentUri } from "../util/documentContext.js";
 
 const COMMENT_TYPES = [
   { label: "suggestion", description: "Suggest an improvement" },
@@ -104,15 +105,15 @@ export function registerAddLineComment(store: SidecarStore): vscode.Disposable {
     "mrsf.addLineComment",
     async (lineArg?: unknown, uriArg?: unknown) => {
       const normalized = normalizeLineCommandArgs(lineArg, uriArg);
-      const requestedUri = toUri(normalized.uriArg);
-      let editor = findMarkdownEditor(requestedUri, false);
+      const requestedUri = normalized.uriArg ? toUri(normalized.uriArg) : resolveDocumentUri();
+      const editor = requestedUri ? findMarkdownEditor(requestedUri, false) : undefined;
 
       // Determine the target URI and line
       const docUri = editor?.document.languageId === "markdown"
         ? editor.document.uri
         : requestedUri;
 
-      if (!docUri) {
+      if (!docUri || docUri.scheme !== "file") {
         vscode.window.showWarningMessage(
           "Open a Markdown file to add review comments.",
         );
@@ -132,6 +133,10 @@ export function registerAddLineComment(store: SidecarStore): vscode.Disposable {
         });
         if (!input) return;
         line = parseInt(input, 10);
+      }
+      if (!Number.isSafeInteger(line) || line < 1) {
+        vscode.window.showWarningMessage("Enter a positive line number.");
+        return;
       }
 
       const text = await vscode.window.showInputBox({
@@ -183,8 +188,9 @@ export function registerAddInlineComment(
   return vscode.commands.registerCommand(
     "mrsf.addInlineComment",
     async (uriArg?: unknown) => {
-      const requestedUri = toUri(normalizeInlineCommandArg(uriArg));
-      const editor = findMarkdownEditor(requestedUri, true);
+      const normalizedUri = normalizeInlineCommandArg(uriArg);
+      const requestedUri = normalizedUri ? toUri(normalizedUri) : resolveDocumentUri();
+      const editor = requestedUri ? findMarkdownEditor(requestedUri, true) : undefined;
 
       if (!editor || editor.document.languageId !== "markdown") {
         vscode.window.showWarningMessage(

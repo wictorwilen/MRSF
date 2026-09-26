@@ -19,6 +19,8 @@ import {
   type CommentFilter,
   type CommentSummary,
   discoverSidecar,
+  loadConfig,
+  sidecarToDocument,
   parseSidecar,
   readDocumentLines,
   writeSidecar,
@@ -41,6 +43,7 @@ import {
 import * as path from "node:path";
 import * as fs from "node:fs";
 import { vscodeChangeToEditorChange } from "../util/positions.js";
+import { resolveDocumentUri } from "../util/documentContext.js";
 
 interface CacheEntry {
   doc: MrsfDocument;
@@ -50,6 +53,10 @@ interface CacheEntry {
 
 export class SidecarStore implements vscode.Disposable {
   private cache = new Map<string, CacheEntry>();
+  private loaded = new Set<string>();
+  private loading = new Map<string, Promise<MrsfDocument | null>>();
+  private loadErrors = new Map<string, unknown>();
+  private generations = new Map<string, number>();
   private workspaceRoot: string | undefined;
   private repoRoot: string | undefined;
 
@@ -108,27 +115,81 @@ export class SidecarStore implements vscode.Disposable {
    * Returns the parsed MrsfDocument or null if no sidecar exists.
    */
   async load(documentUri: vscode.Uri): Promise<MrsfDocument | null> {
-    await this._rootsReady;
     const docPath = documentUri.fsPath;
+    const generation = (this.generations.get(docPath) ?? 0) + 1;
+    this.generations.set(docPath, generation);
+    await this._rootsReady;
     try {
-      const sidecarPath = await discoverSidecar(docPath, {
-        cwd: this.workspaceRoot,
+      let sidecarPath = await discoverSidecar(docPath, {
+        cwd: findWorkspaceRoot(path.dirname(docPath)),
       });
+      if (!fs.existsSync(sidecarPath) && sidecarPath.endsWith(".review.yaml")) {
+        const jsonPath = sidecarPath.replace(/\.review\.yaml$/, ".review.json");
+        if (fs.existsSync(jsonPath)) sidecarPath = jsonPath;
+      }
 
       if (!fs.existsSync(sidecarPath)) {
+        if (this.generations.get(docPath) !== generation) return this.get(documentUri);
         this.cache.delete(docPath);
+        this.loaded.add(docPath);
+        this.loadErrors.delete(docPath);
+        this._onDidChange.fire(documentUri);
         return null;
       }
 
       const doc = await parseSidecar(sidecarPath);
+      if (this.generations.get(docPath) !== generation) return this.get(documentUri);
       const entry: CacheEntry = { doc, sidecarPath, documentPath: docPath };
       this.cache.set(docPath, entry);
+      this.loaded.add(docPath);
+      this.loadErrors.delete(docPath);
       this._onDidChange.fire(documentUri);
       return doc;
-    } catch {
+    } catch (error) {
+      if (this.generations.get(docPath) !== generation) return this.get(documentUri);
       this.cache.delete(docPath);
+      this.loaded.add(docPath);
+      this.loadErrors.set(docPath, error);
+      this._onDidChange.fire(documentUri);
       return null;
     }
+  }
+
+  ensureLoaded(documentUri: vscode.Uri): Promise<MrsfDocument | null> {
+    const cached = this.get(documentUri);
+    if (cached || this.loaded.has(documentUri.fsPath)) return Promise.resolve(cached);
+    const pending = this.loading.get(documentUri.fsPath);
+    if (pending) return pending;
+    const task = this.load(documentUri).finally(() => {
+      if (this.loading.get(documentUri.fsPath) === task) this.loading.delete(documentUri.fsPath);
+    });
+    this.loading.set(documentUri.fsPath, task);
+    return task;
+  }
+
+  getLoadState(documentUri: vscode.Uri): "unloaded" | "loading" | "loaded" | "error" {
+    if (this.loadErrors.has(documentUri.fsPath)) return "error";
+    if (this.loaded.has(documentUri.fsPath) || this.cache.has(documentUri.fsPath)) return "loaded";
+    return this.loading.has(documentUri.fsPath) ? "loading" : "unloaded";
+  }
+
+  async reloadSidecar(sidecarUri: vscode.Uri): Promise<void> {
+    for (const entry of this.cache.values()) {
+      if (entry.sidecarPath === sidecarUri.fsPath) {
+        await this.load(vscode.Uri.file(entry.documentPath));
+        return;
+      }
+    }
+    const root = findWorkspaceRoot(path.dirname(sidecarUri.fsPath));
+    const config = await loadConfig(root);
+    let documentPath = sidecarToDocument(sidecarUri.fsPath);
+    if (config?.sidecar_root) {
+      const relative = path.relative(path.resolve(root, config.sidecar_root), documentPath);
+      if (relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative)) {
+        documentPath = path.join(root, relative);
+      }
+    }
+    await this.load(vscode.Uri.file(documentPath));
   }
 
   /**
@@ -172,6 +233,10 @@ export class SidecarStore implements vscode.Disposable {
    */
   invalidate(documentUri: vscode.Uri): void {
     this.cache.delete(documentUri.fsPath);
+    this.loaded.delete(documentUri.fsPath);
+    this.loadErrors.delete(documentUri.fsPath);
+    this.loading.delete(documentUri.fsPath);
+    this.generations.set(documentUri.fsPath, (this.generations.get(documentUri.fsPath) ?? 0) + 1);
     this._onDidChange.fire(documentUri);
   }
 
@@ -181,8 +246,7 @@ export class SidecarStore implements vscode.Disposable {
   invalidateBySidecarPath(sidecarPath: string): void {
     for (const [docPath, entry] of this.cache.entries()) {
       if (entry.sidecarPath === sidecarPath) {
-        this.cache.delete(docPath);
-        this._onDidChange.fire(vscode.Uri.file(docPath));
+        this.invalidate(vscode.Uri.file(docPath));
         return;
       }
     }
@@ -267,37 +331,10 @@ export class SidecarStore implements vscode.Disposable {
     doc: MrsfDocument;
     uri: vscode.Uri;
   } | null> {
-    // 1. Explicit URI
-    if (explicitUri) {
-      let doc = this.get(explicitUri);
-      if (!doc) doc = await this.load(explicitUri);
-      return doc ? { doc, uri: explicitUri } : null;
-    }
-
-    // 2. Active editor
-    const fromActive = await this.getForActiveEditor();
-    if (fromActive) return fromActive;
-
-    // 3. Any visible markdown editor (side-by-side with preview)
-    for (const editor of vscode.window.visibleTextEditors) {
-      if (editor.document.languageId === "markdown") {
-        const uri = editor.document.uri;
-        let doc = this.get(uri);
-        if (!doc) doc = await this.load(uri);
-        if (doc) return { doc, uri };
-      }
-    }
-
-    // 4. Any open markdown document (preview loads the document model)
-    for (const td of vscode.workspace.textDocuments) {
-      if (td.languageId === "markdown" && td.uri.scheme === "file") {
-        let doc = this.get(td.uri);
-        if (!doc) doc = await this.load(td.uri);
-        if (doc) return { doc, uri: td.uri };
-      }
-    }
-
-    return null;
+    const uri = explicitUri ?? resolveDocumentUri();
+    if (!uri) return null;
+    const doc = await this.ensureLoaded(uri);
+    return doc ? { doc, uri } : null;
   }
 
   // ── Comment operations ──────────────────────────────────────
@@ -311,17 +348,18 @@ export class SidecarStore implements vscode.Disposable {
     opts: AddCommentOptions,
   ): Promise<Comment> {
     const docPath = documentUri.fsPath;
+    await this.ensureLoaded(documentUri);
+    if (this.loadErrors.has(docPath)) throw new Error("Cannot add a comment until the sidecar can be read.");
     let entry = this.cache.get(docPath);
 
     if (!entry) {
       // Create new sidecar
       await this._rootsReady;
+      const workspaceRoot = findWorkspaceRoot(path.dirname(docPath));
       const sidecarPath = await discoverSidecar(docPath, {
-        cwd: this.workspaceRoot,
+        cwd: workspaceRoot,
       });
-      const relativePath = this.workspaceRoot
-        ? path.relative(this.workspaceRoot, docPath)
-        : path.basename(docPath);
+      const relativePath = path.relative(workspaceRoot, docPath);
       const doc: MrsfDocument = {
         mrsf_version: "1.0",
         document: relativePath,

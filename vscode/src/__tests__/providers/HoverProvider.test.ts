@@ -91,7 +91,8 @@ describe("MrsfHoverProvider", () => {
 
     expect(mockBuildReviewSnapshot).toHaveBeenCalledWith(document, { comments: [root, reply] }, true);
     expect(hover).toBeInstanceOf(vscode.Hover);
-    expect(hover?.contents.isTrusted).toBe(true);
+    expect(hover?.contents.isTrusted).toEqual({ enabledCommands: ["mrsf.resolveComment", "mrsf.unresolveComment", "mrsf.replyToComment", "mrsf.deleteComment"] });
+    expect(hover?.contents.value).toContain(encodeURIComponent(JSON.stringify(["c1", uri.toString(), [1, 5]])));
     expect(hover?.contents.supportHtml).toBe(true);
     expect(hover?.contents.value).toContain("**A\\_User** · 5m ago `issue` `high`");
     expect(hover?.contents.value).toContain("Root \\\[comment\\\]");
