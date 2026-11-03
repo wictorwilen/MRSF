@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 - `mrsf add` captures selected text from the requested line rather than the preceding line.
+- Use Git-style repository-relative paths for revision-based reanchoring on Windows, so nested documents retain their source-revision evidence.
 
 ### Changed
 - Document column offsets as zero-based UTF-16 code units, with an exclusive end.
