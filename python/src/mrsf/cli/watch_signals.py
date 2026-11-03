@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import signal
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 
 def register_signal_handlers(shutdown: Callable[..., None]) -> Callable[[], None]:

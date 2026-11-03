@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 import sys
 
@@ -52,10 +53,8 @@ def rename_cmd(ctx: MrsfContext, old_document: str, new_document: str) -> None:
 
     # Remove old sidecar if path changed
     if os.path.abspath(old_sidecar) != os.path.abspath(new_sidecar):
-        try:
+        with contextlib.suppress(OSError):
             os.unlink(old_sidecar)
-        except OSError:
-            pass
 
     if not ctx.quiet:
         click.echo(f"Renamed: {old_sidecar} → {new_sidecar}")

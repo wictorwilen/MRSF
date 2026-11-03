@@ -43,7 +43,11 @@ vi.mock("../commands/rename.js", () => ({ registerRename }));
 vi.mock("../commands/watch.js", () => ({ registerWatch }));
 
 const originalArgv = [...process.argv];
-const originalCI = process.env.CI;
+const ciVariables = [
+  "CI", "CONTINUOUS_INTEGRATION", "BUILD_NUMBER", "GITHUB_ACTIONS",
+  "GITLAB_CI", "CIRCLECI", "TRAVIS", "JENKINS_URL",
+  "CODEBUILD_BUILD_ID", "TF_BUILD", "BUILDKITE", "TEAMCITY_VERSION",
+] as const;
 const originalIsTTY = process.stdout.isTTY;
 
 function setTTY(value: boolean): void {
@@ -61,17 +65,16 @@ async function importBin(): Promise<void> {
 beforeEach(() => {
   vi.clearAllMocks();
   process.argv = ["node", "/home/wictor/code/wictorwilen/mrsf/cli/src/bin.ts"];
-  delete process.env.CI;
+  for (const variable of ciVariables) {
+    vi.stubEnv(variable, undefined);
+  }
   setTTY(true);
 });
 
 afterEach(() => {
   process.argv = [...originalArgv];
-  if (originalCI === undefined) {
-    delete process.env.CI;
-  } else {
-    process.env.CI = originalCI;
-  }
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
   setTTY(Boolean(originalIsTTY));
 });
 
@@ -107,11 +110,11 @@ describe("bin entrypoint", () => {
     stderrWriteSpy.mockRestore();
   });
 
-  it("suppresses the banner in CI", async () => {
+  it.each(ciVariables)("suppresses the banner when %s is set", async (variable) => {
     const stderrWriteSpy = vi
       .spyOn(process.stderr, "write")
       .mockImplementation(() => true);
-    process.env.CI = "true";
+    process.env[variable] = "true";
 
     await importBin();
 

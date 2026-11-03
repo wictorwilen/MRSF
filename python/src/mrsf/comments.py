@@ -33,10 +33,6 @@ ANCHOR_FIELDS = [
 ]
 
 
-def _is_plain_object(value: object) -> bool:
-    return isinstance(value, dict)
-
-
 def _is_comment_extension_value(value: object) -> bool:
     if value is None:
         return True
@@ -46,8 +42,11 @@ def _is_comment_extension_value(value: object) -> bool:
         return value == value and value not in (float("inf"), float("-inf"))
     if isinstance(value, list):
         return all(_is_comment_extension_value(item) for item in value)
-    if _is_plain_object(value):
-        return all(isinstance(key, str) and _is_comment_extension_value(item) for key, item in value.items())
+    if isinstance(value, dict):
+        return all(
+            isinstance(key, str) and _is_comment_extension_value(item)
+            for key, item in value.items()
+        )
     return False
 
 
@@ -61,7 +60,8 @@ def normalize_comment_extensions(extensions: dict[str, object] | None = None) ->
             raise ValueError(f"Comment extension key '{key}' must start with 'x_'.")
         if not _is_comment_extension_value(value):
             raise ValueError(
-                f"Comment extension '{key}' must be JSON-serializable (null, boolean, finite number, string, array, or plain object)."
+                f"Comment extension '{key}' must be JSON-serializable "
+                "(null, boolean, finite number, string, array, or plain object)."
             )
         normalized[key] = value
     return normalized

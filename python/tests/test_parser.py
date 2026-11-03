@@ -1,12 +1,9 @@
 """Tests for the parser module — comprehensive coverage."""
 
-import os
-from pathlib import Path
 
 import pytest
 
 from mrsf.parser import (
-    LenientParseResult,
     _salvage_yaml,
     parse_sidecar,
     parse_sidecar_content,
@@ -14,7 +11,6 @@ from mrsf.parser import (
     parse_sidecar_lenient,
     read_document_lines,
 )
-
 
 # ---------------------------------------------------------------------------
 # parse_sidecar_content — YAML
@@ -147,7 +143,7 @@ class TestParseSidecarFromDisk:
         assert doc.document == "test.md"
 
     def test_raises_on_nonexistent_file(self, tmp_path):
-        with pytest.raises(Exception):
+        with pytest.raises(FileNotFoundError):
             parse_sidecar(str(tmp_path / "missing.review.yaml"))
 
 

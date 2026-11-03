@@ -12,7 +12,6 @@ from mrsf.discovery import (
     sidecar_to_document,
 )
 
-
 # ---------------------------------------------------------------------------
 # sidecarToDocument
 # ---------------------------------------------------------------------------
@@ -89,10 +88,12 @@ class TestLoadConfig:
         assert config.sidecar_root == "reviews"
 
     def test_raises_on_absolute_sidecar_root(self, tmp_path):
-        (tmp_path / ".mrsf.yaml").write_text("sidecar_root: /abs/path\n")
         import pytest
-        with pytest.raises(ValueError, match="relative path"):
-            load_config(str(tmp_path))
+
+        for root in ("/abs/path", str(tmp_path / "reviews"), os.sep + "reviews"):
+            (tmp_path / ".mrsf.yaml").write_text(f"sidecar_root: '{root}'\n")
+            with pytest.raises(ValueError, match="relative path"):
+                load_config(str(tmp_path))
 
     def test_raises_on_traversal_in_sidecar_root(self, tmp_path):
         (tmp_path / ".mrsf.yaml").write_text("sidecar_root: ../outside\n")
@@ -198,23 +199,20 @@ class TestDiscoverAllSidecars:
         result = discover_all_sidecars(str(tmp_path))
         assert len(result) == 0
 
-    def test_handles_permission_error_in_subdirectory(self, tmp_path):
+    def test_handles_permission_error_in_subdirectory(self, tmp_path, monkeypatch):
         """Cover lines 113-114: PermissionError during walk."""
-        import os
-        import stat
-
-        # Create a restricted subdirectory
         restricted = tmp_path / "restricted"
         restricted.mkdir()
         (restricted / "file.md.review.yaml").write_text("")
-        # Remove read/execute permissions
-        restricted.chmod(0o000)
-        try:
-            # Also have an accessible file
-            (tmp_path / "accessible.md.review.yaml").write_text("")
-            result = discover_all_sidecars(str(tmp_path))
-            assert len(result) == 1
-            assert "accessible" in result[0]
-        finally:
-            # Restore permissions for cleanup
-            restricted.chmod(stat.S_IRWXU)
+        original_iterdir = Path.iterdir
+
+        def iterdir(directory):
+            if directory == restricted:
+                raise PermissionError("Test directory is inaccessible")
+            return original_iterdir(directory)
+
+        monkeypatch.setattr(Path, "iterdir", iterdir)
+        (tmp_path / "accessible.md.review.yaml").write_text("")
+        result = discover_all_sidecars(str(tmp_path))
+        assert len(result) == 1
+        assert "accessible" in result[0]
