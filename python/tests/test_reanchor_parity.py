@@ -49,7 +49,7 @@ def test_shared_reanchor_corpus() -> None:
                         f"{case['id']}/{value['id']}: expected {expected}, "
                         f"received {result}"
                     )
-    assert comments_evaluated == 80
+    assert comments_evaluated == 88
     assert failures == []
 
 

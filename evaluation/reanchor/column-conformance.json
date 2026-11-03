@@ -5,5 +5,7 @@
   { "name": "emoji prefix", "text": "# Test\n\n😀 foo bar\n", "line": 3, "start_column": 3, "end_column": 6, "selected_text": "foo" },
   { "name": "non-BMP selection", "text": "x 𠀀 y\n", "line": 1, "start_column": 2, "end_column": 4, "selected_text": "𠀀" },
   { "name": "combining marks and tabs", "text": "é\tfoo\n", "line": 1, "start_column": 3, "end_column": 6, "selected_text": "foo" },
-  { "name": "multi-line columns", "text": "😀 first\nmiddle\n𠀀 last\n", "line": 1, "end_line": 3, "start_column": 3, "end_column": 4, "selected_text": "first\nmiddle\n𠀀 l" }
+  { "name": "multi-line columns", "text": "😀 first\nmiddle\n𠀀 last\n", "line": 1, "end_line": 3, "start_column": 3, "end_column": 4, "selected_text": "first\nmiddle\n𠀀 l" },
+  { "name": "Japanese kanji after emoji", "text": "😀 日本語の説明\n", "line": 1, "start_column": 3, "end_column": 6, "selected_text": "日本語" },
+  { "name": "Japanese kana", "text": "かな カタカナ 漢字\n", "line": 1, "start_column": 3, "end_column": 7, "selected_text": "カタカナ" }
 ]

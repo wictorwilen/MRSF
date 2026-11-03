@@ -15,6 +15,18 @@ anchors, and the acceptable target status and ranges.
 - repeated text, missing positions, copied selections, and teleport hazards;
 - ambiguous and orphaned outcomes where an implementation must not guess.
 
+`cases/diagnostic/unicode-columns.json` adds eight UTF-16 range checks covering
+emoji before Japanese kanji and kana, moved emoji selections, non-BMP CJK,
+multiline Japanese selections, whitespace normalization, ZWJ emoji, and the
+Japanese flag. These cases are part of the committed correctness baseline and
+the Python corpus parity gate, not just standalone unit tests. They assert
+exact column offsets for inline selections as well as status and track incorrect
+confident relocations. The normalization case preserves a line-only anchor.
+
+`column-conformance.json` separately exercises selection capture and unchanged
+reanchoring in both CLIs, including Japanese text, emoji, combining marks, tabs,
+and non-BMP CJK.
+
 Run the corpus from `cli/`:
 
 ```bash
