@@ -95,9 +95,10 @@ See [the skill file](https://github.com/wictorwilen/MRSF/blob/main/examples/mrsf
 
 ## Interactive Editor Integrations
 
-Sidemark is not limited to static rendering or CLI workflows. The repo also includes editor-native integrations when you want the review model to live inside an editing surface:
+Sidemark is not limited to static rendering or CLI workflows. Core and community integrations bring the review model into editing surfaces:
 
 - [VS Code extension](/vscode/) for a ready-made desktop editor experience
+- [Sidemark for Obsidian](/plugins/obsidian), a community-maintained plugin by Adam Coddington for reviewing notes
 - [Monaco plugin](/plugins/monaco) for custom Monaco hosts
 - [Milkdown + Crepe plugin](/plugins/milkdown) for direct Milkdown editors and Crepe shells sharing the same review controller
 - [Tiptap plugin](/plugins/tiptap) for experimental rich-text editing workflows
