@@ -5,12 +5,14 @@ All notable changes to the **Sidemark** VS Code extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.0] - Unreleased
+## [0.6.1] - 2026-11-03
 
 ### Changed
 - Require VS Code 1.137 or later and compile against the matching API declarations.
 
 ### Fixed
+- Track the first source edit even when VS Code delivers its dirty-state change separately from the content change. Verify clean reloads against disk, preserve edit ordering during that check, and finish queued edits before save-time reanchoring.
+- Capture inline selected text from the correct source line (the same indexing correction included in #26).
 - Coalesce background store/settings refresh bursts to reduce overlapping Markdown Preview reloads; this does not fully resolve the intermittent cold-preview frame-swap failure on VS Code 1.137.
 - Render preview comments after delayed Markdown loading and content updates without requiring a resize.
 - Dispose preview observers and queued rendering when the webview closes.
@@ -27,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Keep comment tooltips inside the Markdown Preview pane, opening right-gutter tooltips inward and constraining placement and text wrapping in narrow panes.
 
 ### Validation
+- Exercise native Markdown Text Editor editing before, after and inside all seven Unicode spans, boundary-insertion affinity, undo restoration, UTF-16 selection-comment persistence and save-time reanchoring. Verify that the loaded hybrid Markdown Editor reports unsupported integration without stale threads, and that returning to Text Editor restores comments and hovers.
 - Expand the real-host suite with a long Unicode document, seven explicit UTF-16 selections, Unicode authors/comments, reply/edit persistence, Resolve/Unresolve, anchor/source preservation and modern-preview document switching.
 - Wait for actionable real pointer targets, verify fresh sidebar highlight requests independently of animation timing, and capture viewport/frame layout in failure diagnostics.
 - Attach Playwright before preview creation, skip hidden replacement frames, and wait for an actual workspace watcher readiness event before the single external sidecar edit.

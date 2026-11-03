@@ -19,6 +19,9 @@ await writeFile(path.join(workspace, "preview.md"), "# Preview\n\nHello world\n"
 await writeFile(path.join(workspace, "other.md"), "# Other document\n");
 await writeFile(path.join(workspace, "unicode.md"), unicodeFixture.content);
 await writeFile(path.join(workspace, "unicode.md.review.json"), JSON.stringify(unicodeFixture.review));
+await writeFile(path.join(workspace, "source-editing.md"), unicodeFixture.content);
+await writeFile(path.join(workspace, "source-editing.md.review.json"),
+  JSON.stringify({ ...unicodeFixture.review, document: "source-editing.md" }));
 await writeFile(path.join(workspace, "preview.md.review.json"), JSON.stringify({
   mrsf_version: "1.0",
   document: "preview.md",

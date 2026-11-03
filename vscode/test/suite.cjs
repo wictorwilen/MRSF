@@ -5,6 +5,7 @@ const vscode = require("vscode");
 const { chromium } = require("playwright-core");
 const path = require("node:path");
 const unicodeFixture = require("./fixtures.cjs");
+const verifyEditorModes = require("./editor-modes.cjs");
 
 function isReplacedFrame(frame, error) {
   return frame.isDetached() || /Frame was detached|not attached to the DOM|Execution context was destroyed/.test(error.message);
@@ -232,11 +233,15 @@ async function verifyInteractions(target, browser) {
   page.on("console", (message) => {
     if (message.type() === "error" || message.text().includes("postMessage")) console.log("Browser console:", message.text());
   });
-  page.on("pageerror", (error) => console.log("Browser error:", error.message));
+  page.on("pageerror", (error) => console.log("Browser error:", error.stack));
   page.setDefaultTimeout(15000);
   const artifacts = path.join(__dirname, "..", ".vscode-test", "screenshots", vscode.version);
   await fs.mkdir(artifacts, { recursive: true });
   try {
+    if (process.env.MRSF_TEST_FOCUS === "editor") {
+      await verifyEditorModes(page, artifacts, { eventually, findFrame });
+      return;
+    }
     await page.getByRole("tab", { name: /preview\.md/ }).click();
     let preview;
     if (process.env.MRSF_TEST_FOCUS === "tooltip") {
@@ -369,6 +374,7 @@ async function verifyInteractions(target, browser) {
     await page.screenshot({ path: path.join(artifacts, "hover-refresh.png") });
     console.log("Trusted preview clicks and live hover actions passed");
     await verifyUnicodeReview(page, artifacts);
+    await verifyEditorModes(page, artifacts, { eventually, findFrame });
   } catch (error) {
     const diagnostics = [];
     for (const frame of page.frames()) {

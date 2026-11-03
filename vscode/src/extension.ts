@@ -3,6 +3,7 @@
  */
 import * as vscode from "vscode";
 import * as path from "node:path";
+import * as fs from "node:fs";
 import { SidecarStore } from "./store/SidecarStore.js";
 import { FileWatcher } from "./store/FileWatcher.js";
 import { GutterDecorationProvider } from "./decorations/GutterDecorationProvider.js";
@@ -321,38 +322,51 @@ export function activate(context: vscode.ExtensionContext) {
     statusBar.setDirtyAnchors(dirtyDocs.size > 0);
   }
 
+  const pendingEdits = new Map<string, Promise<void>>();
   context.subscriptions.push(
-    vscode.workspace.onDidChangeTextDocument(async (e) => {
-      if (e.document.languageId !== "markdown") return;
+    vscode.workspace.onDidChangeTextDocument((e) => {
+      if (e.document.languageId !== "markdown" || e.contentChanges.length === 0) return;
       const doc = store.get(e.document.uri);
       if (!doc || doc.comments.length === 0) return;
 
-      // Detect when the document has been reloaded from disk without the
-      // user saving — for example, when an AI agent (MCP server or Copilot)
-      // writes to the file directly on disk.  After such a reload the
-      // document is clean (isDirty === false) and carries real content
-      // changes, but there is no corresponding onDidSaveTextDocument event.
-      // The live-tracker heuristic is unreliable for large replacements, so
-      // we run a full reanchor instead.
-      // Undo/redo operations can also leave the document clean, but they set
-      // e.reason (1 = Undo, 2 = Redo) so we exclude them here.
-      if (e.document.isDirty === false && e.contentChanges.length > 0 && !e.reason) {
-        const config = vscode.workspace.getConfiguration("sidemark");
-        if (config.get<boolean>("reanchorOnSave", true)) {
-          await runReanchor(e.document.uri);
+      // The first user edit can arrive before VS Code marks the document dirty.
+      // Confirm a clean reload against disk, preserving edit order during I/O.
+      const cleanText = e.document.isDirty === false && !e.reason ? e.document.getText() : undefined;
+      const version = e.document.version;
+      const processChange = async (): Promise<void> => {
+        if (cleanText !== undefined) {
+          let diskText: string | undefined;
+          try {
+            diskText = (await fs.promises.readFile(e.document.uri.fsPath, "utf8")).replace(/^\uFEFF/, "");
+          } catch (error: unknown) {
+            void vscode.window.showWarningMessage(
+              `Cannot verify Markdown reload; retaining live anchor tracking: ${error instanceof Error ? error.message : String(error)}`,
+            );
+          }
+          if (diskText === cleanText && !e.document.isDirty && e.document.version === version) {
+            const config = vscode.workspace.getConfiguration("sidemark", e.document.uri);
+            if (config.get<boolean>("reanchorOnSave", true)) await runReanchor(e.document.uri);
+            return;
+          }
         }
-        return;
-      }
 
-      // Apply line-shift adjustments to in-memory comments so
-      // decorations track the edits in real-time.
-      const moved = store.applyLiveEdits(e.document.uri, e.contentChanges);
+        if (store.applyLiveEdits(e.document.uri, e.contentChanges)) {
+          dirtyDocs.add(e.document.uri.fsPath);
+          statusBar.setDirtyAnchors(true);
+        }
+      };
 
-      if (moved) {
-        dirtyDocs.add(e.document.uri.fsPath);
-        statusBar.setDirtyAnchors(true);
-        // Decorations auto-update via store.onDidChange → providers
-      }
+      const key = e.document.uri.toString();
+      const pending = pendingEdits.get(key);
+      const task = (pending ? pending.then(processChange) : processChange()).catch((error: unknown) => {
+        void vscode.window.showErrorMessage(
+          `Failed to track Markdown changes: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      });
+      pendingEdits.set(key, task);
+      void task.then(() => {
+        if (pendingEdits.get(key) === task) pendingEdits.delete(key);
+      });
     }),
   );
 
@@ -362,6 +376,7 @@ export function activate(context: vscode.ExtensionContext) {
       const config = vscode.workspace.getConfiguration("sidemark");
       if (!config.get<boolean>("reanchorOnSave", true)) return;
 
+      await pendingEdits.get(document.uri.toString());
       await runReanchor(document.uri);
     }),
   );

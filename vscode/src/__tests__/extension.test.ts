@@ -3,6 +3,7 @@ import { __mock, EventEmitter, Uri } from "vscode";
 import * as fs from "node:fs";
 
 const mockParseSidecarContent = vi.fn();
+const mockReadSource = vi.fn();
 
 const mockStore = {
   load: vi.fn(),
@@ -47,6 +48,7 @@ const mockReanchorController = {
 vi.mock("node:fs", () => ({
   existsSync: vi.fn().mockReturnValue(false),
   readFileSync: vi.fn(),
+  promises: { readFile: (...args: unknown[]) => mockReadSource(...args) },
 }));
 
 vi.mock("@mrsf/cli", () => ({
@@ -149,6 +151,7 @@ describe("extension activate", () => {
   beforeEach(() => {
     __mock.reset();
     vi.clearAllMocks();
+    mockReadSource.mockResolvedValue("new content\n");
     mockStore.load.mockResolvedValue({ comments: [{ id: "c1" }] });
     mockStore.ensureLoaded.mockResolvedValue({ comments: [] });
     mockStore.getLoadState.mockReturnValue("loaded");
@@ -502,7 +505,7 @@ describe("extension activate", () => {
     //  • contentChanges has entries  — the content actually changed
     //  • reason is absent  — not an undo/redo operation
     __mock.emitDidChangeTextDocument({
-      document: { uri, languageId: "markdown", isDirty: false },
+      document: { uri, languageId: "markdown", isDirty: false, version: 1, getText: () => "new content\n" },
       contentChanges: [{ range: { start: { line: 0, character: 0 }, end: { line: 5, character: 0 } }, text: "new content\n" }],
     });
 
@@ -520,7 +523,7 @@ describe("extension activate", () => {
     expect(mockStore.clearPendingShifts).toHaveBeenCalledWith(uri);
   });
 
-  it("does not reanchor on external reload when reanchorOnSave is disabled", () => {
+  it("does not reanchor on external reload when reanchorOnSave is disabled", async () => {
     const uri = Uri.file("/workspace/doc.md");
     const context = {
       extensionUri: Uri.file("/workspace/ext"),
@@ -535,13 +538,81 @@ describe("extension activate", () => {
     activate(context as never);
 
     __mock.emitDidChangeTextDocument({
-      document: { uri, languageId: "markdown", isDirty: false },
+      document: { uri, languageId: "markdown", isDirty: false, version: 1, getText: () => "new content\n" },
       contentChanges: [{ range: { start: { line: 0, character: 0 }, end: { line: 5, character: 0 } }, text: "new content\n" }],
     });
 
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(mockStore.reloadFromDisk).not.toHaveBeenCalled();
     expect(mockStore.reanchorComments).not.toHaveBeenCalled();
     expect(mockStore.applyLiveEdits).not.toHaveBeenCalled();
+  });
+
+  it("tracks the first edit when VS Code delivers the dirty flag separately", async () => {
+    const uri = Uri.file("/workspace/doc.md");
+    const context = {
+      extensionUri: Uri.file("/workspace/ext"),
+      subscriptions: [] as Array<{ dispose?: () => void }>,
+      workspaceState: { get: vi.fn(), update: vi.fn() },
+    };
+    activate(context as never);
+    mockReadSource.mockResolvedValue("original\n");
+    const document = { uri, languageId: "markdown", isDirty: false, version: 2, getText: () => "前🇯🇵 original\n" };
+    const changes = [{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }, text: "前🇯🇵 " }];
+    __mock.emitDidChangeTextDocument({ document, contentChanges: changes });
+    document.isDirty = true;
+    __mock.emitDidChangeTextDocument({ document, contentChanges: [] });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(mockStore.applyLiveEdits).toHaveBeenCalledExactlyOnceWith(uri, changes);
+    expect(mockStore.reloadFromDisk).not.toHaveBeenCalled();
+    expect(mockStore.reanchorComments).not.toHaveBeenCalled();
+  });
+
+  it("keeps live changes in order while checking a clean document against disk", async () => {
+    const uri = Uri.file("/workspace/doc.md");
+    const context = {
+      extensionUri: Uri.file("/workspace/ext"),
+      subscriptions: [] as Array<{ dispose?: () => void }>,
+      workspaceState: { get: vi.fn(), update: vi.fn() },
+    };
+    activate(context as never);
+    let finishRead!: (text: string) => void;
+    mockReadSource.mockReturnValue(new Promise<string>((resolve) => { finishRead = resolve; }));
+    const document = { uri, languageId: "markdown", isDirty: false, version: 2, getText: () => "first" };
+    const first = [{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }, text: "first" }];
+    const second = [{ range: { start: { line: 0, character: 5 }, end: { line: 0, character: 5 } }, text: "second" }];
+    __mock.emitDidChangeTextDocument({ document, contentChanges: first });
+    document.isDirty = true;
+    document.version = 3;
+    __mock.emitDidChangeTextDocument({ document, contentChanges: second });
+    expect(mockStore.applyLiveEdits).not.toHaveBeenCalled();
+    finishRead("first");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(mockStore.applyLiveEdits.mock.calls).toEqual([[uri, first], [uri, second]]);
+    expect(mockStore.reloadFromDisk).not.toHaveBeenCalled();
+  });
+
+  it("reports a disk verification error without discarding live edits", async () => {
+    const uri = Uri.file("/workspace/doc.md");
+    const context = {
+      extensionUri: Uri.file("/workspace/ext"),
+      subscriptions: [] as Array<{ dispose?: () => void }>,
+      workspaceState: { get: vi.fn(), update: vi.fn() },
+    };
+    activate(context as never);
+    mockReadSource.mockRejectedValue(new Error("access denied"));
+    const changes = [{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }, text: "x" }];
+    __mock.emitDidChangeTextDocument({
+      document: { uri, languageId: "markdown", isDirty: false, version: 2, getText: () => "x" },
+      contentChanges: changes,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(__mock.warningMessages).toContain("Cannot verify Markdown reload; retaining live anchor tracking: access denied");
+    expect(mockStore.applyLiveEdits).toHaveBeenCalledExactlyOnceWith(uri, changes);
+    expect(mockStore.reloadFromDisk).not.toHaveBeenCalled();
   });
 
   it("uses live tracker (not reanchor) when document is dirty after change (user editing or Copilot API changes)", () => {
