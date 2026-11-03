@@ -10,8 +10,6 @@
     "demo:milkdown:build": "vite build milkdown-demo",
     "demo:monaco": "vite monaco-demo",
     "demo:monaco:build": "vite build monaco-demo",
-    "demo:compare": "vite compare-demo",
-    "demo:compare:build": "vite build compare-demo",
     "demo:tiptap": "vite tiptap-demo",
     "demo:tiptap:build": "vite build tiptap-demo",
     "test:monaco-demo": "vitest run --config vitest.config.ts"

@@ -2,7 +2,6 @@
 
 from mrsf.types import Comment, MrsfDocument
 
-
 # ---------------------------------------------------------------------------
 # Comment.to_dict / from_dict
 # ---------------------------------------------------------------------------
@@ -10,7 +9,9 @@ from mrsf.types import Comment, MrsfDocument
 
 class TestCommentSerialization:
     def test_round_trips_minimal_comment(self):
-        c = Comment(id="c-1", author="A", timestamp="2025-01-01T00:00:00Z", text="hello", resolved=False)
+        c = Comment(
+            id="c-1", author="A", timestamp="2025-01-01T00:00:00Z", text="hello", resolved=False
+        )
         d = c.to_dict()
         c2 = Comment.from_dict(d)
         assert c2.id == "c-1"

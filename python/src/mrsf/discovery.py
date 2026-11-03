@@ -54,7 +54,7 @@ def load_config(workspace_root: str, config_path: str | None = None) -> MrsfConf
 
     sr = parsed.get("sidecar_root")
     if isinstance(sr, str):
-        if os.path.isabs(sr):
+        if Path(sr).root:
             raise ValueError(f'.mrsf.yaml: sidecar_root must be a relative path (got "{sr}")')
         if ".." in sr:
             raise ValueError(f'.mrsf.yaml: sidecar_root must not contain ".." (got "{sr}")')

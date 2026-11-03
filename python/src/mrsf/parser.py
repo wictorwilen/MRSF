@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import date, datetime
 from dataclasses import dataclass
+from datetime import date, datetime
 from pathlib import Path
 
 from ruamel.yaml import YAML
@@ -91,7 +91,7 @@ def parse_sidecar(file_path: str | Path) -> MrsfDocument:
 
 def parse_sidecar_content(content: str, filename_hint: str | None = None) -> MrsfDocument:
     """Parse MRSF sidecar content from a string."""
-    trimmed = content.strip()
+    content.strip()
     leading_trimmed = content.lstrip()
 
     is_json = leading_trimmed.startswith("{") or (
@@ -143,10 +143,7 @@ def parse_sidecar_content_lenient(
     # Try normal parse
     parsed = None
     try:
-        if is_json:
-            parsed = json.loads(leading_trimmed)
-        else:
-            parsed = _yaml.load(content)
+        parsed = json.loads(leading_trimmed) if is_json else _yaml.load(content)
     except Exception as e:
         if not is_json:
             return _salvage_yaml(content)

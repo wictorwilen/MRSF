@@ -6,6 +6,7 @@ key ordering, whitespace). Auto-computes selected_text_hash when selected_text c
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import os
@@ -129,10 +130,8 @@ def _atomic_write_file(file_path: str, content: str) -> None:
             f.write(content)
         os.replace(tmp_path, file_path)
     except Exception:
-        try:
+        with contextlib.suppress(OSError):
             os.unlink(tmp_path)
-        except OSError:
-            pass
         raise
 
 
