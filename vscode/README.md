@@ -10,28 +10,6 @@ Add, manage, and navigate **Markdown Review Sidecar Format** ([MRSF](https://sid
 
 ## Features
 
-### Preview Recovery Status (0.6.0 Development)
-
-The recovery targets VS Code's **Markdown Preview** and Markdown **Text Editor**, not the hybrid **Markdown Editor**.
-Modern Preview tabs expose a document URI and can drive document-bound sidebar actions. Legacy `markdown.showPreview*` webviews do not expose their source URI; automatic sidebar switching between multiple legacy previews remains a release blocker. This development version does not claim full compatibility until that gap is resolved.
-
-### Development Verification
-
-After installing and building the CLI dependency and installing the Monaco dependency, run these commands from `vscode/`:
-
-```sh
-npm ci
-npm run lint
-npm test
-npm run test:host -- 1.137.0
-npm run test:host -- stable
-npm run package
-```
-
-Host tests use temporary documents and an isolated VS Code profile. They check preview-only activation, JSON hydration, external updates and both preview tab types. Playwright connects to a loopback-only debugging port to test native preview comment clicks, Enter-key activation and immediate Resolve/Unresolve hover updates without changing the cursor selection. Screenshots are saved under `.vscode-test/screenshots/`. Complete visual parity, all action transports, multi-document legacy tracking and rich-anchor parity remain unverified.
-
-To run only the real-webview tooltip bounds checks (both gutters, narrow panes, long text), set `MRSF_TEST_FOCUS=tooltip` before `npm run test:host`. In PowerShell, use `$env:MRSF_TEST_FOCUS = "tooltip"`; remove it afterward with `Remove-Item Env:MRSF_TEST_FOCUS` to restore the full suite. This focused mode does not test native click transport, file watching, or comment persistence.
-
 ### Gutter icons & inline highlights
 
 Every commented line gets a color-coded gutter icon (open 💬, resolved ✅, orphaned ⚠️, multiple comments). Inline/column-span comments are highlighted directly in the editor text.
@@ -181,6 +159,8 @@ npx @mrsf/cli list --open
 
 - VS Code 1.137 or later
 - Git (optional — enables commit-based staleness detection and diff-based reanchoring)
+
+Use **Reopen Editor With... > Markdown Preview** for document-aware preview sidebar tracking. Automatic switching between multiple older command-opened previews is not supported. The hybrid Markdown Editor is not supported.
 
 ## Links
 

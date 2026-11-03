@@ -14,6 +14,7 @@
 import { readFile, writeFile, rename, unlink } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { createHash, randomBytes } from "node:crypto";
+import { setTimeout as delay } from "node:timers/promises";
 import path from "node:path";
 import { Parser, CST, parse as yamlParse } from "yaml";
 import type { MrsfDocument, Comment } from "./types.js";
@@ -63,7 +64,19 @@ async function atomicWriteFile(
   const tmp = filePath + "." + randomBytes(6).toString("hex") + ".tmp";
   try {
     await writeFile(tmp, content, "utf-8");
-    await rename(tmp, filePath);
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await rename(tmp, filePath);
+        break;
+      } catch (error) {
+        // Windows readers and antivirus scanners can briefly lock the destination.
+        if (attempt >= 5 || !(error instanceof Error) || !("code" in error)
+          || !["EPERM", "EACCES", "EBUSY"].some((code) => code === error.code)) {
+          throw error;
+        }
+        await delay(50 * (attempt + 1));
+      }
+    }
   } catch (err) {
     // Clean up temp file on failure
     try { await unlink(tmp); } catch { /* ignore */ }

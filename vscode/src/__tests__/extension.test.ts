@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { __mock, EventEmitter, Uri } from "vscode";
 import * as fs from "node:fs";
 
 const mockParseSidecarContent = vi.fn();
+const mockReadSource = vi.fn();
 
 const mockStore = {
   load: vi.fn(),
@@ -47,6 +48,7 @@ const mockReanchorController = {
 vi.mock("node:fs", () => ({
   existsSync: vi.fn().mockReturnValue(false),
   readFileSync: vi.fn(),
+  promises: { readFile: (...args: unknown[]) => mockReadSource(...args) },
 }));
 
 vi.mock("@mrsf/cli", () => ({
@@ -129,7 +131,13 @@ vi.mock("../statusBar.js", () => ({
   },
 }));
 
-import { activate, setPreviewScrollTarget } from "../extension.js";
+import { activate as activateExtension, setPreviewScrollTarget } from "../extension.js";
+
+const activeContexts: Array<{ subscriptions: Array<{ dispose?: () => void }> }> = [];
+function activate(context: Parameters<typeof activateExtension>[0]) {
+  activeContexts.push(context);
+  return activateExtension(context);
+}
 
 function getRegisteredCommand(id: string) {
   const command = __mock.commandRegistrations.find((entry) => entry.id === id);
@@ -143,6 +151,7 @@ describe("extension activate", () => {
   beforeEach(() => {
     __mock.reset();
     vi.clearAllMocks();
+    mockReadSource.mockResolvedValue("new content\n");
     mockStore.load.mockResolvedValue({ comments: [{ id: "c1" }] });
     mockStore.ensureLoaded.mockResolvedValue({ comments: [] });
     mockStore.getLoadState.mockReturnValue("loaded");
@@ -169,6 +178,16 @@ describe("extension activate", () => {
     __mock.configuration.set("sidemark.previewLineHighlight", true);
     __mock.configuration.set("sidemark.reanchorOnSave", true);
     __mock.configuration.set("sidemark.reanchorThreshold", 0.6);
+  });
+
+  afterEach(() => {
+    for (const context of activeContexts.splice(0)) {
+      for (const subscription of context.subscriptions) subscription.dispose?.();
+    }
+    if (vi.isFakeTimers()) {
+      vi.clearAllTimers();
+      vi.useRealTimers();
+    }
   });
 
   it("registers core extension components and loads the active markdown file", async () => {
@@ -304,6 +323,7 @@ describe("extension activate", () => {
   });
 
   it("refreshes comments from visible markdown editors and reacts to store changes", async () => {
+    vi.useFakeTimers();
     const uri = Uri.file("/workspace/doc.md");
     const context = {
       extensionUri: Uri.file("/workspace/ext"),
@@ -342,13 +362,14 @@ describe("extension activate", () => {
     expect(__mock.informationMessages).toContain("Sidemark comments refreshed.");
 
     mockStoreChangeEmitter.fire(uri);
-    await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(250);
 
     expect(__mock.executedCommands).toContainEqual({ id: "markdown.preview.refresh", args: [] });
     expect(mockStatusBar.setCommentCount).toHaveBeenCalledWith(1);
   });
 
   it("refreshes editor and preview surfaces when sidemark settings change", async () => {
+    vi.useFakeTimers();
     const uri = Uri.file("/workspace/doc.md");
     const context = {
       extensionUri: Uri.file("/workspace/ext"),
@@ -379,7 +400,46 @@ describe("extension activate", () => {
     expect(mockGutterProvider.updateActiveEditor).toHaveBeenCalled();
     expect(mockInlineProvider.updateActiveEditor).toHaveBeenCalled();
     expect(mockSidebarProvider.refresh).toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(250);
     expect(__mock.executedCommands).toContainEqual({ id: "markdown.preview.refresh", args: [] });
+  });
+
+  it("coalesces background store and settings refreshes before reloading previews", async () => {
+    vi.useFakeTimers();
+    const context = {
+      extensionUri: Uri.file("/workspace/ext"),
+      subscriptions: [] as Array<{ dispose?: () => void }>,
+      workspaceState: { get: vi.fn(), update: vi.fn() },
+    };
+    activate(context as never);
+    __mock.executedCommands.length = 0;
+    const uri = Uri.file("/workspace/doc.md");
+
+    mockStoreChangeEmitter.fire(uri);
+    await vi.advanceTimersByTimeAsync(100);
+    mockStoreChangeEmitter.fire(uri);
+    __mock.emitDidChangeConfiguration("sidemark.previewComments");
+    await vi.advanceTimersByTimeAsync(249);
+    expect(__mock.executedCommands.filter((command) => command.id === "markdown.preview.refresh")).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(__mock.executedCommands.filter((command) => command.id === "markdown.preview.refresh")).toHaveLength(1);
+  });
+
+  it("cancels a queued preview refresh when the extension is disposed", async () => {
+    vi.useFakeTimers();
+    const context = {
+      extensionUri: Uri.file("/workspace/ext"),
+      subscriptions: [] as Array<{ dispose?: () => void }>,
+      workspaceState: { get: vi.fn(), update: vi.fn() },
+    };
+    activate(context as never);
+    __mock.executedCommands.length = 0;
+    mockStoreChangeEmitter.fire(Uri.file("/workspace/doc.md"));
+
+    for (const subscription of context.subscriptions) subscription.dispose?.();
+    await vi.advanceTimersByTimeAsync(500);
+
+    expect(__mock.executedCommands.filter((command) => command.id === "markdown.preview.refresh")).toHaveLength(0);
   });
 
   it("tracks live edits, reanchors on save, and clears markdown state when leaving markdown", async () => {
@@ -445,7 +505,7 @@ describe("extension activate", () => {
     //  • contentChanges has entries  — the content actually changed
     //  • reason is absent  — not an undo/redo operation
     __mock.emitDidChangeTextDocument({
-      document: { uri, languageId: "markdown", isDirty: false },
+      document: { uri, languageId: "markdown", isDirty: false, version: 1, getText: () => "new content\n" },
       contentChanges: [{ range: { start: { line: 0, character: 0 }, end: { line: 5, character: 0 } }, text: "new content\n" }],
     });
 
@@ -463,7 +523,7 @@ describe("extension activate", () => {
     expect(mockStore.clearPendingShifts).toHaveBeenCalledWith(uri);
   });
 
-  it("does not reanchor on external reload when reanchorOnSave is disabled", () => {
+  it("does not reanchor on external reload when reanchorOnSave is disabled", async () => {
     const uri = Uri.file("/workspace/doc.md");
     const context = {
       extensionUri: Uri.file("/workspace/ext"),
@@ -478,13 +538,81 @@ describe("extension activate", () => {
     activate(context as never);
 
     __mock.emitDidChangeTextDocument({
-      document: { uri, languageId: "markdown", isDirty: false },
+      document: { uri, languageId: "markdown", isDirty: false, version: 1, getText: () => "new content\n" },
       contentChanges: [{ range: { start: { line: 0, character: 0 }, end: { line: 5, character: 0 } }, text: "new content\n" }],
     });
 
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(mockStore.reloadFromDisk).not.toHaveBeenCalled();
     expect(mockStore.reanchorComments).not.toHaveBeenCalled();
     expect(mockStore.applyLiveEdits).not.toHaveBeenCalled();
+  });
+
+  it("tracks the first edit when VS Code delivers the dirty flag separately", async () => {
+    const uri = Uri.file("/workspace/doc.md");
+    const context = {
+      extensionUri: Uri.file("/workspace/ext"),
+      subscriptions: [] as Array<{ dispose?: () => void }>,
+      workspaceState: { get: vi.fn(), update: vi.fn() },
+    };
+    activate(context as never);
+    mockReadSource.mockResolvedValue("original\n");
+    const document = { uri, languageId: "markdown", isDirty: false, version: 2, getText: () => "前🇯🇵 original\n" };
+    const changes = [{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }, text: "前🇯🇵 " }];
+    __mock.emitDidChangeTextDocument({ document, contentChanges: changes });
+    document.isDirty = true;
+    __mock.emitDidChangeTextDocument({ document, contentChanges: [] });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(mockStore.applyLiveEdits).toHaveBeenCalledExactlyOnceWith(uri, changes);
+    expect(mockStore.reloadFromDisk).not.toHaveBeenCalled();
+    expect(mockStore.reanchorComments).not.toHaveBeenCalled();
+  });
+
+  it("keeps live changes in order while checking a clean document against disk", async () => {
+    const uri = Uri.file("/workspace/doc.md");
+    const context = {
+      extensionUri: Uri.file("/workspace/ext"),
+      subscriptions: [] as Array<{ dispose?: () => void }>,
+      workspaceState: { get: vi.fn(), update: vi.fn() },
+    };
+    activate(context as never);
+    let finishRead!: (text: string) => void;
+    mockReadSource.mockReturnValue(new Promise<string>((resolve) => { finishRead = resolve; }));
+    const document = { uri, languageId: "markdown", isDirty: false, version: 2, getText: () => "first" };
+    const first = [{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }, text: "first" }];
+    const second = [{ range: { start: { line: 0, character: 5 }, end: { line: 0, character: 5 } }, text: "second" }];
+    __mock.emitDidChangeTextDocument({ document, contentChanges: first });
+    document.isDirty = true;
+    document.version = 3;
+    __mock.emitDidChangeTextDocument({ document, contentChanges: second });
+    expect(mockStore.applyLiveEdits).not.toHaveBeenCalled();
+    finishRead("first");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(mockStore.applyLiveEdits.mock.calls).toEqual([[uri, first], [uri, second]]);
+    expect(mockStore.reloadFromDisk).not.toHaveBeenCalled();
+  });
+
+  it("reports a disk verification error without discarding live edits", async () => {
+    const uri = Uri.file("/workspace/doc.md");
+    const context = {
+      extensionUri: Uri.file("/workspace/ext"),
+      subscriptions: [] as Array<{ dispose?: () => void }>,
+      workspaceState: { get: vi.fn(), update: vi.fn() },
+    };
+    activate(context as never);
+    mockReadSource.mockRejectedValue(new Error("access denied"));
+    const changes = [{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }, text: "x" }];
+    __mock.emitDidChangeTextDocument({
+      document: { uri, languageId: "markdown", isDirty: false, version: 2, getText: () => "x" },
+      contentChanges: changes,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(__mock.warningMessages).toContain("Cannot verify Markdown reload; retaining live anchor tracking: access denied");
+    expect(mockStore.applyLiveEdits).toHaveBeenCalledExactlyOnceWith(uri, changes);
+    expect(mockStore.reloadFromDisk).not.toHaveBeenCalled();
   });
 
   it("uses live tracker (not reanchor) when document is dirty after change (user editing or Copilot API changes)", () => {

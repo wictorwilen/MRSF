@@ -12,7 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Require VS Code 1.137 or later and compile against the matching API declarations.
 
 ### Fixed
+- Track the first source edit even when VS Code delivers its dirty-state change separately from the content change. Verify clean reloads against disk, preserve edit ordering during that check, and finish queued edits before save-time reanchoring.
 - Capture automatically populated selected text from the requested line, not the preceding line.
+- Coalesce background store/settings refresh bursts to reduce overlapping Markdown Preview reloads.
 - Render preview comments after delayed Markdown loading and content updates without requiring a resize.
 - Dispose preview observers and queued rendering when the webview closes.
 - Preserve document identity for empty previews and load configured YAML/JSON sidecars through the store.
@@ -28,11 +30,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Keep comment tooltips inside the Markdown Preview pane, opening right-gutter tooltips inward and constraining placement and text wrapping in narrow panes.
 
 ### Validation
+- Exercise native Markdown Text Editor editing before, after and inside all seven Unicode spans, boundary-insertion affinity, undo restoration, UTF-16 selection-comment persistence and save-time reanchoring. Verify that the loaded hybrid Markdown Editor reports unsupported integration without stale threads, and that returning to Text Editor restores comments and hovers.
+- Expand the real-host suite with a long Unicode document, seven explicit UTF-16 selections, Unicode authors/comments, reply/edit persistence, Resolve/Unresolve, anchor/source preservation and modern-preview document switching.
+- Wait for actionable real pointer targets, verify fresh sidebar highlight requests independently of animation timing, and capture viewport/frame layout in failure diagnostics.
+- Wait for native focus through the webview iframe chain between pointer-down and pointer release, and before Enter activation. Keep refreshed Unicode text assertions inside replacement-aware frame checks.
+- Attach Playwright before preview creation, wait for fully loaded visible frames containing the expected content, and wait for an actual workspace watcher readiness event before the single external sidecar edit. Capture lifecycle diagnostics even when cold hydration or external updates fail before the interaction workflow.
 - Add real-script DOM regressions and an isolated VS Code host smoke test.
 - Verify native preview comment links and immediate hover Resolve/Unresolve updates with real input in Windows VS Code 1.137 and 1.138 hosts.
 - Verify consecutive gutter clicks, inline click/Enter activation, and (+) comment persistence on the clicked source line.
 - Check tooltip bounds for both gutters at 260px and 650px widths, including long text and short viewports.
-- Full recovery remains blocked on automatic document tracking across multiple legacy command-opened previews. Complete visual parity and remaining action transports are not yet verified.
+- Automatic document tracking across multiple legacy command-opened previews and hybrid Markdown Editor integration remain unsupported. Use modern Markdown Preview or Text Editor for document-aware review workflows; exhaustive visual parity and macOS compatibility are not claimed.
 
 ## [0.5.1] - 2026-08-18
 
