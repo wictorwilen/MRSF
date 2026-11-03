@@ -8,11 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.6.1] - 2026-11-03
 
 ### Changed
+- Rebuilt against `@mrsf/cli` 0.8.0 with the clarified UTF-16 column contract.
 - Require VS Code 1.137 or later and compile against the matching API declarations.
 
 ### Fixed
 - Track the first source edit even when VS Code delivers its dirty-state change separately from the content change. Verify clean reloads against disk, preserve edit ordering during that check, and finish queued edits before save-time reanchoring.
-- Capture inline selected text from the correct source line (the same indexing correction included in #26).
+- Capture automatically populated selected text from the requested line, not the preceding line.
 - Coalesce background store/settings refresh bursts to reduce overlapping Markdown Preview reloads.
 - Render preview comments after delayed Markdown loading and content updates without requiring a resize.
 - Dispose preview observers and queued rendering when the webview closes.

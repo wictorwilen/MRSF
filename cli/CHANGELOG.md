@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 - Retry transient `EPERM`, `EACCES` and `EBUSY` errors when atomically replacing sidecars, so brief Windows file locks do not discard review saves. Retries are bounded to 750 ms of backoff; permanent errors still propagate and temporary files are cleaned up.
+- `mrsf add` captures selected text from the requested line rather than the preceding line.
+- Use Git-style repository-relative paths for revision-based reanchoring on Windows, so nested documents retain their source-revision evidence.
+
+### Changed
+- Document column offsets as zero-based UTF-16 code units, with an exclusive end.
 
 ## [0.7.1] - 2026-08-18
 

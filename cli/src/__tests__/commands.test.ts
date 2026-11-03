@@ -613,7 +613,7 @@ describe("add command", () => {
     discoverSidecar.mockResolvedValue(sidecarPath);
     parseSidecar.mockRejectedValue(new Error("missing"));
     findRepoRoot.mockResolvedValue(null);
-    readDocumentLines.mockResolvedValue(["alpha", "beta"]);
+    readDocumentLines.mockResolvedValue(["", "alpha", "beta"]);
     addComment.mockResolvedValue({ id: "c-2", line: 2 });
     populateSelectedText.mockImplementation((comment) => {
       comment.selected_text = "beta";
@@ -632,7 +632,10 @@ describe("add command", () => {
       "2",
     ]);
 
-    expect(populateSelectedText).toHaveBeenCalled();
+    expect(populateSelectedText).toHaveBeenCalledWith(
+      expect.objectContaining({ line: 2 }),
+      ["alpha", "beta"],
+    );
     expect(writeSidecar).toHaveBeenCalledWith(
       sidecarPath,
       expect.objectContaining({

@@ -96,7 +96,7 @@ export async function reanchorDocument(
   if (!opts.noGit && (await isGitAvailable())) {
     const repoRoot = opts.repoRoot ?? (await findRepoRoot(opts.cwd));
     if (repoRoot && opts.documentPath) {
-      const relPath = path.relative(repoRoot, opts.documentPath);
+      const relPath = path.relative(repoRoot, opts.documentPath).split(path.sep).join("/");
       const head = await getCurrentCommit(repoRoot);
 
       // Use a shared fromCommit for all comments, or per-comment

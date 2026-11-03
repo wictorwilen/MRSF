@@ -193,6 +193,27 @@ describe("reanchoring evaluation", () => {
     expect(findBaselineDifferences(baseline, baseline)).toEqual([]);
   });
 
+  it("checks UTF-16 ranges for emoji and Japanese corpus selections", async () => {
+    const cases = await loadEvaluationCases(
+      fileURLToPath(new URL(
+        "../../../evaluation/reanchor/cases/diagnostic",
+        import.meta.url,
+      )),
+      fileURLToPath(new URL(
+        "../../../evaluation/reanchor/schema.json",
+        import.meta.url,
+      )),
+    );
+    const unicodeCases = cases.filter((item) => item.value.categories.includes("utf16"));
+    const summary = await evaluateCases(unicodeCases);
+
+    expect(summary.comments).toBe(8);
+    expect(summary.passed).toBe(8);
+    expect(summary.failed).toBe(0);
+    expect(summary.incorrectConfidentRelocations).toBe(0);
+    expect(unicodeCases.some((item) => item.value.categories.includes("japanese"))).toBe(true);
+  });
+
   it("reports changed baseline results", async () => {
     const summary = await evaluateCases([{
       casePath: "/tmp/baseline-change.json",

@@ -1,0 +1,90 @@
+[
+  {
+    "id": "utf16-emoji-before-japanese",
+    "categories": ["unicode", "utf16", "emoji", "japanese", "unchanged", "inline"],
+    "source": { "text": "😀 日本語のコメント\n" },
+    "target": { "text": "😀 日本語のコメント\n" },
+    "comments": [{
+      "id": "unicode-01",
+      "anchor": { "line": 1, "start_column": 3, "end_column": 6, "selected_text": "日本語" },
+      "expected": { "status": "anchored", "ranges": [{ "line": 1, "end_line": 1, "start_column": 3, "end_column": 6 }] }
+    }]
+  },
+  {
+    "id": "utf16-prefix-inserted-before-kana",
+    "categories": ["unicode", "utf16", "emoji", "japanese", "insertion", "inline"],
+    "source": { "text": "注記: ひらがなとカタカナ\n" },
+    "target": { "text": "😀 注記: ひらがなとカタカナ\n" },
+    "comments": [{
+      "id": "unicode-02",
+      "anchor": { "line": 1, "start_column": 4, "end_column": 13, "selected_text": "ひらがなとカタカナ" },
+      "expected": { "status": "anchored", "ranges": [{ "line": 1, "end_line": 1, "start_column": 7, "end_column": 16 }] }
+    }]
+  },
+  {
+    "id": "utf16-emoji-selection-moved",
+    "categories": ["unicode", "utf16", "emoji", "japanese", "move", "inline"],
+    "source": { "text": "開始 😀 終了\n" },
+    "target": { "text": "# 見出し\n\n開始 😀 終了\n" },
+    "comments": [{
+      "id": "unicode-03",
+      "anchor": { "line": 1, "start_column": 3, "end_column": 5, "selected_text": "😀" },
+      "expected": { "status": "anchored", "ranges": [{ "line": 3, "end_line": 3, "start_column": 3, "end_column": 5 }] }
+    }]
+  },
+  {
+    "id": "utf16-non-bmp-cjk-selection",
+    "categories": ["unicode", "utf16", "non-bmp", "insertion", "inline"],
+    "source": { "text": "x 𠀀 y\n" },
+    "target": { "text": "😀 x 𠀀 y\n" },
+    "comments": [{
+      "id": "unicode-04",
+      "anchor": { "line": 1, "start_column": 2, "end_column": 4, "selected_text": "𠀀" },
+      "expected": { "status": "anchored", "ranges": [{ "line": 1, "end_line": 1, "start_column": 5, "end_column": 7 }] }
+    }]
+  },
+  {
+    "id": "utf16-multiline-japanese-selection",
+    "categories": ["unicode", "utf16", "emoji", "japanese", "multiline", "move"],
+    "source": { "text": "😀 first\n中間の行\n𠀀 last\n" },
+    "target": { "text": "# 見出し\n\n😀 first\n中間の行\n𠀀 last\n" },
+    "comments": [{
+      "id": "unicode-05",
+      "anchor": { "line": 1, "end_line": 3, "start_column": 3, "end_column": 4, "selected_text": "first\n中間の行\n𠀀 l" },
+      "expected": { "status": "anchored", "ranges": [{ "line": 3, "end_line": 5, "start_column": 3, "end_column": 4 }] }
+    }]
+  },
+  {
+    "id": "utf16-japanese-whitespace-normalized",
+    "categories": ["unicode", "utf16", "emoji", "japanese", "whitespace", "normalization"],
+    "source": { "text": "😀 日本語 を 確認\n" },
+    "target": { "text": "😀 日本語  を   確認\n" },
+    "comments": [{
+      "id": "unicode-06",
+      "anchor": { "line": 1, "selected_text": "😀 日本語 を 確認" },
+      "expected": { "status": "fuzzy", "ranges": [{ "line": 1, "end_line": 1 }] }
+    }]
+  },
+  {
+    "id": "utf16-zwj-emoji-selection",
+    "categories": ["unicode", "utf16", "emoji", "japanese", "grapheme", "insertion"],
+    "source": { "text": "担当: 👩‍💻\n" },
+    "target": { "text": "😀 担当: 👩‍💻\n" },
+    "comments": [{
+      "id": "unicode-07",
+      "anchor": { "line": 1, "start_column": 4, "end_column": 9, "selected_text": "👩‍💻" },
+      "expected": { "status": "anchored", "ranges": [{ "line": 1, "end_line": 1, "start_column": 7, "end_column": 12 }] }
+    }]
+  },
+  {
+    "id": "utf16-japanese-flag-selection",
+    "categories": ["unicode", "utf16", "emoji", "japanese", "grapheme", "insertion"],
+    "source": { "text": "国: 🇯🇵 日本\n" },
+    "target": { "text": "😀 国: 🇯🇵 日本\n" },
+    "comments": [{
+      "id": "unicode-08",
+      "anchor": { "line": 1, "start_column": 3, "end_column": 7, "selected_text": "🇯🇵" },
+      "expected": { "status": "anchored", "ranges": [{ "line": 1, "end_line": 1, "start_column": 6, "end_column": 10 }] }
+    }]
+  }
+]

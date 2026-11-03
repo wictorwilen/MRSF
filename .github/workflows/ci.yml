@@ -51,6 +51,8 @@ jobs:
           npm --prefix vscode ci
       - name: Type-check and unit tests
         run: |
+          npm --prefix cli run lint
+          npm --prefix cli test
           npm --prefix vscode run lint
           npm --prefix vscode test
       - name: Host smoke tests (Windows)

@@ -12,6 +12,7 @@ from dataclasses import dataclass
 
 from rapidfuzz.distance import Levenshtein
 
+from .text import utf16_length
 from .types import FuzzyCandidate
 
 MAX_FUZZY_CANDIDATE_LINES = 64
@@ -62,8 +63,8 @@ def exact_match(lines: list[str], needle: str) -> list[FuzzyCandidate]:
                         text=needle,
                         line=start_line,
                         end_line=start_line,
-                        start_column=idx,
-                        end_column=idx + len(needle),
+                        start_column=utf16_length(line[:idx]),
+                        end_column=utf16_length(line[:idx]) + utf16_length(needle),
                         score=1.0,
                     )
                 )
@@ -73,10 +74,10 @@ def exact_match(lines: list[str], needle: str) -> list[FuzzyCandidate]:
             if idx != -1:
                 before_match = window_text[:idx]
                 lines_before_end = before_match.split("\n")
-                start_col = len(lines_before_end[-1])
+                start_col = utf16_length(lines_before_end[-1])
 
                 after_match = needle.split("\n")
-                end_col = len(after_match[-1])
+                end_col = utf16_length(after_match[-1])
                 if start_col == 0 or len(lines_before_end) == 1:
                     results.append(
                         FuzzyCandidate(
@@ -125,7 +126,7 @@ def normalized_match(lines: list[str], needle: str) -> list[FuzzyCandidate]:
                         line=start_line,
                         end_line=start_line + win_size - 1,
                         start_column=0,
-                        end_column=len(window_lines[-1]),
+                        end_column=utf16_length(window_lines[-1]),
                         score=0.95,
                     )
                 )
@@ -271,7 +272,7 @@ def fuzzy_search_thresholds(
                         line=start_line,
                         end_line=start_line + win_size - 1,
                         start_column=0,
-                        end_column=len(window_lines[-1]),
+                        end_column=utf16_length(window_lines[-1]),
                         score=score,
                     )
                 )
@@ -297,8 +298,8 @@ def fuzzy_search_thresholds(
                                 text=sub,
                                 line=line_num,
                                 end_line=line_num,
-                                start_column=col,
-                                end_column=col + length,
+                                start_column=utf16_length(line[:col]),
+                                end_column=utf16_length(line[: col + length]),
                                 score=score,
                             )
                         )

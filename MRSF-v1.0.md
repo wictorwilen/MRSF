@@ -18,7 +18,9 @@ MRSF specifies how to persist review comments for Markdown documents in a sideca
 - Stable across document revisions through multiple anchoring strategies
 
 ## 2. Conventions and Terminology
-The key words MUST, MUST NOT, REQUIRED, SHOULD, SHOULD NOT, MAY are to be interpreted as described in RFC 2119 and RFC 8174 when appearing in uppercase. YAML examples follow YAML 1.2; JSON examples follow RFC 8259. Lines are 1-based; columns are 0-based. `selected_text` refers to the exact substring captured by a reviewer. `mrsf_version` denotes the MRSF format version, distinct from the target document’s own revision.
+The key words MUST, MUST NOT, REQUIRED, SHOULD, SHOULD NOT, MAY are to be interpreted as described in RFC 2119 and RFC 8174 when appearing in uppercase. YAML examples follow YAML 1.2; JSON examples follow RFC 8259. Lines are 1-based; columns are 0-based UTF-16 code-unit offsets within each line, not byte offsets, Unicode code-point counts, grapheme clusters, or visual columns. Column ranges are half-open: `start_column` is inclusive and `end_column` is exclusive. Implementations MUST use this unit when reading or writing column fields, regardless of their native string indexing. `selected_text` refers to the exact substring captured by a reviewer. `mrsf_version` denotes the MRSF format version, distinct from the target document’s own revision.
+
+For example, in the line `😀 foo bar`, the emoji occupies two UTF-16 code units and the following space occupies one. Selecting `foo` therefore gives `start_column: 3` and `end_column: 6`. Tabs count as one code unit; combining characters are counted separately. Implementations SHOULD place range boundaries between Unicode scalar values rather than splitting a surrogate pair.
 
 ## 3. File Naming and Discovery
 Sidecar files MUST follow this naming pattern:
@@ -99,8 +101,8 @@ comments:
 ### 7.1 Targeting Fields
 - `line`: Starting line number (1-based).
 - `end_line`: Ending line number (inclusive); MUST be ≥ line.
-- `start_column`: Starting column index (0-based); MUST be ≥ 0.
-- `end_column`: Ending column index; MUST be ≥ `start_column` when `line` equals `end_line` (same-line span); when `end_line` > `line` (multi-line span), `end_column` is independent of `start_column`.
+- `start_column`: Inclusive starting UTF-16 code-unit offset (0-based) within `line`; MUST be ≥ 0.
+- `end_column`: Exclusive ending UTF-16 code-unit offset (0-based) within `end_line`, or `line` when `end_line` is absent; MUST be ≥ `start_column` for a same-line span; when `end_line` > `line` (multi-line span), `end_column` is independent of `start_column`.
 
 Line and column values are positional: they reflect the document state at the time the comment was created. Any insertion or deletion above the anchored location will shift these values, making them unreliable on their own across revisions. For this reason, `selected_text` SHOULD always be provided alongside targeting fields; it is content-based and survives positional shifts. When `commit` is present, implementations can compare it against the current document revision to detect that line/column values may be stale before attempting resolution.
 
