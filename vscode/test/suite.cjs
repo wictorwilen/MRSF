@@ -20,8 +20,26 @@ async function clickPreviewControl(preview, selector, keyboard = false) {
       if (window.mrsfTrustedClick) window.mrsfTrustedClick.bubbled = true;
     }, { once: true });
   }, selector);
-  if (keyboard) await preview.locator(selector).first().press("Enter");
-  else await preview.locator(selector).first().click();
+  const control = preview.locator(selector).first();
+  const mouse = preview.page().mouse;
+  if (keyboard) await control.focus();
+  else {
+    await control.hover();
+    await mouse.down();
+  }
+  try {
+    // VS Code accepts native webview links only from its focused outer iframe.
+    await eventually(async () => {
+      for (let frame = preview; frame.parentFrame(); frame = frame.parentFrame()) {
+        const owner = await frame.frameElement();
+        if (!await owner.evaluate((element) => element.ownerDocument.activeElement === element)) return false;
+      }
+      return true;
+    }, "Native webview focus must follow pointer-down or keyboard focus before activation");
+    if (keyboard) await control.press("Enter");
+  } finally {
+    if (!keyboard) await mouse.up();
+  }
   assert.deepEqual(await preview.evaluate(() => window.mrsfTrustedClick),
     { trusted: true, matches: true, hasDocumentView: true, bubbled: true },
     `Preview must receive a trusted ${selector} click, keyboard=${keyboard}`);
