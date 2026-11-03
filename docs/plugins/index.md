@@ -1,5 +1,5 @@
 ---
-description: "Browse Sidemark / MRSF plugins for rendering pipelines and editor integrations, including markdown-it, rehype, Marked, Marp, Monaco, Milkdown, and Tiptap."
+description: "Browse Sidemark / MRSF plugins for rendering pipelines and editor integrations, including the community-maintained Sidemark for Obsidian."
 ---
 
 # Plugins
@@ -36,10 +36,21 @@ Choose based on where comments need to appear:
 - Use a rendering plugin when your host already renders Markdown to HTML and you want badges, highlights, and tooltips in the output.
 - Use an editor plugin when your host owns a live editing surface and needs comment state, overlays, and host-controlled persistence.
 - Use the [VS Code extension](/vscode/) when you want a ready-made desktop workflow instead of embedding Sidemark in your own host.
+- Use [Sidemark for Obsidian](/plugins/obsidian) when you want a community-maintained review workflow inside your Obsidian vault.
+
+## Community Integrations
+
+These integrations are maintained independently of the core packages above. Their own documentation and issue trackers are the best place for installation details and support.
+
+| Integration | Maintainer | Best fit |
+|-------------|------------|----------|
+| [Sidemark for Obsidian](/plugins/obsidian) | [Adam Coddington](https://github.com/coddingtonbear) | Comments, threads, and suggested edits in Obsidian notes, stored in MRSF sidecars |
+
+Community integrations share the MRSF format but may add their own behavior and extension fields. See each integration's page for interoperability notes.
 
 ## Common Model
 
-All plugins still work from the same MRSF sidecar model:
+The core rendering and editor packages above share these conventions:
 
 - sidecar comments remain outside the Markdown source
 - canonical anchors are line, range, column, and `selected_text`

@@ -25,6 +25,12 @@ Sidemark (formally MRSF — Markdown Review Sidecar Format) is a portable, versi
 | `@mrsf/rehype-mrsf` | https://www.npmjs.com/package/@mrsf/rehype-mrsf | rehype rendering plugin (unified ecosystem) |
 | `mrsf-vscode` | https://marketplace.visualstudio.com/items?itemName=wictor.mrsf-vscode | VS Code extension |
 
+## Community Integrations
+
+- Sidemark for Obsidian: https://sidemark.org/plugins/obsidian
+- Independently maintained by Adam Coddington: https://github.com/coddingtonbear/obsidian-sidemark
+- Comments use MRSF sidecars; suggested edits and quote context use plugin-specific `x_` extensions, not standardized cross-tool workflows.
+
 ## CLI Commands
 
 - `mrsf init <file>` — Create a sidecar for a Markdown file
@@ -97,6 +103,7 @@ Common: `author`, `timestamp`, `resolved`, `line`, `end_line`, `start_column`, `
 - Library API: https://sidemark.org/cli/api
 - MCP Server: https://sidemark.org/mcp/
 - VS Code Extension: https://sidemark.org/vscode/
+- Obsidian Community Plugin: https://sidemark.org/plugins/obsidian
 - FAQ: https://sidemark.org/guide/faq
 - CI/CD Integration: https://sidemark.org/guide/ci-integration
 
