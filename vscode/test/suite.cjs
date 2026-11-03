@@ -128,10 +128,10 @@ async function verifyUnicodeReview(page, artifacts) {
       assert.equal(saved[key], expected[key], `${expected.id}: sidebar actions must preserve ${key}`);
     }
   }
-  const refreshedPreview = await findFrame(page, '.mrsf-comment[data-comment-id="emoji-prefix"] .mrsf-comment-body',
+  await findFrame(page, '.mrsf-comment[data-comment-id="emoji-prefix"] .mrsf-comment-body',
     "Preview must refresh the Unicode edit without losing its selected text",
-    async (frame) => await frame.locator('.mrsf-comment[data-comment-id="emoji-prefix"] .mrsf-comment-body').textContent() === editedText);
-  assert.equal(await refreshedPreview.locator('.mrsf-inline-highlight[data-comment-id="emoji-prefix"]').textContent(), "日本語");
+    async (frame) => await frame.locator('.mrsf-comment[data-comment-id="emoji-prefix"] .mrsf-comment-body').textContent() === editedText
+      && await frame.locator('.mrsf-inline-highlight[data-comment-id="emoji-prefix"]').textContent() === "日本語");
   await page.screenshot({ path: path.join(artifacts, "unicode-sidebar.png"), animations: "disabled" });
   assert.equal(await fs.readFile(target.fsPath, "utf8"), originalMarkdown, "Review actions must not modify Markdown source");
 
@@ -160,8 +160,26 @@ async function clickPreviewControl(preview, selector, keyboard = false) {
       if (window.mrsfTrustedClick) window.mrsfTrustedClick.bubbled = true;
     }, { once: true });
   }, selector);
-  if (keyboard) await preview.locator(selector).first().press("Enter");
-  else await preview.locator(selector).first().click();
+  const control = preview.locator(selector).first();
+  const mouse = preview.page().mouse;
+  if (keyboard) await control.focus();
+  else {
+    await control.hover();
+    await mouse.down();
+  }
+  try {
+    // VS Code accepts native webview links only from its focused outer iframe.
+    await eventually(async () => {
+      for (let frame = preview; frame.parentFrame(); frame = frame.parentFrame()) {
+        const owner = await frame.frameElement();
+        if (!await owner.evaluate((element) => element.ownerDocument.activeElement === element)) return false;
+      }
+      return true;
+    }, "Native webview focus must follow pointer-down or keyboard focus before activation");
+    if (keyboard) await control.press("Enter");
+  } finally {
+    if (!keyboard) await mouse.up();
+  }
   assert.deepEqual(await preview.evaluate(() => window.mrsfTrustedClick),
     { trusted: true, matches: true, hasDocumentView: true, bubbled: true, href },
     `Preview must receive a trusted ${selector} click, keyboard=${keyboard}`);
@@ -382,6 +400,11 @@ async function verifyInteractions(target, browser) {
         const owner = frame.parentFrame() ? await frame.frameElement() : undefined;
         const state = await frame.evaluate(() => ({
           focused: document.hasFocus(),
+          activeElement: document.activeElement && {
+            tag: document.activeElement.tagName,
+            id: document.activeElement.id,
+            src: document.activeElement.getAttribute("src"),
+          },
           visibility: document.visibilityState,
           viewport: { width: innerWidth, height: innerHeight, scale: devicePixelRatio },
           iframes: [...document.querySelectorAll("iframe")].map((element) => ({
@@ -390,6 +413,8 @@ async function verifyInteractions(target, browser) {
           })),
           click: window.mrsfTrustedClick,
           highlightRequestId: document.body?.dataset.highlightRequestId,
+          prompts: [...document.querySelectorAll(".monaco-dialog-box, .quick-input-widget, .notifications-list-container")]
+            .map((element) => ({ text: element.innerText.slice(0, 2000), visible: !!element.getClientRects().length })),
           threads: [...document.querySelectorAll(".thread.highlighted")].map((thread) => ({
             commentId: thread.querySelector("[data-id]")?.getAttribute("data-id"),
             animations: thread.getAnimations().map((animation) => ({
@@ -404,7 +429,9 @@ async function verifyInteractions(target, browser) {
           badgeBounds: await frame.locator(".mrsf-badge").first().boundingBox({ timeout: 500 }).catch(() => null) };
         diagnostics.push(diagnostic);
         console.log("UI frame", JSON.stringify(diagnostic));
-      } catch {}
+      } catch (diagnosticError) {
+        console.log("UI diagnostics unavailable", diagnosticError.message);
+      }
     }
     await fs.writeFile(path.join(artifacts, "failure.json"), JSON.stringify({ error: error.stack, frames: diagnostics }, null, 2));
     await page.screenshot({ path: path.join(artifacts, "failure.png") });

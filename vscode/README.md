@@ -10,10 +10,10 @@ Add, manage, and navigate **Markdown Review Sidecar Format** ([MRSF](https://sid
 
 ## Features
 
-### Preview Recovery Status (0.6.0 Development)
+### Editor Compatibility (0.6.1)
 
 The recovery targets VS Code's **Markdown Preview** and Markdown **Text Editor**, not the hybrid **Markdown Editor**.
-Modern Preview tabs expose a document URI and can drive document-bound sidebar actions. Legacy `markdown.showPreview*` webviews do not expose their source URI; automatic sidebar switching between multiple legacy previews remains a release blocker. This development version does not claim full compatibility until that gap is resolved.
+Modern Preview tabs expose a document URI and can drive document-bound sidebar actions. Legacy `markdown.showPreview*` webviews do not expose their source URI; automatic sidebar switching between multiple legacy previews is not supported. Use **Reopen Editor With... > Markdown Preview** for document-aware preview tracking. This release does not add hybrid Markdown Editor or multi-document legacy-preview integration.
 
 ### Development Verification
 
@@ -32,9 +32,7 @@ Host tests use temporary documents and an isolated VS Code profile. They check p
 
 Background store/settings events coalesce preview refreshes over 250 ms to let cold webview frame swaps settle. Explicit sidebar navigation remains immediate.
 
-The expanded suite passed three consecutive runs on VS Code 1.142.0 and two on stable 1.144.1 on Windows ARM64. The minimum supported 1.137.0 passed once, then failed Unicode preview hydration: annotations were present in a hidden pending frame but absent from the visible frame. Coalescing refreshes has not eliminated this lifecycle failure; this recovery work is not release-ready. These results do not establish Linux/macOS compatibility or repair the CI results of other branches.
-
-The full suite also opens a document longer than 150 lines with seven explicit UTF-16 selection spans: Japanese after an emoji prefix, ZWJ emoji, flags, non-BMP CJK, combining characters, hiragana and emoji with skin-tone modifiers. It checks exact highlighted text, Unicode authors and comment bodies, native click/Enter navigation, existing and newly saved replies, Unicode edits, Resolve/Unresolve, unchanged anchor coordinates, unchanged Markdown source, and sidebar switching between modern previews. Playwright attaches before preview creation and ignores hidden replacement frames. Pointer checks use real input with actionability waiting; repeated sidebar navigation checks fresh request IDs rather than relying on catching a short animation before it finishes.
+The full suite also opens a document longer than 150 lines with seven explicit UTF-16 selection spans: Japanese after an emoji prefix, ZWJ emoji, flags, non-BMP CJK, combining characters, hiragana and emoji with skin-tone modifiers. It checks exact highlighted text, Unicode authors and comment bodies, native click/Enter navigation, existing and newly saved replies, Unicode edits, Resolve/Unresolve, unchanged anchor coordinates, unchanged Markdown source, and sidebar switching between modern previews. Playwright attaches before preview creation and ignores hidden replacement frames. Pointer checks use a real pointer-down, wait for native focus through each ancestor iframe, and release the pointer once; Enter activation observes the same focus prerequisite. This respects VS Code's focus gate for native webview links without fixed sleeps, synthetic clicks or retries of comment creation. Repeated sidebar navigation checks fresh request IDs rather than relying on catching a short animation before it finishes. Refresh assertions remain inside replacement-aware frame checks.
 
 The external-update test waits for a separate workspace file-watcher readiness event, then writes the review sidecar once and verifies both cached data and the actual webview. Set `MRSF_TEST_FOCUS=watcher` to run only cold preview hydration and external-update checks; this skips the interaction and Unicode workflows.
 
@@ -42,7 +40,7 @@ The full suite also uses the native Markdown **Text Editor**: it inserts Unicode
 
 VS Code can deliver the first content change before the corresponding dirty-state notification. Sidemark compares a seemingly clean change with disk before classifying it as an external reload, queues subsequent edits in order during that check, and waits for pending edits before save-time reanchoring.
 
-Complete visual parity, all action transports, multi-document legacy tracking and rich-anchor parity remain unverified. The hybrid Markdown Editor is not supported; use Markdown Preview or Text Editor.
+These checks cover the workflows listed above, not exhaustive visual parity or macOS compatibility. The hybrid Markdown Editor and automatic multi-document legacy-preview tracking are not supported; use modern Markdown Preview or Text Editor.
 
 To run only the real-webview tooltip bounds checks (both gutters, narrow panes, long text), set `MRSF_TEST_FOCUS=tooltip` before `npm run test:host`. In PowerShell, use `$env:MRSF_TEST_FOCUS = "tooltip"`; remove it afterward with `Remove-Item Env:MRSF_TEST_FOCUS` to restore the full suite. This focused mode does not test native click transport, file watching, or comment persistence.
 
