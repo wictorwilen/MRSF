@@ -138,7 +138,7 @@ describe("getLineShift", () => {
 // Git subprocess functions (with real git repo)
 // ---------------------------------------------------------------------------
 
-describe("git operations with real repo", () => {
+describe("git operations with real repo", { timeout: 30_000 }, () => {
   let tmpDir: string;
 
   beforeEach(async () => {
@@ -147,10 +147,10 @@ describe("git operations with real repo", () => {
     await execFile("git", ["init"], { cwd: tmpDir });
     await execFile("git", ["config", "user.email", "test@test.com"], { cwd: tmpDir });
     await execFile("git", ["config", "user.name", "Test"], { cwd: tmpDir });
-  });
+  }, 30_000);
 
   afterEach(() => {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+    fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 3 });
     resetGitCache();
   });
 
@@ -169,7 +169,9 @@ describe("git operations with real repo", () => {
     const nested = path.join(tmpDir, "a", "b");
     fs.mkdirSync(nested, { recursive: true });
     const root = await findRepoRoot(nested);
-    expect(root).toBe(tmpDir);
+    expect(root).not.toBeNull();
+    if (!root) throw new Error("Expected repository root.");
+    expect(fs.realpathSync.native(root)).toBe(fs.realpathSync.native(tmpDir));
   });
 
   it("getGitUserName returns the repository-local user.name", async () => {

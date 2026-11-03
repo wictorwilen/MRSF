@@ -7,6 +7,10 @@ on:
       - "plugins/**"
       - "examples/**"
       - "vscode/**"
+      - "python/**"
+      - "docs/**"
+      - "mrsf.schema.json"
+      - "mrsf-config.schema.json"
       - ".github/workflows/ci.yml"
       - "package.json"
       - "vitest.config.ts"
@@ -17,12 +21,67 @@ on:
       - "plugins/**"
       - "examples/**"
       - "vscode/**"
+      - "python/**"
+      - "docs/**"
+      - "mrsf.schema.json"
+      - "mrsf-config.schema.json"
       - ".github/workflows/ci.yml"
       - "package.json"
       - "vitest.config.ts"
   workflow_dispatch:
 
 jobs:
+  library-validation:
+    name: Libraries (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Type-check, build and test libraries in dependency order
+        run: |
+          for package in cli plugins/shared mcp plugins/monaco plugins/milkdown plugins/tiptap; do
+            npm --prefix "$package" ci
+            npm --prefix "$package" run lint
+            npm --prefix "$package" run build
+            npm --prefix "$package" test
+          done
+
+  python-validation:
+    name: Python ${{ matrix.python }} (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: python
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        python: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install package and validation tools
+        run: python -m pip install ".[dev]" build
+      - name: Lint
+        run: python -m ruff check .
+      - name: Type-check
+        run: python -m mypy src
+      - name: Run full test suite
+        run: python -m pytest -q
+      - name: Build wheel and source distribution
+        run: python -m build
+
   vscode-compatibility:
     name: VS Code ${{ matrix.version }} (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -112,12 +171,16 @@ jobs:
         run: |
           cd ${{ matrix.package.path }}
           npm ci
+          npm run lint
           npm run build
           npm test -- --coverage
 
   editor-builds:
-    name: Editor And Demo Builds
+    name: Documentation And Demo Builds
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v5
 
@@ -125,26 +188,24 @@ jobs:
         with:
           node-version: 20
 
-      - name: Build CLI library
+      - name: Build all documentation and demo dependencies
         run: |
-          cd cli
-          npm ci
-          npm run build
+          for package in cli plugins/shared plugins/markdown-it plugins/rehype plugins/marked plugins/marp plugins/monaco plugins/milkdown plugins/tiptap; do
+            npm --prefix "$package" ci
+            npm --prefix "$package" run build
+          done
 
-      - name: Build shared plugin library
+      - name: Build documentation
         run: |
-          cd plugins/shared
-          npm ci
-          npm run build
+          npm --prefix docs ci
+          npm --prefix docs run docs:build
 
-      - name: Build Milkdown plugin
-        run: |
-          cd plugins/milkdown
-          npm ci
-          npm run build
-
-      - name: Build Milkdown example demo
+      - name: Build all example demos and run example tests
         run: |
           cd examples
-          npm install
+          npm install --package-lock=false
+          npm run demo:marp:build
           npm run demo:milkdown:build
+          npm run demo:monaco:build
+          npm run demo:tiptap:build
+          npm run test:monaco-demo

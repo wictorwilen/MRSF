@@ -28,10 +28,26 @@ class TestValidate:
         assert result.valid is True
 
     def test_detects_duplicate_ids(self):
-        result = validate(make_doc(comments=[
-            Comment(id="dup", author="A", timestamp="2025-01-01T00:00:00Z", text="a", resolved=False),
-            Comment(id="dup", author="B", timestamp="2025-01-01T00:00:00Z", text="b", resolved=False),
-        ]))
+        result = validate(
+            make_doc(
+                comments=[
+                    Comment(
+                        id="dup",
+                        author="A",
+                        timestamp="2025-01-01T00:00:00Z",
+                        text="a",
+                        resolved=False,
+                    ),
+                    Comment(
+                        id="dup",
+                        author="B",
+                        timestamp="2025-01-01T00:00:00Z",
+                        text="b",
+                        resolved=False,
+                    ),
+                ]
+            )
+        )
         assert result.valid is False
         assert any("Duplicate" in e.message for e in result.errors)
 

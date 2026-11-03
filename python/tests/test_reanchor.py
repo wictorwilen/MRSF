@@ -1,6 +1,5 @@
 """Tests for the re-anchor engine — 1:1 match with reanchor.test.ts."""
 
-import os
 from unittest.mock import patch
 
 from mrsf.anchor_context import create_anchor_context_index
@@ -400,7 +399,10 @@ class TestReanchorCommentLineFallback:
             "footer",
         )
         comment = make_comment(
-            selected_text="The precise original sentence that should only weakly resemble the candidate after edits.",
+            selected_text=(
+                "The precise original sentence that should only weakly resemble "
+                "the candidate after edits."
+            ),
             line=2,
         )
 
@@ -451,8 +453,18 @@ class TestReanchorCommentLineFallback:
 class TestReanchorCommentLowFuzzy:
     def test_single_fuzzy_match_with_long_string(self):
         # Use string >= 200 chars to avoid substring matching
-        long_needle = "The implementation of the advanced caching mechanism provides significant performance improvements to the overall system architecture while maintaining backward compatibility with existing clients " + "x" * 10
-        long_line = "The implementation of the advanced caching mechanism provided significant performance improvements to the overall system architecture while maintaining backward compatibility with existing clientsss " + "x" * 10
+        long_needle = (
+            "The implementation of the advanced caching mechanism provides significant "
+            "performance improvements to the overall system architecture while maintaining "
+            "backward compatibility with existing clients "
+            + "x" * 10
+        )
+        long_line = (
+            "The implementation of the advanced caching mechanism provided significant "
+            "performance improvements to the overall system architecture while maintaining "
+            "backward compatibility with existing clientsss "
+            + "x" * 10
+        )
         lines = lines1("# Title", "", long_line, "Other content")
         comment = make_comment(selected_text=long_needle, line=999)
         result = reanchor_comment(comment, lines, threshold=0.5)
@@ -461,7 +473,11 @@ class TestReanchorCommentLowFuzzy:
 
     def test_ambiguous_multiple_matches(self):
         # Strings >= 200 chars that are similar but not exactly matching the needle
-        base = "The implementation of the advanced caching mechanism provides significant performance improvements to the overall system architecture while maintaining backward compatibility with existing client applications and third-party integrations"
+        base = (
+            "The implementation of the advanced caching mechanism provides significant "
+            "performance improvements to the overall system architecture while maintaining "
+            "backward compatibility with existing client applications and third-party integrations"
+        )
         similar1 = base.replace("advanced", "improved")
         similar2 = base.replace("advanced", "enhanced")
         needle = base.replace("advanced", "upgraded")
@@ -493,7 +509,9 @@ class TestReanchorDocument:
     def test_custom_threshold(self):
         lines = lines1("# Title", "Some text.")
         comments = [
-            make_comment(id="c1", selected_text="Totally different content that doesn't match.", line=5),
+            make_comment(
+                id="c1", selected_text="Totally different content that doesn't match.", line=5
+            ),
         ]
         doc = make_doc(comments)
         opts = ReanchorOptions(no_git=True, threshold=0.99)
@@ -820,12 +838,12 @@ class TestReanchorDocumentGitAware:
         opts = ReanchorOptions(from_commit="override-sha")
         results = reanchor_document(
             doc, lines, opts,
-            document_path="/repo/doc.md",
+            document_path="/repo/docs/doc.md",
             repo_root="/repo",
         )
         assert len(results) == 1
         # get_diff should be called with override-sha, not comment.commit
-        mock_diff.assert_called_once_with("override-sha", "head-sha", "doc.md", "/repo")
+        mock_diff.assert_called_once_with("override-sha", "head-sha", "docs/doc.md", "/repo")
 
     def test_groups_short_and_full_forms_of_the_same_commit(self):
         full_commit = "0123456789012345678901234567890123456789"

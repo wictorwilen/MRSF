@@ -144,7 +144,9 @@ class TestResolveComment:
         doc = make_doc()
         doc.comments.append(Comment(id="c-1", author="A", timestamp="", text="x", resolved=False))
         doc.comments.append(
-            Comment(id="c-2", author="B", timestamp="", text="reply", resolved=False, reply_to="c-1")
+            Comment(
+                id="c-2", author="B", timestamp="", text="reply", resolved=False, reply_to="c-1"
+            )
         )
         resolve_comment(doc, "c-1", cascade=False)
         assert doc.comments[0].resolved is True
@@ -154,7 +156,9 @@ class TestResolveComment:
         doc = make_doc()
         doc.comments.append(Comment(id="c-1", author="A", timestamp="", text="x", resolved=False))
         doc.comments.append(
-            Comment(id="c-2", author="B", timestamp="", text="reply", resolved=False, reply_to="c-1")
+            Comment(
+                id="c-2", author="B", timestamp="", text="reply", resolved=False, reply_to="c-1"
+            )
         )
         resolve_comment(doc, "c-1", cascade=True)
         assert doc.comments[0].resolved is True
@@ -233,10 +237,20 @@ class TestRemoveComment:
             Comment(id="root", author="A", timestamp="", text="root", resolved=False, line=1)
         )
         doc.comments.append(
-            Comment(id="mid", author="B", timestamp="", text="mid", resolved=False, reply_to="root", line=5)
+            Comment(
+                id="mid",
+                author="B",
+                timestamp="",
+                text="mid",
+                resolved=False,
+                reply_to="root",
+                line=5,
+            )
         )
         doc.comments.append(
-            Comment(id="leaf", author="C", timestamp="", text="leaf", resolved=False, reply_to="mid")
+            Comment(
+                id="leaf", author="C", timestamp="", text="leaf", resolved=False, reply_to="mid"
+            )
         )
         remove_comment(doc, "mid")
         assert len(doc.comments) == 2
@@ -274,7 +288,15 @@ class TestRemoveComment:
 
 class TestFilterComments:
     comments = [
-        Comment(id="1", author="Alice", timestamp="", text="a", resolved=False, type="issue", severity="high"),
+        Comment(
+            id="1",
+            author="Alice",
+            timestamp="",
+            text="a",
+            resolved=False,
+            type="issue",
+            severity="high",
+        ),
         Comment(id="2", author="Bob", timestamp="", text="b", resolved=True, type="suggestion"),
         Comment(id="3", author="Alice", timestamp="", text="c", resolved=False),
     ]
@@ -306,8 +328,12 @@ class TestGetThreads:
     def test_groups_replies_under_roots(self):
         comments = [
             Comment(id="root", author="A", timestamp="", text="root", resolved=False),
-            Comment(id="r1", author="B", timestamp="", text="reply 1", resolved=False, reply_to="root"),
-            Comment(id="r2", author="C", timestamp="", text="reply 2", resolved=False, reply_to="root"),
+            Comment(
+                id="r1", author="B", timestamp="", text="reply 1", resolved=False, reply_to="root"
+            ),
+            Comment(
+                id="r2", author="C", timestamp="", text="reply 2", resolved=False, reply_to="root"
+            ),
             Comment(id="standalone", author="D", timestamp="", text="solo", resolved=False),
         ]
         threads = get_threads(comments)
@@ -318,7 +344,14 @@ class TestGetThreads:
     def test_creates_thread_for_reply_with_missing_root(self):
         """Cover line 236: root_id not in threads → create empty list."""
         comments = [
-            Comment(id="orphan-reply", author="B", timestamp="", text="reply", resolved=False, reply_to="missing-root"),
+            Comment(
+                id="orphan-reply",
+                author="B",
+                timestamp="",
+                text="reply",
+                resolved=False,
+                reply_to="missing-root",
+            ),
         ]
         threads = get_threads(comments)
         assert "missing-root" in threads
@@ -334,7 +367,15 @@ class TestGetThreads:
 class TestSummarize:
     def test_produces_correct_summary(self):
         comments = [
-            Comment(id="1", author="A", timestamp="", text="a", resolved=False, type="issue", severity="high"),
+            Comment(
+                id="1",
+                author="A",
+                timestamp="",
+                text="a",
+                resolved=False,
+                type="issue",
+                severity="high",
+            ),
             Comment(id="2", author="B", timestamp="", text="b", resolved=True, type="suggestion"),
             Comment(id="3", author="A", timestamp="", text="c", resolved=False, reply_to="1"),
         ]
@@ -419,18 +460,21 @@ class TestPopulateSelectedText:
 
 class TestAddCommentWithGit:
     def test_auto_detects_commit_when_repo_root_provided(self):
-        from unittest.mock import patch, MagicMock
+        from unittest.mock import patch
+
         from mrsf.git import reset_git_cache
         reset_git_cache()
-        with patch("mrsf.comments.is_git_available", return_value=True):
-            with patch("mrsf.comments.get_current_commit", return_value="abc123"):
-                doc = make_doc()
-                c = add_comment(
-                    doc,
-                    AddCommentOptions(author="Alice", text="Fix"),
-                    repo_root="/repo",
-                )
-                assert c.commit == "abc123"
+        with (
+            patch("mrsf.comments.is_git_available", return_value=True),
+            patch("mrsf.comments.get_current_commit", return_value="abc123"),
+        ):
+            doc = make_doc()
+            c = add_comment(
+                doc,
+                AddCommentOptions(author="Alice", text="Fix"),
+                repo_root="/repo",
+            )
+            assert c.commit == "abc123"
 
     def test_no_commit_when_no_repo_root(self):
         doc = make_doc()
@@ -456,10 +500,25 @@ class TestUnresolveCommentExtended:
 
 class TestFilterCommentsExtended:
     comments = [
-        Comment(id="1", author="Alice", timestamp="", text="a", resolved=False, type="issue", severity="high"),
+        Comment(
+            id="1",
+            author="Alice",
+            timestamp="",
+            text="a",
+            resolved=False,
+            type="issue",
+            severity="high",
+        ),
         Comment(id="2", author="Bob", timestamp="", text="b", resolved=True, type="suggestion"),
         Comment(id="3", author="Alice", timestamp="", text="c", resolved=False),
-        Comment(id="4", author="Carol", timestamp="", text="d", resolved=False, extra={"x_reanchor_status": "orphaned"}),
+        Comment(
+            id="4",
+            author="Carol",
+            timestamp="",
+            text="d",
+            resolved=False,
+            extra={"x_reanchor_status": "orphaned"},
+        ),
     ]
 
     def test_filters_by_type(self):
@@ -491,7 +550,14 @@ class TestFilterCommentsExtended:
 class TestSummarizeExtended:
     def test_counts_orphaned(self):
         comments = [
-            Comment(id="1", author="A", timestamp="", text="a", resolved=False, extra={"x_reanchor_status": "orphaned"}),
+            Comment(
+                id="1",
+                author="A",
+                timestamp="",
+                text="a",
+                resolved=False,
+                extra={"x_reanchor_status": "orphaned"},
+            ),
             Comment(id="2", author="B", timestamp="", text="b", resolved=False),
         ]
         s = summarize(comments)

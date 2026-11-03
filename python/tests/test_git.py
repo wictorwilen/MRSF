@@ -3,6 +3,8 @@
 import subprocess
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from mrsf.git import (
     detect_renames,
     find_repo_root,
@@ -19,6 +21,25 @@ from mrsf.git import (
     resolve_commit,
 )
 from mrsf.types import DiffHunk
+
+
+@pytest.mark.parametrize("error", [NotADirectoryError, PermissionError])
+def test_git_read_operations_degrade_on_operating_system_errors(error):
+    reset_git_cache()
+    try:
+        with patch("mrsf.git.subprocess.run", side_effect=error):
+            assert is_git_available() is False
+            with patch("mrsf.git.is_git_available", return_value=True):
+                assert find_repo_root("/invalid") is None
+                assert get_git_user_name("/invalid") is None
+                assert get_current_commit("/invalid") is None
+                assert resolve_commit("HEAD", "/invalid") is None
+                assert get_diff("old", "new", "docs/doc.md", "/invalid") == []
+                assert get_file_at_commit("HEAD", "docs/doc.md", "/invalid") is None
+                assert get_staged_files("/invalid") == []
+                assert detect_renames("old", "new", "/invalid") == {}
+    finally:
+        reset_git_cache()
 
 # ---------------------------------------------------------------------------
 # parseDiffHunks

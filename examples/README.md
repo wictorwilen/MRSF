@@ -86,16 +86,6 @@ npm run demo:milkdown
 Then open the printed local Vite URL and navigate to `/` to try the interactive Milkdown demo.
 The page lets you switch between a direct Milkdown editor and Crepe, both backed by the same MRSF runtime. You can add comments from a selection, reply, edit, resolve, delete, save the in-memory sidecar, reload host state, and simulate external sidecar changes.
 
-There is also a browser comparison rig for the Rehype and Tiptap integrations:
-
-```bash
-cd examples
-npm install
-npm run demo:compare
-```
-
-Then open the printed local Vite URL and navigate to `/` to compare the same Markdown and sidecar rendered by both plugins side by side. The rig starts with `ex.md` and `ex.md.review.yaml`, and also lets you upload a Markdown/sidecar pair for direct visual comparison.
-
 ## Trying the Examples
 
 If you have the MRSF CLI installed (`npm install -g @mrsf/cli` or via `npx`), you

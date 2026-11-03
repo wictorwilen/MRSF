@@ -1,10 +1,7 @@
 """Tests for the resolve_files module — comprehensive coverage."""
 
-import os
-from pathlib import Path
 
 from mrsf.resolve_files import _is_sidecar_path, resolve_sidecar_paths
-
 
 # ---------------------------------------------------------------------------
 # _is_sidecar_path

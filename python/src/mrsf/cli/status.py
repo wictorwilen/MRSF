@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import sys
 
@@ -90,10 +91,8 @@ def status_cmd(ctx: MrsfContext, files: tuple[str, ...], as_json: bool) -> None:
         doc_dir = os.path.dirname(sc)
         doc_path = os.path.join(doc_dir, doc.document)
         if os.path.isfile(doc_path):
-            try:
+            with contextlib.suppress(Exception):
                 doc_lines = read_document_lines(doc_path)
-            except Exception:
-                pass
 
         counts = {"fresh": 0, "stale": 0, "orphaned": 0, "unknown": 0}
         for c in doc.comments:
