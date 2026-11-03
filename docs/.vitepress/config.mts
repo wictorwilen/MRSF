@@ -251,6 +251,12 @@ export default withMermaid(defineConfig({
             { text: "Tiptap", link: "/plugins/tiptap" },
           ],
         },
+        {
+          text: "Community Integrations",
+          items: [
+            { text: "Obsidian", link: "/plugins/obsidian" },
+          ],
+        },
       ],
       "/cli/": [
         {
