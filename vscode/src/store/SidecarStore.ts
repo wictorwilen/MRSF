@@ -375,7 +375,7 @@ export class SidecarStore implements vscode.Disposable {
     if (comment.line != null) {
       try {
         const lines = await readDocumentLines(docPath);
-        populateSelectedText(comment, lines);
+        populateSelectedText(comment, lines.slice(1));
       } catch {
         // Best effort — file may not be saved yet
       }

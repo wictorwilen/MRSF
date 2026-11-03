@@ -6,6 +6,7 @@ import uuid
 from datetime import datetime, timezone
 
 from .git import get_current_commit, is_git_available
+from .text import utf16_slice
 from .types import (
     AddCommentOptions,
     Comment,
@@ -114,7 +115,7 @@ def add_comment(
 
 
 def populate_selected_text(comment: Comment, document_lines: list[str]) -> None:
-    """Populate selected_text from document lines."""
+    """Populate selected_text from a zero-based array of document lines."""
     if comment.selected_text:
         return
     if comment.line is None:
@@ -129,16 +130,16 @@ def populate_selected_text(comment: Comment, document_lines: list[str]) -> None:
     if start_idx == end_idx:
         line = document_lines[start_idx]
         if comment.start_column is not None and comment.end_column is not None:
-            line = line[comment.start_column : comment.end_column]
+            line = utf16_slice(line, comment.start_column, comment.end_column)
         comment.selected_text = line
     else:
         lines: list[str] = []
         for i in range(start_idx, end_idx + 1):
             text = document_lines[i]
             if i == start_idx and comment.start_column is not None:
-                text = text[comment.start_column :]
+                text = utf16_slice(text, comment.start_column)
             if i == end_idx and comment.end_column is not None:
-                text = text[: comment.end_column]
+                text = utf16_slice(text, end=comment.end_column)
             lines.append(text)
         comment.selected_text = "\n".join(lines)
 

@@ -5,12 +5,14 @@ All notable changes to the **Sidemark** VS Code extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.0] - Unreleased
+## [0.6.1] - Unreleased
 
 ### Changed
+- Rebuilt against `@mrsf/cli` 0.8.0 with the clarified UTF-16 column contract.
 - Require VS Code 1.137 or later and compile against the matching API declarations.
 
 ### Fixed
+- Capture automatically populated selected text from the requested line, not the preceding line.
 - Render preview comments after delayed Markdown loading and content updates without requiring a resize.
 - Dispose preview observers and queued rendering when the webview closes.
 - Preserve document identity for empty previews and load configured YAML/JSON sidecars through the store.

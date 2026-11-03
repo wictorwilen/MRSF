@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from .fuzzy import combined_score
+from .text import utf16_length, utf16_slice
 from .types import Comment, ReanchorStatus
 
 MATCH_THRESHOLD = 0.35
@@ -523,8 +524,8 @@ def _exact_range(
     before = candidate[:index].split("\n")
     selected_lines = selected.split("\n")
     line = start_line + len(before) - 1
-    start_column = len(before[-1])
-    final_length = len(selected_lines[-1])
+    start_column = utf16_length(before[-1])
+    final_length = utf16_length(selected_lines[-1])
     end_column = start_column + final_length if len(selected_lines) == 1 else final_length
     return line, line + len(selected_lines) - 1, start_column, end_column, selected
 
@@ -555,11 +556,11 @@ def _extract_text(
     if line == final:
         text = lines[line]
         if start_column is not None and end_column is not None:
-            return text[start_column:end_column]
+            return utf16_slice(text, start_column, end_column)
         return text
     result = lines[line : final + 1]
     if start_column is not None:
-        result[0] = result[0][start_column:]
+        result[0] = utf16_slice(result[0], start_column)
     if end_column is not None:
-        result[-1] = result[-1][:end_column]
+        result[-1] = utf16_slice(result[-1], end=end_column)
     return "\n".join(result)

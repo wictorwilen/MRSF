@@ -70,8 +70,8 @@ export function registerAdd(program: Command): void {
     .requiredOption("-t, --text <text>", "Comment text")
     .option("-l, --line <n>", "Line number (1-based)")
     .option("--end-line <n>", "End line (inclusive)")
-    .option("--start-column <n>", "Start column (0-based)")
-    .option("--end-column <n>", "End column (0-based)")
+    .option("--start-column <n>", "Inclusive UTF-16 column (0-based)")
+    .option("--end-column <n>", "Exclusive UTF-16 column (0-based)")
     .option("--type <type>", "Comment type (e.g. suggestion, issue)")
     .option("--severity <level>", "Severity: low | medium | high")
     .option("--reply-to <id>", "Reply to an existing comment")
@@ -157,7 +157,7 @@ export function registerAdd(program: Command): void {
         } else if (comment.line != null) {
           try {
             const lines = await readDocumentLines(docPath);
-            populateSelectedText(comment, lines);
+            populateSelectedText(comment, lines.slice(1));
           } catch {
             // Document file may not exist yet, skip
           }

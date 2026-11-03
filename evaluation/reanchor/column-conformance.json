@@ -1,0 +1,9 @@
+[
+  { "name": "first line", "text": "first line\nsecond line\nthird line\n", "line": 1, "selected_text": "first line" },
+  { "name": "later line", "text": "first line\nsecond line\nthird line\n", "line": 3, "selected_text": "third line" },
+  { "name": "ASCII columns", "text": "first line\nsecond line\nthird line\n", "line": 3, "start_column": 0, "end_column": 5, "selected_text": "third" },
+  { "name": "emoji prefix", "text": "# Test\n\n😀 foo bar\n", "line": 3, "start_column": 3, "end_column": 6, "selected_text": "foo" },
+  { "name": "non-BMP selection", "text": "x 𠀀 y\n", "line": 1, "start_column": 2, "end_column": 4, "selected_text": "𠀀" },
+  { "name": "combining marks and tabs", "text": "é\tfoo\n", "line": 1, "start_column": 3, "end_column": 6, "selected_text": "foo" },
+  { "name": "multi-line columns", "text": "😀 first\nmiddle\n𠀀 last\n", "line": 1, "end_line": 3, "start_column": 3, "end_column": 4, "selected_text": "first\nmiddle\n𠀀 l" }
+]

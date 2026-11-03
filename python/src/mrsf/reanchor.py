@@ -48,6 +48,7 @@ from .revision_projection import (
     create_revision_projection,
     project_comment_anchor,
 )
+from .text import utf16_slice
 from .types import (
     Comment,
     DiffHunk,
@@ -651,16 +652,16 @@ def _extract_text(
     if start_idx == end_idx:
         text = lines[start_idx]
         if start_column is not None and end_column is not None:
-            return text[start_column:end_column]
+            return utf16_slice(text, start_column, end_column)
         return text
 
     result: list[str] = []
     for i in range(start_idx, end_idx + 1):
         text = lines[i]
         if i == start_idx and start_column is not None:
-            text = text[start_column:]
+            text = utf16_slice(text, start_column)
         if i == end_idx and end_column is not None:
-            text = text[:end_column]
+            text = utf16_slice(text, end=end_column)
         result.append(text)
     return "\n".join(result)
 

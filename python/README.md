@@ -49,6 +49,19 @@ mrsf watch docs/ --reanchor --force
 `--author` is omitted. Pass `--author` to override it; global Git identity is
 not used.
 
+### Column offsets and older sidecars
+
+`start_column` and `end_column` are zero-based UTF-16 code-unit offsets, with an
+exclusive end, matching JavaScript and the editor integrations. For example,
+`foo` in `😀 foo bar` occupies columns 3–6, not Python string indices 2–5.
+
+Python 0.6.0 uses the UTF-16 contract; earlier releases wrote code-point offsets.
+If a sidecar contains
+`selected_text`, reanchoring can recover the UTF-16 positions from that text;
+review ambiguous matches before accepting them. Without selected text or the
+original document revision, the old unit cannot be inferred reliably: verify
+and correct those anchors manually. ASCII and BMP-only selections are unchanged.
+
 ### Global Options
 
 | Option | Description |

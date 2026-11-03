@@ -8,7 +8,7 @@ from typing import Any, cast
 
 import click
 
-from ..comments import add_comment
+from ..comments import add_comment, populate_selected_text
 from ..discovery import discover_sidecar
 from ..git import find_repo_root, get_git_user_name
 from ..parser import parse_sidecar, read_document_lines
@@ -28,8 +28,8 @@ from .main import MrsfContext, pass_ctx
 @click.option("-t", "--text", required=True, help="Comment text.")
 @click.option("-l", "--line", type=int, default=None, help="Starting line number.")
 @click.option("--end-line", type=int, default=None, help="Ending line number.")
-@click.option("--start-column", type=int, default=None, help="Starting column.")
-@click.option("--end-column", type=int, default=None, help="Ending column.")
+@click.option("--start-column", type=int, default=None, help="Inclusive UTF-16 column (0-based).")
+@click.option("--end-column", type=int, default=None, help="Exclusive UTF-16 column (0-based).")
 @click.option(
     "--type", "comment_type", default=None, help="Comment type (suggestion, issue, question, etc.)."
 )
@@ -84,15 +84,6 @@ def add_cmd(
             comments=[],
         )
 
-    # Auto-populate selected_text from document if line given but no selected_text
-    if selected_text is None and line is not None:
-        try:
-            lines = read_document_lines(doc_path)
-            end = end_line if end_line is not None else line
-            selected_text = "\n".join(lines[line - 1 : end])
-        except Exception:
-            pass
-
     opts = AddCommentOptions(
         author=author,
         text=text,
@@ -107,6 +98,12 @@ def add_cmd(
     )
 
     comment = add_comment(doc, opts)
+    if selected_text is None and line is not None:
+        try:
+            lines = read_document_lines(doc_path)
+        except OSError as exc:
+            raise click.ClickException(f"Cannot read document: {exc}") from exc
+        populate_selected_text(comment, lines[1:])
     write_sidecar(sidecar_path, doc)
 
     if not ctx.quiet:
