@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 from .anchor_context import (
@@ -413,7 +414,7 @@ def reanchor_document(
     if not opts.no_git and is_git_available():
         effective_repo_root = repo_root or find_repo_root(opts.cwd)
         if effective_repo_root and document_path:
-            rel_path = os.path.relpath(document_path, effective_repo_root)
+            rel_path = Path(os.path.relpath(document_path, effective_repo_root)).as_posix()
             head = get_current_commit(effective_repo_root)
 
             global_from = opts.from_commit

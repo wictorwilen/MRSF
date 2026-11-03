@@ -10,14 +10,12 @@ import os
 import signal
 import tempfile
 import time
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 from mrsf.cli.watch_signals import register_signal_handlers
-from mrsf.types import ReanchorOptions, ReanchorResult, ValidationResult
-
+from mrsf.types import ReanchorOptions, ValidationResult
 
 # ---------------------------------------------------------------------------
 # The watch handler logic extracted for testability

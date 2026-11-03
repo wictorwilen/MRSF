@@ -4,8 +4,6 @@ Round-trip, serialisation, hash logic, YAML-special quoting, concurrent writes.
 """
 
 import json
-import os
-import tempfile
 import threading
 from pathlib import Path
 from unittest.mock import patch
@@ -383,11 +381,30 @@ class TestWriteSidecarCommentMutations:
         fp = str(tmp_dir / "append.review.yaml")
         Path(fp).write_text(self.TWO_COMMENTS, encoding="utf-8")
         doc = MrsfDocument(
-            mrsf_version="1.0", document="test.md",
+            mrsf_version="1.0",
+            document="test.md",
             comments=[
-                Comment(id="c-001", author="Alice", timestamp="2026-01-01T00:00:00Z", text="First comment", resolved=False),
-                Comment(id="c-002", author="Bob", timestamp="2026-01-02T00:00:00Z", text="Second comment", resolved=False),
-                Comment(id="c-003", author="Carol", timestamp="2026-01-03T00:00:00Z", text="New comment", resolved=False),
+                Comment(
+                    id="c-001",
+                    author="Alice",
+                    timestamp="2026-01-01T00:00:00Z",
+                    text="First comment",
+                    resolved=False,
+                ),
+                Comment(
+                    id="c-002",
+                    author="Bob",
+                    timestamp="2026-01-02T00:00:00Z",
+                    text="Second comment",
+                    resolved=False,
+                ),
+                Comment(
+                    id="c-003",
+                    author="Carol",
+                    timestamp="2026-01-03T00:00:00Z",
+                    text="New comment",
+                    resolved=False,
+                ),
             ],
         )
         write_sidecar(fp, doc)
@@ -401,9 +418,16 @@ class TestWriteSidecarCommentMutations:
         fp = str(tmp_dir / "remove.review.yaml")
         Path(fp).write_text(self.TWO_COMMENTS, encoding="utf-8")
         doc = MrsfDocument(
-            mrsf_version="1.0", document="test.md",
+            mrsf_version="1.0",
+            document="test.md",
             comments=[
-                Comment(id="c-002", author="Bob", timestamp="2026-01-02T00:00:00Z", text="Second comment", resolved=False),
+                Comment(
+                    id="c-002",
+                    author="Bob",
+                    timestamp="2026-01-02T00:00:00Z",
+                    text="Second comment",
+                    resolved=False,
+                ),
             ],
         )
         write_sidecar(fp, doc)
@@ -491,10 +515,24 @@ class TestWriteSidecarHashManagement:
         )
         Path(fp).write_text(original, encoding="utf-8")
         doc = MrsfDocument(
-            mrsf_version="1.0", document="test.md",
+            mrsf_version="1.0",
+            document="test.md",
             comments=[
-                Comment(id="c-001", author="Alice", timestamp="2026-01-01T00:00:00Z", text="Existing", resolved=False),
-                Comment(id="c-002", author="Bob", timestamp="2026-01-02T00:00:00Z", text="New", resolved=False, selected_text="some code"),
+                Comment(
+                    id="c-001",
+                    author="Alice",
+                    timestamp="2026-01-01T00:00:00Z",
+                    text="Existing",
+                    resolved=False,
+                ),
+                Comment(
+                    id="c-002",
+                    author="Bob",
+                    timestamp="2026-01-02T00:00:00Z",
+                    text="New",
+                    resolved=False,
+                    selected_text="some code",
+                ),
             ],
         )
         write_sidecar(fp, doc)
@@ -511,6 +549,7 @@ class TestWriteSidecarHashManagement:
 class TestWriteSidecarIdempotency:
     def test_writing_twice_produces_identical_output(self, tmp_dir):
         fp = str(tmp_dir / "idempotent.review.yaml")
+        selected_text_hash = compute_hash("Some selected\\ntext here.")
         original = (
             'mrsf_version: "1.0"\n'
             'document: test.md\n'
@@ -528,7 +567,7 @@ class TestWriteSidecarIdempotency:
             '    selected_text: |-\n'
             '      Some selected\n'
             '      text here.\n'
-            f'    selected_text_hash: {compute_hash("Some selected\\ntext here.")}\n'
+            f'    selected_text_hash: {selected_text_hash}\n'
             '    commit: deadbeef\n'
         )
         Path(fp).write_text(original, encoding="utf-8")
@@ -713,7 +752,9 @@ class TestWriteSidecarYamlSpecialQuoting:
         ("inline comment marker", "some text # comment"),
     ]
 
-    @pytest.mark.parametrize("label,value", yaml_special_values, ids=[v[0] for v in yaml_special_values])
+    @pytest.mark.parametrize(
+        "label,value", yaml_special_values, ids=[v[0] for v in yaml_special_values]
+    )
     def test_round_trips_selected_text(self, label, value, tmp_dir):
         safe_label = label.replace(" ", "-").replace("(", "").replace(")", "")
         fp = str(tmp_dir / f"special-{safe_label}.review.yaml")
@@ -739,7 +780,9 @@ class TestWriteSidecarYamlSpecialQuoting:
         assert parsed2["comments"][0]["selected_text"] == value
         assert len(parsed2["comments"]) == 2
 
-    def test_round_trips_brand_new_comment_with_yaml_special_selected_text_via_cst_path(self, tmp_dir):
+    def test_round_trips_brand_new_comment_with_yaml_special_selected_text_via_cst_path(
+        self, tmp_dir
+    ):
         fp = str(tmp_dir / "cst-special.review.yaml")
 
         initial = make_doc([make_comment(id="safe-1", selected_text="normal text")])

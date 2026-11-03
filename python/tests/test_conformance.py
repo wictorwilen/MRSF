@@ -21,7 +21,6 @@ Sections covered:
 
 from __future__ import annotations
 
-import os
 import re
 from pathlib import Path
 
@@ -32,7 +31,6 @@ from mrsf import (
     Comment,
     CommentFilter,
     MrsfDocument,
-    ReanchorResult,
     RemoveCommentOptions,
     add_comment,
     apply_reanchor_results,
@@ -51,8 +49,6 @@ from mrsf import (
     validate,
     write_sidecar,
 )
-from mrsf.types import ValidateOptions
-
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -200,10 +196,10 @@ class TestSection4_TopLevelStructure:
 
     def test_missing_mrsf_version(self):
         """[§4] missing mrsf_version is rejected (MUST)."""
-        doc = MrsfDocument.from_dict({"document": "test.md", "comments": []})
+        MrsfDocument.from_dict({"document": "test.md", "comments": []})
         # from_dict defaults mrsf_version to "1.0", so use raw dict via parse
         yaml_content = "document: test.md\ncomments: []\n"
-        doc = parse_sidecar_content(yaml_content)
+        parse_sidecar_content(yaml_content)
         # The parser fills in defaults; validate via schema with missing field
         raw_doc = MrsfDocument(mrsf_version="", document="test.md", comments=[])
         result = validate(raw_doc)
@@ -507,7 +503,7 @@ class TestSection6_2_OptionalCommentFields:
         assert doc.comments[0].anchored_text is None
 
     def test_anchored_text_populated_when_different(self):
-        """[§6.2] anchored_text SHOULD be populated when text differs from selected_text (SHOULD)."""
+        """[§6.2] anchored_text SHOULD be populated when text differs from selected_text."""
         comment = make_comment(line=1, selected_text="original text here")
         doc = make_doc(comments=[comment])
         lines = lines1("modified text here")
@@ -628,7 +624,9 @@ class TestSection7_2_TargetingRules:
         assert result.new_line == 3  # Closest to line 3
 
     def test_multiple_matches_no_line_falls_through(self):
-        """[§7.2] multiple matches without line/column — implementation falls through to fuzzy (SHOULD flag ambiguous).
+        """[§7.2] multiple matches without line/column — implementation falls through to fuzzy.
+
+        SHOULD flag ambiguous.
 
         Spec §7.2: "if no line/column fields are present, agents SHOULD flag the
         comment as ambiguous rather than guessing". The implementation instead
@@ -680,7 +678,7 @@ class TestSection7_3_ReanchoringGuidance:
         assert result.status in ("orphaned", "ambiguous")
 
     def test_different_text_populates_anchored_text(self):
-        """[§7.3] when re-anchoring resolves to different text, SHOULD populate anchored_text (SHOULD)."""
+        """[§7.3] when re-anchoring resolves to different text, SHOULD populate anchored_text."""
         comment = make_comment(line=1, selected_text="original text that was changed")
         doc = make_doc(comments=[comment])
         lines = lines1("original text that was slightly changed")
@@ -701,7 +699,7 @@ class TestSection7_3_ReanchoringGuidance:
         assert doc.comments[0].selected_text == original_text
 
     def test_orphaned_when_text_removed(self):
-        """[§7.3] if referenced text removed and cannot be re-anchored, SHOULD retain as orphaned (SHOULD)."""
+        """[§7.3] removed text that cannot be re-anchored SHOULD be retained as orphaned."""
         lines = lines1("completely different content")
         comment = make_comment(
             line=10,
@@ -774,7 +772,10 @@ class TestSection7_4_AnchoringResolutionProcedure:
         lines = lines1("completely unrelated content")
         comment = make_comment(
             line=100,
-            selected_text="A paragraph that was deleted entirely from the document and cannot be found anywhere",
+            selected_text=(
+                "A paragraph that was deleted entirely from the document "
+                "and cannot be found anywhere"
+            ),
         )
         result = reanchor_comment(comment, lines)
         assert result.status == "orphaned"
@@ -869,7 +870,9 @@ class TestSection9_1_Deletion:
     def test_reply_keeps_own_targeting_fields(self):
         """[§9.1] reply with own targeting fields keeps them during promotion (MUST)."""
         parent = make_comment(id="parent", line=10, selected_text="parent text")
-        reply = make_comment(id="reply", reply_to="parent", line=20, selected_text="reply's own text")
+        reply = make_comment(
+            id="reply", reply_to="parent", line=20, selected_text="reply's own text"
+        )
         doc = make_doc(comments=[parent, reply])
 
         remove_comment(doc, "parent")

@@ -34,7 +34,7 @@ def is_git_available() -> bool:
             check=True,
         )
         _git_available = True
-    except (subprocess.SubprocessError, FileNotFoundError):
+    except (subprocess.SubprocessError, OSError):
         _git_available = False
     return _git_available
 
@@ -64,7 +64,7 @@ def find_repo_root(cwd: str | None = None) -> str | None:
         )
         if result.returncode == 0:
             return result.stdout.strip()
-    except (subprocess.SubprocessError, FileNotFoundError):
+    except (subprocess.SubprocessError, OSError):
         pass
     return None
 
@@ -84,7 +84,7 @@ def get_git_user_name(repo_root: str) -> str | None:
         if result.returncode == 0:
             name = result.stdout.strip()
             return name or None
-    except (subprocess.SubprocessError, FileNotFoundError):
+    except (subprocess.SubprocessError, OSError):
         pass
     return None
 
@@ -103,7 +103,7 @@ def get_current_commit(repo_root: str) -> str | None:
         )
         if result.returncode == 0:
             return result.stdout.strip()
-    except (subprocess.SubprocessError, FileNotFoundError):
+    except (subprocess.SubprocessError, OSError):
         pass
     return None
 
@@ -122,7 +122,7 @@ def resolve_commit(revision: str, repo_root: str) -> str | None:
         )
         if result.returncode == 0:
             return result.stdout.strip()
-    except (subprocess.SubprocessError, FileNotFoundError):
+    except (subprocess.SubprocessError, OSError):
         pass
     return None
 
@@ -194,7 +194,7 @@ def get_diff(
         )
         if result.returncode == 0:
             return parse_diff_hunks(result.stdout)
-    except (subprocess.SubprocessError, FileNotFoundError):
+    except (subprocess.SubprocessError, OSError):
         pass
     return []
 
@@ -243,7 +243,7 @@ def get_file_at_commit(commit: str, file_path: str, repo_root: str) -> str | Non
         )
         if result.returncode == 0:
             return result.stdout
-    except (subprocess.SubprocessError, FileNotFoundError):
+    except (subprocess.SubprocessError, OSError):
         pass
     return None
 
@@ -270,7 +270,7 @@ def get_staged_files(repo_root: str, pattern: str | None = None) -> list[str]:
         )
         if result.returncode == 0:
             return [f for f in result.stdout.strip().split("\n") if f]
-    except (subprocess.SubprocessError, FileNotFoundError):
+    except (subprocess.SubprocessError, OSError):
         pass
     return []
 
@@ -303,5 +303,5 @@ def detect_renames(
                 if m:
                     renames[m.group(1)] = m.group(2)
         return renames
-    except (subprocess.SubprocessError, FileNotFoundError):
+    except (subprocess.SubprocessError, OSError):
         return {}

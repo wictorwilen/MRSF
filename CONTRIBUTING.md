@@ -17,6 +17,24 @@ Thanks for helping improve the Markdown Review Sidecar Format (MRSF). This docum
 - Validate examples against `mrsf.schema.json` (e.g., with a JSON Schema validator). Keep examples schema-compliant.
 - Check that line/column and `selected_text` anchors are consistent in examples.
 
+### Tooling checks
+
+There is no root npm workspace. Run `npm run lint`, `npm run build`, and `npm test` within each TypeScript package. Build `cli` first, then `plugins/shared`, before building packages that consume them. CI runs all package suites, retains renderer coverage checks, and checks libraries and VS Code on Windows and Linux.
+
+For Python, run these commands from `python`:
+
+```bash
+python -m pip install ".[dev]" build
+python -m ruff check .
+python -m mypy src
+python -m pytest -q
+python -m build
+```
+
+CI checks Python 3.10 and 3.13 on Windows and Linux. Permission-error tests inject the filesystem error instead of relying on platform-specific `chmod` behavior.
+
+After building the plugin dependencies, build documentation with `npm run docs:build` in `docs`. In `examples`, run `npm run demo:marp:build`, `npm run demo:milkdown:build`, `npm run demo:monaco:build`, `npm run demo:tiptap:build`, and `npm run test:monaco-demo`.
+
 ## Versioning
 - `mrsf_version` denotes the format version. Bump the minor version for backward-compatible additions; bump major only for breaking changes.
 - Document notable changes in the spec’s text; consider adding a brief changelog entry in PR descriptions.

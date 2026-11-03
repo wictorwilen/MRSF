@@ -45,6 +45,7 @@ dev = [
     "pytest-asyncio>=0.23",
     "ruff>=0.3",
     "mypy>=1.9",
+    "types-jsonschema>=4.20",
 ]
 
 [project.scripts]
