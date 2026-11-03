@@ -1,13 +1,13 @@
 {
   "version": 1,
   "algorithm": "baseline",
-  "cases": 56,
-  "comments": 80,
+  "cases": 64,
+  "comments": 88,
   "metrics": {
-    "passed": 80,
+    "passed": 88,
     "failed": 0,
-    "exactRangeMatches": 80,
-    "statusMatches": 80,
+    "exactRangeMatches": 88,
+    "statusMatches": 88,
     "incorrectConfidentRelocations": 0
   },
   "results": [
@@ -921,6 +921,150 @@
         "newEndLine": 25,
         "newStartColumn": 0,
         "newEndColumn": 18,
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "utf16-emoji-before-japanese",
+      "commentId": "unicode-01",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "unicode-01",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 3,
+        "newEndColumn": 6,
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "utf16-prefix-inserted-before-kana",
+      "commentId": "unicode-02",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "unicode-02",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 7,
+        "newEndColumn": 16,
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "utf16-emoji-selection-moved",
+      "commentId": "unicode-03",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "unicode-03",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 3,
+        "newEndLine": 3,
+        "newStartColumn": 3,
+        "newEndColumn": 5,
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "utf16-non-bmp-cjk-selection",
+      "commentId": "unicode-04",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "unicode-04",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 5,
+        "newEndColumn": 7,
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "utf16-multiline-japanese-selection",
+      "commentId": "unicode-05",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "unicode-05",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 3,
+        "newEndLine": 5,
+        "newStartColumn": 3,
+        "newEndColumn": 4,
+        "reason": "Source revision and neighboring line evidence confirm exact relocation."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "utf16-japanese-whitespace-normalized",
+      "commentId": "unicode-06",
+      "expectedStatus": "fuzzy",
+      "actual": {
+        "commentId": "unicode-06",
+        "status": "fuzzy",
+        "score": 0.6000000000000001,
+        "newLine": 1,
+        "newEndLine": 1,
+        "anchoredText": "😀 日本語  を   確認",
+        "previousSelectedText": "😀 日本語 を 確認",
+        "reason": "Markdown structure and bidirectional context locate the edited anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "utf16-zwj-emoji-selection",
+      "commentId": "unicode-07",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "unicode-07",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 7,
+        "newEndColumn": 12,
+        "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
+      },
+      "statusCorrect": true,
+      "rangeCorrect": true,
+      "passed": true
+    },
+    {
+      "caseId": "utf16-japanese-flag-selection",
+      "commentId": "unicode-08",
+      "expectedStatus": "anchored",
+      "actual": {
+        "commentId": "unicode-08",
+        "status": "anchored",
+        "score": 1,
+        "newLine": 1,
+        "newEndLine": 1,
+        "newStartColumn": 6,
+        "newEndColumn": 10,
         "reason": "Markdown structure and bidirectional context disambiguate the exact anchor."
       },
       "statusCorrect": true,

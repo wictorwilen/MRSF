@@ -117,7 +117,8 @@ export async function addComment(
 }
 
 /**
- * Populate selected_text from document lines (reads the file content region).
+ * Populate selected_text from a zero-based array of document lines.
+ * Remove the unused first element from readDocumentLines before calling.
  * Should be called after addComment if the caller provides line info but not selected_text.
  */
 export function populateSelectedText(

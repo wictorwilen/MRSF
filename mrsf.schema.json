@@ -84,12 +84,12 @@
           "start_column": {
             "type": "integer",
             "minimum": 0,
-            "description": "Starting column index (0-based) within the starting line."
+            "description": "Inclusive starting UTF-16 code-unit offset (0-based) within the starting line."
           },
           "end_column": {
             "type": "integer",
             "minimum": 0,
-            "description": "Ending column index. MUST be >= start_column when on the same line."
+            "description": "Exclusive ending UTF-16 code-unit offset (0-based) within the ending line. MUST be >= start_column when on the same line."
           },
           "selected_text": {
             "type": "string",

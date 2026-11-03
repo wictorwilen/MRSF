@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .fuzzy import combined_score, exact_match
+from .text import utf16_length, utf16_slice
 from .types import Comment
 
 CONTEXT_RADIUS = 8
@@ -196,13 +197,18 @@ def _project_columns(
         return comment.start_column, comment.end_column
     source = projection.source_lines[comment.line]
     target = projection.target_lines[target_line]
-    prefix = source[: comment.start_column]
-    suffix = source[comment.end_column :]
-    start = len(prefix) if target.startswith(prefix) else min(comment.start_column, len(target))
+    prefix = utf16_slice(source, end=comment.start_column)
+    suffix = utf16_slice(source, comment.end_column)
+    target_length = utf16_length(target)
+    start = (
+        utf16_length(prefix)
+        if target.startswith(prefix)
+        else min(comment.start_column, target_length)
+    )
     end = (
-        len(target) - len(suffix)
+        target_length - utf16_length(suffix)
         if target.endswith(suffix)
-        else min(len(target), start + comment.end_column - comment.start_column)
+        else min(target_length, start + comment.end_column - comment.start_column)
     )
     return start, end
 
@@ -220,11 +226,11 @@ def _extract_text(
     if line == final_line:
         text = lines[line]
         if start_column is not None and end_column is not None:
-            return text[start_column:end_column]
+            return utf16_slice(text, start_column, end_column)
         return text
     result = lines[line : final_line + 1]
     if start_column is not None:
-        result[0] = result[0][start_column:]
+        result[0] = utf16_slice(result[0], start_column)
     if end_column is not None:
-        result[-1] = result[-1][:end_column]
+        result[-1] = utf16_slice(result[-1], end=end_column)
     return "\n".join(result)

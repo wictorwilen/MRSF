@@ -27,7 +27,9 @@ export interface Comment {
   // Optional — anchoring
   line?: number;
   end_line?: number;
+  /** Inclusive, zero-based UTF-16 code-unit offset within line. */
   start_column?: number;
+  /** Exclusive, zero-based UTF-16 code-unit offset within end_line or line. */
   end_column?: number;
   selected_text?: string;
   selected_text_hash?: string;

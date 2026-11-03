@@ -271,9 +271,13 @@ await addComment(doc, {
 
 Extension entries are flattened onto the persisted comment as standard MRSF `x_*` fields.
 
-### `populateSelectedText(comment: Comment, lines: string[]): Comment`
+### `populateSelectedText(comment: Comment, lines: string[]): void`
 
-Fill in `selected_text` from the document lines based on the comment's line/column anchors.
+Fill in `selected_text` and its hash in place from the comment's line/column
+anchors. Pass a zero-based array of lines, such as `text.split("\n")`.
+`readDocumentLines()` returns a one-based array with an unused first entry:
+pass `lines.slice(1)` when using its result. Columns are zero-based UTF-16
+code-unit offsets, with an exclusive end.
 
 ### `resolveComment(sidecarPath: string, commentId: string): Promise<void>`
 

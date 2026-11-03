@@ -159,7 +159,7 @@ describe("SidecarStore", () => {
 
     expect(comment.id).toBe("c-new");
     expect(mockAddComment).toHaveBeenCalled();
-    expect(mockPopulateSelectedText).toHaveBeenCalledWith(comment, ["", "one", "two"]);
+    expect(mockPopulateSelectedText).toHaveBeenCalledWith(comment, ["one", "two"]);
     expect(mockWriteSidecar).toHaveBeenCalled();
   });
 
