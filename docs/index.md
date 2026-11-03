@@ -61,6 +61,11 @@ features:
     details: "Embed Sidemark directly into Monaco-based editors with @mrsf/monaco-mrsf — gutter annotations, inline highlights, hover summaries, and host-driven comment workflows."
     link: https://www.npmjs.com/package/@mrsf/monaco-mrsf
     linkText: "@mrsf/monaco-mrsf on npm"
+  - icon: 💬
+    title: Obsidian Community Plugin
+    details: "Sidemark for Obsidian by Adam Coddington brings comments, threads, and suggested edits to your notes, stored in MRSF sidecars. Independently maintained by the community."
+    link: /plugins/obsidian
+    linkText: "Sidemark for Obsidian"
   - icon: 🥛
     title: Milkdown + Crepe Plugin
     details: "Run the same Sidemark review runtime in direct Milkdown editors and Crepe shells, with shared sidecar workflows, inline anchors, gutters, tooltips, and host-controlled save and reanchor flows."
@@ -104,6 +109,7 @@ Sidemark, also known as **MRSF** (Markdown Review Sidecar Format), stores commen
 If you want comments inside a live editor instead of rendered HTML, Sidemark also includes interactive editor packages:
 
 - [VS Code extension](/vscode/) for a turnkey desktop workflow
+- [Sidemark for Obsidian](/plugins/obsidian), a community plugin by Adam Coddington for comments and suggested edits in your notes
 - [Monaco plugin](/plugins/monaco) for custom Monaco-based apps
 - [Milkdown + Crepe guide](/plugins/milkdown) for direct Milkdown editors and Crepe hosts sharing the same runtime
 - [Tiptap plugin](/plugins/tiptap) for experimental rich-text editor workflows
