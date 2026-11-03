@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- Retry transient `EPERM`, `EACCES` and `EBUSY` errors when atomically replacing sidecars, so brief Windows file locks do not discard review saves. Retries are bounded to 750 ms of backoff; permanent errors still propagate and temporary files are cleaned up.
+
 ## [0.7.1] - 2026-08-18
 
 ### Added

@@ -4,13 +4,21 @@ import { createServer } from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { runTests } from "@vscode/test-electron";
+import unicodeFixture from "./fixtures.cjs";
 
 const extensionRoot = fileURLToPath(new URL("..", import.meta.url));
 const temporaryRoot = await mkdtemp(path.join(tmpdir(), "sidemark-host-"));
 const workspace = path.join(temporaryRoot, "workspace");
 await mkdir(workspace);
+await mkdir(path.join(workspace, ".vscode"));
+await writeFile(path.join(workspace, ".vscode", "settings.json"), JSON.stringify({
+  "sidemark.author": unicodeFixture.author,
+  "sidemark.previewGutterPosition": "right",
+}));
 await writeFile(path.join(workspace, "preview.md"), "# Preview\n\nHello world\n");
 await writeFile(path.join(workspace, "other.md"), "# Other document\n");
+await writeFile(path.join(workspace, "unicode.md"), unicodeFixture.content);
+await writeFile(path.join(workspace, "unicode.md.review.json"), JSON.stringify(unicodeFixture.review));
 await writeFile(path.join(workspace, "preview.md.review.json"), JSON.stringify({
   mrsf_version: "1.0",
   document: "preview.md",
@@ -33,6 +41,7 @@ try {
     extensionTestsPath: path.join(extensionRoot, "test", "suite.cjs"),
     extensionTestsEnv: { MRSF_TEST_CDP_PORT: String(debugPort), MRSF_TEST_FOCUS: process.env.MRSF_TEST_FOCUS || "" },
     launchArgs: [workspace, "--disable-extensions", "--skip-welcome", "--skip-release-notes",
+      "--force-device-scale-factor=1", "--window-size=1280,900",
       "--remote-debugging-address=127.0.0.1", `--remote-debugging-port=${debugPort}`,
       "--user-data-dir", path.join(temporaryRoot, "user-data"), "--extensions-dir", path.join(temporaryRoot, "extensions")],
   });

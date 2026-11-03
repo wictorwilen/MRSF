@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Require VS Code 1.137 or later and compile against the matching API declarations.
 
 ### Fixed
+- Coalesce background store/settings refresh bursts to reduce overlapping Markdown Preview reloads; this does not fully resolve the intermittent cold-preview frame-swap failure on VS Code 1.137.
 - Render preview comments after delayed Markdown loading and content updates without requiring a resize.
 - Dispose preview observers and queued rendering when the webview closes.
 - Preserve document identity for empty previews and load configured YAML/JSON sidecars through the store.
@@ -26,11 +27,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Keep comment tooltips inside the Markdown Preview pane, opening right-gutter tooltips inward and constraining placement and text wrapping in narrow panes.
 
 ### Validation
+- Expand the real-host suite with a long Unicode document, seven explicit UTF-16 selections, Unicode authors/comments, reply/edit persistence, Resolve/Unresolve, anchor/source preservation and modern-preview document switching.
+- Wait for actionable real pointer targets, verify fresh sidebar highlight requests independently of animation timing, and capture viewport/frame layout in failure diagnostics.
+- Attach Playwright before preview creation, skip hidden replacement frames, and wait for an actual workspace watcher readiness event before the single external sidecar edit.
 - Add real-script DOM regressions and an isolated VS Code host smoke test.
 - Verify native preview comment links and immediate hover Resolve/Unresolve updates with real input in Windows VS Code 1.137 and 1.138 hosts.
 - Verify consecutive gutter clicks, inline click/Enter activation, and (+) comment persistence on the clicked source line.
 - Check tooltip bounds for both gutters at 260px and 650px widths, including long text and short viewports.
 - Full recovery remains blocked on automatic document tracking across multiple legacy command-opened previews. Complete visual parity and remaining action transports are not yet verified.
+- Windows ARM64 validation passed three consecutive runs on VS Code 1.142.0 and two on stable 1.144.1. VS Code 1.137.0 passed once, then failed cold Unicode hydration with annotations in a hidden pending frame; recovery is not release-ready.
 
 ## [0.5.1] - 2026-08-18
 

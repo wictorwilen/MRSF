@@ -4,8 +4,146 @@ const { setTimeout: delay } = require("node:timers/promises");
 const vscode = require("vscode");
 const { chromium } = require("playwright-core");
 const path = require("node:path");
+const unicodeFixture = require("./fixtures.cjs");
+
+function isReplacedFrame(frame, error) {
+  return frame.isDetached() || /Frame was detached|not attached to the DOM|Execution context was destroyed/.test(error.message);
+}
+
+async function isVisibleWebviewFrame(frame) {
+  if (!frame.parentFrame()) return false;
+  const owner = await frame.frameElement();
+  return owner.evaluate((element) => getComputedStyle(element).visibility === "visible");
+}
+
+async function waitForFileWatcher(root) {
+  const probe = vscode.Uri.joinPath(root, ".mrsf-watcher-ready");
+  const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(root, ".mrsf-watcher-ready"));
+  let ready = false;
+  const subscription = watcher.onDidCreate(() => { ready = true; });
+  try {
+    await eventually(async () => {
+      await fs.writeFile(probe.fsPath, "ready");
+      await delay(50);
+      await fs.rm(probe.fsPath, { force: true });
+      return ready;
+    }, "VS Code's workspace file watcher must be ready before testing external edits");
+  } finally {
+    subscription.dispose();
+    watcher.dispose();
+    await fs.rm(probe.fsPath, { force: true });
+  }
+}
+
+async function findFrame(page, selector, message, check = async () => true) {
+  let result;
+  await eventually(async () => {
+    for (const frame of page.frames()) {
+      try {
+        if (await frame.locator(selector).count() && await isVisibleWebviewFrame(frame) && await check(frame)) {
+          result = frame;
+          return true;
+        }
+      } catch (error) {
+        if (!isReplacedFrame(frame, error)) throw error;
+      }
+    }
+    return false;
+  }, message);
+  return result;
+}
+
+async function verifyUnicodeReview(page, artifacts) {
+  const root = vscode.workspace.workspaceFolders[0].uri;
+  const target = vscode.Uri.joinPath(root, "unicode.md");
+  const sidecarPath = `${target.fsPath}.review.json`;
+  const originalMarkdown = await fs.readFile(target.fsPath, "utf8");
+  const originalLines = originalMarkdown.split("\n");
+  assert.ok(originalLines.length > 150, "Unicode fixture must exercise a long, scrolling document");
+  const anchors = unicodeFixture.review.comments.filter((comment) => comment.line != null);
+  for (const comment of anchors) {
+    assert.equal(originalLines[comment.line - 1].slice(comment.start_column, comment.end_column), comment.selected_text,
+      `${comment.id} fixture must use UTF-16 code-unit offsets`);
+  }
+  await vscode.commands.executeCommand("vscode.openWith", target, "vscode.markdown.preview.editor");
+  let preview = await findFrame(page, '.mrsf-inline-highlight[data-comment-id="emoji-prefix"]', "Unicode preview must hydrate",
+    async (frame) => await frame.locator(".mrsf-inline-highlight").count() === anchors.length);
+  for (const comment of anchors) {
+    const selector = `.mrsf-inline-highlight[data-comment-id="${comment.id}"]`;
+    await eventually(async () => {
+      preview = await findFrame(page, selector, `Unicode ${comment.id} selection must be available`);
+      try {
+        assert.equal(await preview.locator(selector).textContent(), comment.selected_text, `${comment.id} highlight must preserve Unicode`);
+        assert.equal(await preview.locator(`.mrsf-comment[data-comment-id="${comment.id}"] .mrsf-comment-body`).textContent(), comment.text);
+        await clickPreviewControl(preview, selector, comment.id === "zwj");
+        const sidebar = await findFrame(page, `.thread.highlighted [data-id="${comment.id}"]`, `Native ${comment.id} click must reveal its thread`);
+        assert.equal(await sidebar.locator(`[data-id="${comment.id}"] .comment-text`).textContent(), comment.text);
+        assert.equal(await sidebar.locator(`[data-id="${comment.id}"] .author`).textContent(), unicodeFixture.author);
+        assert.equal(await preview.locator(".markdown-body").isVisible(), true);
+        return true;
+      } catch (error) {
+        if (!isReplacedFrame(preview, error)) throw error;
+        return false;
+      }
+    }, `Unicode ${comment.id} interaction must survive a preview frame replacement`);
+  }
+  await page.screenshot({ path: path.join(artifacts, "unicode-preview.png"), animations: "disabled" });
+
+  let sidebar = await findFrame(page, '[data-id="emoji-prefix"]', "Unicode sidebar must remain available");
+  let first = sidebar.locator('[data-id="emoji-prefix"]');
+  const replyText = "新しい返信 👩‍💻 🇯🇵 👍🏽 𠮷 Cafe\u0301";
+  await first.locator(".comment-actions").getByTitle("Reply", { exact: true }).click();
+  await first.getByPlaceholder("Reply...").fill(replyText);
+  await first.getByPlaceholder("Reply...").press("ControlOrMeta+Enter");
+  await eventually(async () => {
+    const saved = JSON.parse(await fs.readFile(sidecarPath, "utf8"));
+    return saved.comments.some((comment) => comment.reply_to === "emoji-prefix" && comment.text === replyText && comment.author === unicodeFixture.author);
+  }, "Unicode reply must persist with the correct author and parent");
+  sidebar = await findFrame(page, ".comment.reply .comment-text", "Persisted Unicode reply must render in its thread",
+    async (frame) => (await frame.locator(".comment.reply .comment-text").allTextContents()).includes(replyText));
+  first = sidebar.locator('[data-id="emoji-prefix"]');
+  assert.equal(await sidebar.locator('[data-id="unicode-existing-reply"] .comment-text').textContent(),
+    unicodeFixture.review.comments.at(-1).text);
+
+  const editedText = "編集済みのコメント 😀 👩‍💻 🇯🇵 𠮷野家 Cafe\u0301 <確認> & \"保存\"";
+  await first.getByTitle("Edit", { exact: true }).click();
+  await first.getByPlaceholder("Edit comment...").fill(editedText);
+  await first.getByPlaceholder("Edit comment...").press("ControlOrMeta+Enter");
+  await eventually(async () => JSON.parse(await fs.readFile(sidecarPath, "utf8")).comments
+    .find((comment) => comment.id === "emoji-prefix")?.text === editedText, "Unicode edit must persist exactly");
+  sidebar = await findFrame(page, '[data-id="emoji-prefix"] .comment-text', "Sidebar must display the Unicode edit",
+    async (frame) => await frame.locator('[data-id="emoji-prefix"] .comment-text').textContent() === editedText);
+  first = sidebar.locator('[data-id="emoji-prefix"]');
+  await first.getByTitle("Resolve", { exact: true }).click();
+  await eventually(async () => JSON.parse(await fs.readFile(sidecarPath, "utf8")).comments
+    .find((comment) => comment.id === "emoji-prefix")?.resolved === true, "Resolve must persist for the Unicode thread");
+  sidebar = await findFrame(page, '[data-id="emoji-prefix"] button[title="Unresolve"]', "Resolved thread must offer Unresolve");
+  await sidebar.locator('[data-id="emoji-prefix"]').getByTitle("Unresolve", { exact: true }).click();
+  await eventually(async () => JSON.parse(await fs.readFile(sidecarPath, "utf8")).comments
+    .find((comment) => comment.id === "emoji-prefix")?.resolved === false, "Unresolve must persist for the Unicode thread");
+  for (const expected of anchors) {
+    const saved = JSON.parse(await fs.readFile(sidecarPath, "utf8")).comments.find((comment) => comment.id === expected.id);
+    for (const key of ["line", "start_column", "end_column", "selected_text"]) {
+      assert.equal(saved[key], expected[key], `${expected.id}: sidebar actions must preserve ${key}`);
+    }
+  }
+  const refreshedPreview = await findFrame(page, '.mrsf-comment[data-comment-id="emoji-prefix"] .mrsf-comment-body',
+    "Preview must refresh the Unicode edit without losing its selected text",
+    async (frame) => await frame.locator('.mrsf-comment[data-comment-id="emoji-prefix"] .mrsf-comment-body').textContent() === editedText);
+  assert.equal(await refreshedPreview.locator('.mrsf-inline-highlight[data-comment-id="emoji-prefix"]').textContent(), "日本語");
+  await page.screenshot({ path: path.join(artifacts, "unicode-sidebar.png"), animations: "disabled" });
+  assert.equal(await fs.readFile(target.fsPath, "utf8"), originalMarkdown, "Review actions must not modify Markdown source");
+
+  const original = vscode.Uri.joinPath(root, "preview.md");
+  await vscode.commands.executeCommand("vscode.openWith", original, "vscode.markdown.preview.editor");
+  await findFrame(page, '[data-id="host-comment"]', "Switching documents must restore the original sidebar");
+  await vscode.commands.executeCommand("vscode.openWith", target, "vscode.markdown.preview.editor");
+  await findFrame(page, '[data-id="emoji-prefix"]', "Switching back must restore Unicode threads");
+  console.log(`Unicode E2E passed: ${originalLines.length} lines, ${anchors.length} UTF-16 selections, replies, edits, resolve/unresolve, source preservation and document switching`);
+}
 
 async function clickPreviewControl(preview, selector, keyboard = false) {
+  const href = await preview.locator(selector).first().getAttribute("href");
   await preview.evaluate((selector) => {
     window.mrsfTrustedClick = null;
     document.addEventListener("click", (event) => {
@@ -14,6 +152,7 @@ async function clickPreviewControl(preview, selector, keyboard = false) {
         matches: event.target instanceof Element && !!event.target.closest(selector),
         hasDocumentView: !!event.view?.document,
         bubbled: false,
+        href: event.target.closest("a")?.getAttribute("href"),
       };
     }, { capture: true, once: true });
     window.addEventListener("click", () => {
@@ -23,7 +162,7 @@ async function clickPreviewControl(preview, selector, keyboard = false) {
   if (keyboard) await preview.locator(selector).first().press("Enter");
   else await preview.locator(selector).first().click();
   assert.deepEqual(await preview.evaluate(() => window.mrsfTrustedClick),
-    { trusted: true, matches: true, hasDocumentView: true, bubbled: true },
+    { trusted: true, matches: true, hasDocumentView: true, bubbled: true, href },
     `Preview must receive a trusted ${selector} click, keyboard=${keyboard}`);
 }
 
@@ -86,8 +225,7 @@ async function verifyTooltipLayout(preview, page, artifacts) {
   }
 }
 
-async function verifyInteractions(target) {
-  const browser = await chromium.connectOverCDP(`http://127.0.0.1:${process.env.MRSF_TEST_CDP_PORT}`);
+async function verifyInteractions(target, browser) {
   const page = browser.contexts()[0].pages().find((candidate) => candidate.url().includes("workbench"));
   assert.ok(page, "VS Code workbench must be available for UI checks");
   await page.bringToFront();
@@ -102,28 +240,21 @@ async function verifyInteractions(target) {
     await page.getByRole("tab", { name: /preview\.md/ }).click();
     let preview;
     if (process.env.MRSF_TEST_FOCUS === "tooltip") {
-      await eventually(async () => {
-        for (const frame of page.frames()) {
-          if (await frame.locator(".mrsf-badge").count().catch(() => 0)) {
-            preview = frame;
-            return true;
-          }
-        }
-        return false;
-      }, "Preview must render a tooltip anchor");
+      preview = await findFrame(page, ".mrsf-badge", "Preview must render a tooltip anchor");
       await verifyTooltipLayout(preview, page, artifacts);
       return;
     }
     let hoverVerified = false;
+    let highlightRequestId = 0;
     for (const [selector, keyboard] of [[".mrsf-badge", false], [".mrsf-badge", false], [".mrsf-inline-highlight", false], [".mrsf-inline-highlight", true], [".mrsf-badge", false]]) {
       await eventually(async () => {
         for (const frame of page.frames()) {
           try {
-            if (await frame.locator(selector).count()) {
+            if (await frame.locator(selector).count() && await isVisibleWebviewFrame(frame)) {
               const target = await frame.locator(selector).first().elementHandle();
               const bounds = await target?.boundingBox();
               if (!target || !bounds || !bounds.width || !bounds.height) continue;
-              await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+              await target.hover();
               if (!await target.evaluate(async (element) => {
                 await new Promise(requestAnimationFrame);
                 return element.isConnected && element.matches(":hover");
@@ -171,11 +302,14 @@ async function verifyInteractions(target) {
       await eventually(async () => {
         for (const frame of page.frames()) {
           try {
-            const animated = await frame.evaluate(() => {
+            const highlighted = await frame.evaluate((previousRequestId) => {
               const thread = document.querySelector('[data-id="host-comment"]')?.closest('.thread.highlighted');
-              return thread?.getAnimations().some((animation) => animation.playState === "running");
-            });
-            if (animated) {
+              const requestId = Number(document.body?.dataset.highlightRequestId);
+              return thread && requestId > previousRequestId && getComputedStyle(thread).animationName === "highlight-pulse"
+                ? requestId : 0;
+            }, highlightRequestId);
+            if (highlighted) {
+              highlightRequestId = highlighted;
               sidebar = frame;
               return true;
             }
@@ -234,6 +368,7 @@ async function verifyInteractions(target) {
     assert.deepEqual(editor.selections, selections, "Hover refresh must preserve the original cursor and selections");
     await page.screenshot({ path: path.join(artifacts, "hover-refresh.png") });
     console.log("Trusted preview clicks and live hover actions passed");
+    await verifyUnicodeReview(page, artifacts);
   } catch (error) {
     const diagnostics = [];
     for (const frame of page.frames()) {
@@ -242,6 +377,11 @@ async function verifyInteractions(target) {
         const state = await frame.evaluate(() => ({
           focused: document.hasFocus(),
           visibility: document.visibilityState,
+          viewport: { width: innerWidth, height: innerHeight, scale: devicePixelRatio },
+          iframes: [...document.querySelectorAll("iframe")].map((element) => ({
+            id: element.id, src: element.src, visibility: getComputedStyle(element).visibility,
+            bounds: element.getBoundingClientRect().toJSON(),
+          })),
           click: window.mrsfTrustedClick,
           highlightRequestId: document.body?.dataset.highlightRequestId,
           threads: [...document.querySelectorAll(".thread.highlighted")].map((thread) => ({
@@ -263,23 +403,20 @@ async function verifyInteractions(target) {
     await fs.writeFile(path.join(artifacts, "failure.json"), JSON.stringify({ error: error.stack, frames: diagnostics }, null, 2));
     await page.screenshot({ path: path.join(artifacts, "failure.png") });
     throw error;
-  } finally {
-    await browser.close();
   }
 }
 
 async function eventually(predicate, message) {
-  for (let attempt = 0; attempt < 1200; attempt++) {
+  const deadline = performance.now() + 60000;
+  while (performance.now() < deadline) {
     if (await predicate()) return;
     await delay(50);
   }
   assert.fail(message);
 }
 
-exports.run = async function run() {
+async function run(browser) {
   const root = vscode.workspace.workspaceFolders[0].uri;
-  await vscode.workspace.getConfiguration("sidemark", root).update("previewGutterPosition", "right", vscode.ConfigurationTarget.Workspace);
-  await vscode.workspace.getConfiguration("sidemark", root).update("author", "UI test", vscode.ConfigurationTarget.Workspace);
   const target = vscode.Uri.joinPath(root, "preview.md");
   const other = vscode.Uri.joinPath(root, "other.md");
   await vscode.commands.executeCommand("vscode.openWith", target, "vscode.markdown.preview.editor");
@@ -295,20 +432,37 @@ exports.run = async function run() {
   const render = () => markdown.renderer.rules.mrsf_comment_data([], 0, {}, { currentDocument: target });
   await eventually(() => render().includes("Initial review"), "Cold preview must hydrate its JSON sidecar");
   assert.ok(render().includes("data-version=\"1\""));
+  const page = browser.contexts()[0].pages().find((candidate) => candidate.url().includes("workbench"));
+  assert.ok(page, "VS Code workbench must be available for cold-preview checks");
+  await findFrame(page, '#mrsf-comment-data[data-load-state="loaded"]',
+    "Cold preview must display its sidecar in the actual webview before external edits",
+    async (frame) => await frame.locator(".mrsf-comment-body").textContent() === "Initial review");
 
   if (process.env.MRSF_TEST_FOCUS === "tooltip") {
-    await verifyInteractions(target);
+    await verifyInteractions(target, browser);
     console.log("Sidemark tooltip host checks passed");
     return;
   }
 
   const sidecar = vscode.Uri.joinPath(root, "preview.md.review.json");
+  await waitForFileWatcher(root);
   const review = JSON.parse(await fs.readFile(sidecar.fsPath, "utf8"));
   review.comments[0].text = "External update";
   await fs.writeFile(sidecar.fsPath, JSON.stringify(review));
-  await eventually(() => render().includes("External update"), "Watcher must load an external JSON update");
+  try {
+    await eventually(() => render().includes("External update"), "Watcher must load an external JSON update");
+  } catch (error) {
+    console.error("Watcher state", { sidecar: sidecar.fsPath, disk: await fs.readFile(sidecar.fsPath, "utf8"), rendered: render() });
+    throw error;
+  }
+  await findFrame(page, ".mrsf-comment-body", "External JSON updates must reach the actual preview",
+    async (frame) => await frame.locator(".mrsf-comment-body").textContent() === "External update");
+  if (process.env.MRSF_TEST_FOCUS === "watcher") {
+    console.log("Sidemark watcher host checks passed");
+    return;
+  }
 
-  await verifyInteractions(target);
+  await verifyInteractions(target, browser);
 
   await vscode.commands.executeCommand("markdown.showPreviewToSide", other);
   await eventually(() => vscode.window.tabGroups.all.some((group) => group.tabs.some((tab) =>
@@ -322,4 +476,14 @@ exports.run = async function run() {
   await vscode.window.showTextDocument(document);
   assert.equal(vscode.window.activeTextEditor.document.uri.toString(), target.toString());
   console.log("Sidemark host smoke checks passed");
+}
+
+exports.run = async function () {
+  // Attach before any preview is created so CDP observes the webview frame swaps.
+  const browser = await chromium.connectOverCDP(`http://127.0.0.1:${process.env.MRSF_TEST_CDP_PORT}`);
+  try {
+    await run(browser);
+  } finally {
+    await browser.close();
+  }
 };

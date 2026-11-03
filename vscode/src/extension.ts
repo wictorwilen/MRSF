@@ -101,6 +101,21 @@ async function handleExtensionUri(uri: vscode.Uri): Promise<void> {
 }
 
 export function activate(context: vscode.ExtensionContext) {
+  let previewRefreshTimer: ReturnType<typeof setTimeout> | undefined;
+  function schedulePreviewRefresh(): void {
+    // Let cold-preview frame swaps settle before applying hydration/settings bursts.
+    clearTimeout(previewRefreshTimer);
+    previewRefreshTimer = setTimeout(() => {
+      previewRefreshTimer = undefined;
+      void vscode.commands.executeCommand("markdown.preview.refresh").then(undefined, (error: unknown) => {
+        void vscode.window.showErrorMessage(
+          `Failed to refresh Markdown Preview: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      });
+    }, 250);
+  }
+  context.subscriptions.push(new vscode.Disposable(() => clearTimeout(previewRefreshTimer)));
+
   // ── Status bar ────────────────────────────────────────────
   const statusBar = new MrsfStatusBar();
   context.subscriptions.push(statusBar);
@@ -235,7 +250,7 @@ export function activate(context: vscode.ExtensionContext) {
       checkStaleness(uri);
       // Refresh Markdown preview so the markdown-it plugin re-reads the
       // sidecar and the preview script can update badges/tooltips.
-      vscode.commands.executeCommand("markdown.preview.refresh");
+      schedulePreviewRefresh();
     }),
   );
 
@@ -248,7 +263,7 @@ export function activate(context: vscode.ExtensionContext) {
       gutterProvider.updateActiveEditor();
       inlineProvider.updateActiveEditor();
       sidebarProvider.refresh();
-      vscode.commands.executeCommand("markdown.preview.refresh");
+      schedulePreviewRefresh();
     }),
   );
 
