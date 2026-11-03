@@ -14,7 +14,8 @@ function isReplacedFrame(frame, error) {
 async function isVisibleWebviewFrame(frame) {
   if (!frame.parentFrame()) return false;
   const owner = await frame.frameElement();
-  return owner.evaluate((element) => getComputedStyle(element).visibility === "visible");
+  return owner.evaluate((element) => getComputedStyle(element).visibility === "visible"
+    && element.contentDocument?.readyState === "complete");
 }
 
 async function waitForFileWatcher(root) {
@@ -516,6 +517,38 @@ exports.run = async function () {
   const browser = await chromium.connectOverCDP(`http://127.0.0.1:${process.env.MRSF_TEST_CDP_PORT}`);
   try {
     await run(browser);
+  } catch (error) {
+    try {
+      const page = browser.contexts()[0].pages().find((candidate) => candidate.url().includes("workbench"));
+      const artifacts = path.join(__dirname, "..", ".vscode-test", "screenshots", vscode.version);
+      await fs.mkdir(artifacts, { recursive: true });
+      const frames = [];
+      for (const frame of page.frames()) {
+        try {
+          const owner = frame.parentFrame() ? await frame.frameElement() : undefined;
+          frames.push({
+            frame: await owner?.getAttribute("id"),
+            url: frame.url(),
+            ...await frame.evaluate(() => ({
+              readyState: document.readyState,
+              frames: [...document.querySelectorAll("iframe")].map((element) => ({
+                id: element.id, readyState: element.contentDocument?.readyState,
+                visibility: getComputedStyle(element).visibility,
+              })),
+              comments: [...document.querySelectorAll(".mrsf-comment-body")].map((element) => element.textContent),
+              loadState: document.getElementById("mrsf-comment-data")?.dataset.loadState,
+            })),
+          });
+        } catch (diagnosticError) {
+          if (!isReplacedFrame(frame, diagnosticError)) console.error("Host diagnostics unavailable", diagnosticError.message);
+        }
+      }
+      await fs.writeFile(path.join(artifacts, "host-failure.json"), JSON.stringify({ error: error.stack, frames }, null, 2));
+      await page.screenshot({ path: path.join(artifacts, "host-failure.png") });
+    } catch (diagnosticError) {
+      console.error("Host diagnostics unavailable", diagnosticError.message);
+    }
+    throw error;
   } finally {
     await browser.close();
   }

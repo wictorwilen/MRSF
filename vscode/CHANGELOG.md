@@ -33,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Expand the real-host suite with a long Unicode document, seven explicit UTF-16 selections, Unicode authors/comments, reply/edit persistence, Resolve/Unresolve, anchor/source preservation and modern-preview document switching.
 - Wait for actionable real pointer targets, verify fresh sidebar highlight requests independently of animation timing, and capture viewport/frame layout in failure diagnostics.
 - Wait for native focus through the webview iframe chain between pointer-down and pointer release, and before Enter activation. Keep refreshed Unicode text assertions inside replacement-aware frame checks.
-- Attach Playwright before preview creation, skip hidden replacement frames, and wait for an actual workspace watcher readiness event before the single external sidecar edit.
+- Attach Playwright before preview creation, wait for fully loaded visible frames containing the expected content, and wait for an actual workspace watcher readiness event before the single external sidecar edit. Capture lifecycle diagnostics even when cold hydration or external updates fail before the interaction workflow.
 - Add real-script DOM regressions and an isolated VS Code host smoke test.
 - Verify native preview comment links and immediate hover Resolve/Unresolve updates with real input in Windows VS Code 1.137 and 1.138 hosts.
 - Verify consecutive gutter clicks, inline click/Enter activation, and (+) comment persistence on the clicked source line.

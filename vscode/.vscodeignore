@@ -3,8 +3,8 @@ src/**
 node_modules/**
 tsconfig.json
 esbuild.config.mjs
+CONTRIBUTING.md
 test/**
 .vscode-test/**
 .gitignore
 **/*.map
-
