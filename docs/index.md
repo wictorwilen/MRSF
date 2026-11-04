@@ -104,6 +104,13 @@ If you're searching for **markdown comments**, **comments in Markdown**, or a wa
 
 Sidemark, also known as **MRSF** (Markdown Review Sidecar Format), stores comments in a sidecar file next to the Markdown document. That gives you durable anchors, threaded review comments, Git-friendly history, and tooling for CLIs, editors, AI agents, and rendering pipelines.
 
+## Native SDKs
+
+Embed MRSF support using the [Node.js library](/cli/api),
+[Python SDK](/guide/python), or [Rust SDK](/guide/rust). The Rust crate is
+library-only and does not require either of the other runtimes. For terminal
+workflows, continue using the existing Node.js or Python CLI.
+
 ## Interactive Editor Integrations
 
 If you want comments inside a live editor instead of rendered HTML, Sidemark also includes interactive editor packages:

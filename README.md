@@ -47,6 +47,7 @@ MRSF solves this with **sidecar files** that hold review metadata separate from 
 - CLI tools for validation, re-anchoring, status checks  
 - MCP server for integrations with LLMs and assistant clients
 - Python CLI & SDK (`pip install mrsf`) — 1:1 port of the Node.js CLI
+- Native Rust library for embedding MRSF support without a Node.js or Python runtime
 - Rendering plugins for Marp, Marked, markdown-it, and rehype/unified ecosystems
 - Interactive editor integrations for VS Code, Monaco, Milkdown/Crepe, and experimental Tiptap hosts
 
@@ -226,6 +227,24 @@ opts = mrsf.AddCommentOptions(
 ```
 
 See [`python/README.md`](python/README.md) for the full SDK reference.
+
+## Rust SDK
+
+The native `mrsf` Rust crate lives in [`rust/`](rust/). It provides a library
+for applications that need to read, validate, update, and reanchor MRSF sidecars
+without requiring a Node.js or Python runtime.
+
+The crate is library-only: use the existing Node.js CLI for terminal workflows.
+For local development, add a path dependency pointing to the checkout:
+
+```toml
+[dependencies]
+mrsf = { path = "../mrsf/rust" }
+```
+
+See [`rust/README.md`](rust/README.md) and the [Rust SDK guide](https://sidemark.org/guide/rust)
+for API usage and compatibility details. Creating this crate does not publish it
+to crates.io.
 
 ## 🎨 Rendering Plugins
 

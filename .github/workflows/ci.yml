@@ -8,7 +8,10 @@ on:
       - "examples/**"
       - "vscode/**"
       - "python/**"
+      - "rust/**"
+      - "evaluation/reanchor/**"
       - "docs/**"
+      - "MRSF-v1.0.md"
       - "mrsf.schema.json"
       - "mrsf-config.schema.json"
       - ".github/workflows/ci.yml"
@@ -22,7 +25,10 @@ on:
       - "examples/**"
       - "vscode/**"
       - "python/**"
+      - "rust/**"
+      - "evaluation/reanchor/**"
       - "docs/**"
+      - "MRSF-v1.0.md"
       - "mrsf.schema.json"
       - "mrsf-config.schema.json"
       - ".github/workflows/ci.yml"
@@ -31,6 +37,65 @@ on:
   workflow_dispatch:
 
 jobs:
+  rust-validation:
+    name: Rust ${{ matrix.toolchain }} (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: rust
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        toolchain: ["1.88.0", stable]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          components: rustfmt, clippy
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Lint
+        run: cargo clippy --locked --all-targets --all-features -- -D warnings
+      - name: Run tests and documentation examples
+        run: cargo test --locked --all-features
+      - name: Verify published package contents and build
+        run: cargo package --locked
+      - uses: actions/setup-python@v6
+        if: matrix.toolchain == 'stable'
+        with:
+          python-version: "3.13"
+      - name: Check bundled schemas match canonical schemas
+        if: matrix.toolchain == 'stable'
+        run: |
+          python -c "from pathlib import Path; names = ('mrsf.schema.json', 'mrsf-config.schema.json'); mismatches = [n for n in names if Path('schemas', n).read_bytes() != Path('..', n).read_bytes()]; assert not mismatches, f'Bundled schemas differ: {mismatches}'"
+
+  rust-interoperability:
+    name: Rust / Node / Python Interoperability (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Build Node SDK
+        run: |
+          npm --prefix cli ci
+          npm --prefix cli run build
+      - name: Install Python SDK
+        run: python -m pip install -e ./python
+      - name: Exercise all producer, updater, and reader combinations
+        run: python examples/test-rust-interop.py
+
   library-validation:
     name: Libraries (${{ matrix.os }})
     runs-on: ${{ matrix.os }}

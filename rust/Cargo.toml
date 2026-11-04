@@ -1,0 +1,25 @@
+[package]
+name = "mrsf"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+description = "Native Markdown Review Sidecar Format (MRSF/Sidemark) library"
+license = "MIT"
+repository = "https://github.com/wictorwilen/MRSF"
+homepage = "https://sidemark.org"
+readme = "README.md"
+keywords = ["markdown", "review", "sidecar", "yaml", "annotation"]
+categories = ["text-processing", "parser-implementations"]
+include = ["src/**", "tests/**", "examples/**", "schemas/**", "Cargo.toml", "Cargo.lock", "README.md", "LICENSE"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+oneyaml = "1.2"
+jsonschema = { version = "0.33", default-features = false }
+thiserror = "2"
+sha2 = "0.10"
+uuid = { version = "=1.18.1", features = ["v4"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+regex = "1"
+strsim = "0.11"
