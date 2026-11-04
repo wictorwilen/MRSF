@@ -86,6 +86,23 @@ npm run demo:milkdown
 Then open the printed local Vite URL and navigate to `/` to try the interactive Milkdown demo.
 The page lets you switch between a direct Milkdown editor and Crepe, both backed by the same MRSF runtime. You can add comments from a selection, reply, edit, resolve, delete, save the in-memory sidecar, reload host state, and simulate external sidecar changes.
 
+## Published Rust SDK Samples
+
+The [`rust-sdk/`](https://github.com/wictorwilen/MRSF/tree/main/examples/rust-sdk) package uses the published
+[`mrsf` 0.1.0 crate](https://crates.io/crates/mrsf/0.1.0), not the local Rust
+implementation. It requires Rust 1.88 or later, but no Node.js or Python runtime.
+From that directory:
+
+```bash
+cargo run --locked
+cargo run --locked --example reanchor
+cargo test --locked --all-targets
+```
+
+The samples demonstrate UTF-16 selections, independently resolved replies,
+YAML/JSON round trips, and source-aware reanchoring. They print their results
+without changing your Markdown files or sidecars.
+
 ## Trying the Examples
 
 If you have the MRSF CLI installed (`npm install -g @mrsf/cli` or via `npx`), you

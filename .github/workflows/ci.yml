@@ -40,6 +40,8 @@ jobs:
   rust-validation:
     name: Rust ${{ matrix.toolchain }} (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/rust/target
     defaults:
       run:
         working-directory: rust
@@ -62,6 +64,16 @@ jobs:
         run: cargo test --locked --all-features
       - name: Verify published package contents and build
         run: cargo package --locked
+      - name: Check published-crate sample formatting
+        run: cargo fmt --manifest-path ../examples/rust-sdk/Cargo.toml --all -- --check
+      - name: Lint published-crate samples
+        run: cargo clippy --locked --manifest-path ../examples/rust-sdk/Cargo.toml --all-targets -- -D warnings
+      - name: Test published-crate samples
+        run: cargo test --locked --manifest-path ../examples/rust-sdk/Cargo.toml --all-targets
+      - name: Run comment lifecycle sample
+        run: cargo run --locked --manifest-path ../examples/rust-sdk/Cargo.toml
+      - name: Run reanchoring sample
+        run: cargo run --locked --manifest-path ../examples/rust-sdk/Cargo.toml --example reanchor
       - uses: actions/setup-python@v6
         if: matrix.toolchain == 'stable'
         with:
@@ -70,6 +82,10 @@ jobs:
         if: matrix.toolchain == 'stable'
         run: |
           python -c "from pathlib import Path; names = ('mrsf.schema.json', 'mrsf-config.schema.json'); mismatches = [n for n in names if Path('schemas', n).read_bytes() != Path('..', n).read_bytes()]; assert not mismatches, f'Bundled schemas differ: {mismatches}'"
+      - name: Verify sample uses the crates.io release
+        if: matrix.toolchain == 'stable'
+        run: |
+          cargo metadata --locked --manifest-path ../examples/rust-sdk/Cargo.toml --format-version 1 | python -c "import json, sys; packages = [p for p in json.load(sys.stdin)['packages'] if p['name'] == 'mrsf']; assert len(packages) == 1, packages; sdk = packages[0]; assert sdk['version'] == '0.1.0' and sdk['source'] == 'registry+https://github.com/rust-lang/crates.io-index', sdk; print('Verified published mrsf ' + sdk['version'])"
 
   rust-interoperability:
     name: Rust / Node / Python Interoperability (${{ matrix.os }})

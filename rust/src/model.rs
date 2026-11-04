@@ -12,7 +12,7 @@ pub type Extensions = Map<String, Value>;
 /// A v1 sidecar. Crate version and format version are independent.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct MrsfDocument {
-    /// MRSF format version, currently `"1.0"`, not the crate's `"0.1.0"`.
+    /// MRSF format version, currently `"1.0"`, independent of the crate version.
     pub mrsf_version: String,
     /// Repository/workspace-relative Markdown path, even for redirected sidecars.
     pub document: String,

@@ -7,3 +7,4 @@ coverage/
 tmp/
 .vscode-test/
 /rust/target/
+/examples/rust-sdk/target/
