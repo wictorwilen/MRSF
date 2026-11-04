@@ -33,6 +33,33 @@ python -m build
 
 CI checks Python 3.10 and 3.13 on Windows and Linux. Permission-error tests inject the filesystem error instead of relying on platform-specific `chmod` behavior.
 
+For the library-only Rust crate, run these commands from `rust`:
+
+```bash
+cargo fmt --all -- --check
+cargo clippy --locked --all-targets --all-features -- -D warnings
+cargo test --locked --all-features
+cargo package --locked
+```
+
+CI checks the declared minimum Rust version and stable on Windows and Linux.
+`cargo package` verifies the distributable without relying on files outside the
+crate. Keep both bundled schemas in `rust/schemas` byte-identical to their
+canonical root copies. Keep shared reanchoring fixtures aligned with
+`evaluation/reanchor`; do not change expected outcomes to accommodate a port.
+
+After building `cli` and installing the Python SDK, run the cross-language
+round-trip checks from the repository root:
+
+```bash
+python examples/test-rust-interop.py
+```
+
+The harness exercises YAML and JSON produced, updated, and validated by all
+three SDKs. The Rust executable it uses is a development example, not a CLI
+distributed by the crate. Do not add a competing Rust CLI or a publishing step
+as part of ordinary SDK changes.
+
 After building the plugin dependencies, build documentation with `npm run docs:build` in `docs`. In `examples`, run `npm run demo:marp:build`, `npm run demo:milkdown:build`, `npm run demo:monaco:build`, `npm run demo:tiptap:build`, and `npm run test:monaco-demo`.
 
 ## Versioning

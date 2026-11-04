@@ -1,0 +1,65 @@
+{
+  "id": "moved-section-repeated-anchor",
+  "description": "Nearby exact comments establish the displacement of a moved section and disambiguate repeated text.",
+  "categories": [
+    "global-reconciliation",
+    "section-move",
+    "duplicate-text"
+  ],
+  "source": {
+    "text": "# Alpha\n\nUnique alpha landmark.\n\nCommon lead-in.\n\nRepeated target.\n\nCommon follow-up.\n\nUnique alpha tail.\n\n# Beta\n\nUnique beta landmark.\n\nCommon lead-in.\n\nRepeated target.\n\nCommon follow-up.\n\nUnique beta tail."
+  },
+  "target": {
+    "text": "Intro.\n\n# Current\n\nUnique beta landmark.\n\nCommon lead-in.\n\nRepeated target.\n\nCommon follow-up.\n\nUnique beta tail.\n\n# Current\n\nUnique alpha landmark.\n\nCommon lead-in.\n\nRepeated target.\n\nCommon follow-up.\n\nUnique alpha tail."
+  },
+  "comments": [
+    {
+      "id": "alpha-leading-landmark",
+      "anchor": {
+        "line": 3,
+        "selected_text": "Unique alpha landmark."
+      },
+      "expected": {
+        "status": "anchored",
+        "ranges": [
+          {
+            "line": 17
+          }
+        ],
+        "rationale": "The unique exact text moves with the Alpha section."
+      }
+    },
+    {
+      "id": "alpha-repeated-target",
+      "anchor": {
+        "line": 7,
+        "selected_text": "Repeated target."
+      },
+      "expected": {
+        "status": "anchored",
+        "ranges": [
+          {
+            "line": 21
+          }
+        ],
+        "rationale": "Two same-section landmarks disambiguate the repeated exact text."
+      }
+    },
+    {
+      "id": "alpha-trailing-landmark",
+      "anchor": {
+        "line": 11,
+        "selected_text": "Unique alpha tail."
+      },
+      "expected": {
+        "status": "anchored",
+        "ranges": [
+          {
+            "line": 25
+          }
+        ],
+        "rationale": "The unique exact text moves with the Alpha section."
+      }
+    }
+  ]
+}

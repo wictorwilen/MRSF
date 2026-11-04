@@ -6,3 +6,4 @@ dist/
 coverage/
 tmp/
 .vscode-test/
+/rust/target/

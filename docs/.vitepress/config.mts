@@ -203,6 +203,7 @@ export default withMermaid(defineConfig({
       },
       { text: "CLI", link: "/cli/", activeMatch: "/cli/" },
       { text: "Python SDK", link: "/guide/python", activeMatch: "/guide/python" },
+      { text: "Rust SDK", link: "/guide/rust", activeMatch: "/guide/rust" },
       { text: "VS Code", link: "/vscode/", activeMatch: "/vscode/" },
       { text: "MCP Server", link: "/mcp/", activeMatch: "/mcp/" },
       {
@@ -222,6 +223,7 @@ export default withMermaid(defineConfig({
             { text: "Agent Skill", link: "/guide/agent-skill" },
             { text: "Reanchoring Implementation", link: "/guide/reanchoring" },
             { text: "Python CLI & SDK", link: "/guide/python" },
+            { text: "Rust SDK", link: "/guide/rust" },
             { text: "CI/CD Integration", link: "/guide/ci-integration" },
             { text: "FAQ", link: "/guide/faq" },
           ],

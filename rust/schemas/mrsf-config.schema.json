@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/wictorwilen/MRSF/raw/main/mrsf-config.schema.json",
+  "title": "MRSF Configuration (.mrsf.yaml)",
+  "description": "Schema for .mrsf.yaml repository configuration files. See MRSF-v1.0.md §3.2 for details.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "sidecar_root": {
+      "type": "string",
+      "description": "Relative path from the repository or workspace root to the directory where sidecar files are stored. Must not contain '..' or be an absolute path.",
+      "pattern": "^(?!/)(?!.*\\.\\.).*$"
+    }
+  }
+}
