@@ -5,7 +5,7 @@ Format (MRSF), also known as [Sidemark](https://sidemark.org). No Node.js, Pytho
 CLI, network service, or asynchronous runtime is needed. Git is optional and is
 used only for revision evidence.
 
-- Crate version: **0.1.0**.
+- Crate version: **0.1.1**.
 - Supported format: **MRSF 1.x**, with `mrsf_version: "1.0"` for new files.
 - Minimum supported Rust version: **1.88.0**, edition 2021.
 - License: MIT.
@@ -14,14 +14,29 @@ The crate version is **not** the sidecar's `mrsf_version`. Unknown major format
 versions are rejected. Newer v1 minor versions are accepted with a warning and
 unknown fields remain intact.
 
-## Using the local crate
+## Installation
 
-From another package in this checkout:
+Install the published [mrsf crate](https://crates.io/crates/mrsf) in your
+application with Rust 1.88 or later:
+
+```bash
+cargo add mrsf
+```
+
+Or add the dependency to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-mrsf = { path = "../rust" }
+mrsf = "0.1"
 ```
+
+Browse the [0.1.1 API documentation](https://docs.rs/mrsf/0.1.1/mrsf/).
+The [standalone usage samples](https://github.com/wictorwilen/MRSF/tree/main/examples/rust-sdk)
+pin the published version and demonstrate sidecar round trips, threaded comments,
+UTF-16 selections, and reanchoring without requiring a local SDK build.
+
+Contributors editing this crate can use `mrsf = { path = "../rust" }` instead;
+that is a development override, not needed by applications.
 
 ### Parse, inspect, and validate
 

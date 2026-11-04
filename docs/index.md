@@ -111,6 +111,9 @@ Embed MRSF support using the [Node.js library](/cli/api),
 library-only and does not require either of the other runtimes. For terminal
 workflows, continue using the existing Node.js or Python CLI.
 
+Install the published [Rust crate](https://crates.io/crates/mrsf) with
+`cargo add mrsf`, or browse its [API reference](https://docs.rs/mrsf/0.1.0/mrsf/).
+
 ## Interactive Editor Integrations
 
 If you want comments inside a live editor instead of rendered HTML, Sidemark also includes interactive editor packages:

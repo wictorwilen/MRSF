@@ -13,6 +13,7 @@
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/wictor.mrsf-vscode?label=VS%20Code)](https://marketplace.visualstudio.com/items?itemName=wictor.mrsf-vscode)
 [![VS Code Installs](https://img.shields.io/visual-studio-marketplace/i/wictor.mrsf-vscode?label=VS%20Code%20installs)](https://marketplace.visualstudio.com/items?itemName=wictor.mrsf-vscode)
 [![mrsf on PyPI](https://img.shields.io/pypi/v/mrsf?label=mrsf%20on%20PyPI)](https://pypi.org/project/mrsf/)
+[![mrsf on crates.io](https://img.shields.io/crates/v/mrsf?label=mrsf%20on%20crates.io)](https://crates.io/crates/mrsf)
 [![@mrsf/markdown-it-mrsf on npm](https://img.shields.io/npm/v/@mrsf/markdown-it-mrsf?label=%40mrsf%2Fmarkdown-it-mrsf)](https://www.npmjs.com/package/@mrsf/markdown-it-mrsf)
 [![@mrsf/marp-mrsf on npm](https://img.shields.io/npm/v/@mrsf/marp-mrsf?label=%40mrsf%2Fmarp-mrsf)](https://www.npmjs.com/package/@mrsf/marp-mrsf)
 [![@mrsf/marked-mrsf on npm](https://img.shields.io/npm/v/@mrsf/marked-mrsf?label=%40mrsf%2Fmarked-mrsf)](https://www.npmjs.com/package/@mrsf/marked-mrsf)
@@ -234,17 +235,25 @@ The native `mrsf` Rust crate lives in [`rust/`](rust/). It provides a library
 for applications that need to read, validate, update, and reanchor MRSF sidecars
 without requiring a Node.js or Python runtime.
 
-The crate is library-only: use the existing Node.js CLI for terminal workflows.
-For local development, add a path dependency pointing to the checkout:
+Install the published [crate from crates.io](https://crates.io/crates/mrsf):
+
+```bash
+cargo add mrsf
+```
+
+Or add it to your application's manifest:
 
 ```toml
 [dependencies]
-mrsf = { path = "../mrsf/rust" }
+mrsf = "0.1"
 ```
 
-See [`rust/README.md`](rust/README.md) and the [Rust SDK guide](https://sidemark.org/guide/rust)
-for API usage and compatibility details. Creating this crate does not publish it
-to crates.io.
+The crate is library-only: use the existing Node.js CLI for terminal workflows.
+See the [API documentation](https://docs.rs/mrsf/0.1.0/mrsf/),
+[`rust/README.md`](rust/README.md), and the [Rust SDK guide](https://sidemark.org/guide/rust)
+for API usage and compatibility details. The runnable
+[`examples/rust-sdk/`](examples/rust-sdk/) samples depend on the published
+`mrsf` 0.1.0 crate, not the local implementation.
 
 ## 🎨 Rendering Plugins
 

@@ -1,0 +1,10 @@
+[package]
+name = "mrsf-published-example"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+publish = false
+description = "Runnable usage samples for the published MRSF Rust crate"
+
+[dependencies]
+mrsf = "=0.1.0"
